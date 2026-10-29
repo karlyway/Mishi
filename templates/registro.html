@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Registrar Movimiento | Mishi{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="page-header" style="justify-content: center; text-align: center;">
+        <div>
+            <h1 class="page-title">Registrar Movimiento</h1>
+            <p class="page-desc">Registra tus gastos o ingresos en menos de 15 segundos</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <!-- Selector de Tipo (Paso 1) -->
+        <div class="tab-selector">
+            <button type="button" class="tab-btn active" id="btnGasto" onclick="cambiarTipo('gasto')">📉 Registrar Gasto</button>
+            <button type="button" class="tab-btn" id="btnIngreso" onclick="cambiarTipo('ingreso')">📈 Registrar Ingreso</button>
+        </div>
+
+        <form action="{% url 'dashboard' %}" method="GET">
+            <!-- Monto (Paso 2) -->
+            <div class="form-group">
+                <label class="form-label" for="monto">¿Cuánto dinero es?</label>
+                <div class="amount-input-container">
+                    <span class="amount-prefix">$</span>
+                    <input type="number" id="monto" name="monto" class="form-input amount-input" placeholder="0" required min="100" step="100" oninput="calcularImpacto()">
+                </div>
+            </div>
+
+            <!-- Categoría (Paso 3) -->
+            <div class="form-group">
+                <label class="form-label">Selecciona la categoría</label>
+                <div class="category-chips">
+                    <div class="category-chip selected" onclick="seleccionarCategoria(this, 'Alimentación')">
+                        <div class="category-icon">🍔</div>
+                        <div class="category-name">Alimentación</div>
+                    </div>
+                    <div class="category-chip" onclick="seleccionarCategoria(this, 'Ocio y Salidas')">
+                        <div class="category-icon">🍿</div>
+                        <div class="category-name">Ocio y Salidas</div>
+                    </div>
+                    <div class="category-chip" onclick="seleccionarCategoria(this, 'Transporte')">
+                        <div class="category-icon">🚌</div>
+                        <div class="category-name">Transporte</div>
+                    </div>
+                    <div class="category-chip" onclick="seleccionarCategoria(this, 'Refrigerios y Dulces')">
+                        <div class="category-icon">☕</div>
+                        <div class="category-name">Refrigerios/Dulces</div>
+                    </div>
+                    <div class="category-chip" onclick="seleccionarCategoria(this, 'Gastos Universitarios')">
+                        <div class="category-icon">📚</div>
+                        <div class="category-name">Universidad</div>
+                    </div>
+                    <div class="category-chip" onclick="seleccionarCategoria(this, 'Servicios y Recargas')">
+                        <div class="category-icon">📱</div>
+                        <div class="category-name">Recargas/Datos</div>
+                    </div>
+                </div>
+                <input type="hidden" name="categoria" id="categoriaInput" value="Alimentación">
+            </div>
+
+            <!-- Descripción rápida y fecha -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="descripcion">Descripción (opcional)</label>
+                    <input type="text" id="descripcion" name="descripcion" class="form-input" placeholder="Ej. Empanada, Copias del parcial...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="fecha">Fecha</label>
+                    <input type="date" id="fecha" name="fecha" class="form-input" value="2026-10-29">
+                </div>
+            </div>
+
+            <!-- Opción Módulo Social: Gasto Compartido -->
+            <div class="form-group" style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
+                    <input type="checkbox" id="checkCompartido" onchange="toggleCompartido(this)" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                    <span>👥 ¿Es un gasto compartido o préstamo a un amigo?</span>
+                </label>
+                <div id="seccionCompartido" style="display: none; margin-top: 0.75rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                        <input type="text" placeholder="Nombre del amigo (ej. Isabel A.)" class="form-input" style="font-size: 0.85rem;">
+                        <input type="number" placeholder="Monto que le corresponde" class="form-input" style="font-size: 0.85rem;">
+                    </div>
+                    <small style="color: #64748B; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Se agregará a tu módulo de préstamos pendientes automáticamente.</small>
+                </div>
+            </div>
+
+            <!-- Cálculo de Impacto en Vivo (RF-04) -->
+            <div class="live-impact-box" id="impactoBox">
+                <strong>💡 Impacto en tu presupuesto diario:</strong>
+                <p id="impactoTexto" style="margin-top: 0.25rem;">
+                    Tu saldo actual es de <strong>${{ saldo }} COP</strong> y tu límite diario es de <strong>${{ limite_diario }} COP</strong> (para {{ dias_restantes }} días). Ingresa un monto para calcular tu nuevo límite.
+                </p>
+            </div>
+
+            <!-- Botones de Acción (Paso 4) -->
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary" style="flex: 2; font-size: 1.05rem;">
+                    💾 Guardar movimiento
+                </button>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary" style="flex: 1;">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const saldoActual = {{ saldo }};
+    const diasRestantes = {{ dias_restantes }};
+    let tipoActual = 'gasto';
+
+    function cambiarTipo(tipo) {
+        tipoActual = tipo;
+        document.getElementById('btnGasto').classList.toggle('active', tipo === 'gasto');
+        document.getElementById('btnIngreso').classList.toggle('active', tipo === 'ingreso');
+        calcularImpacto();
+    }
+
+    function seleccionarCategoria(elemento, nombre) {
+        document.querySelectorAll('.category-chip').forEach(chip => chip.classList.remove('selected'));
+        elemento.classList.add('selected');
+        document.getElementById('categoriaInput').value = nombre;
+    }
+
+    function toggleCompartido(checkbox) {
+        document.getElementById('seccionCompartido').style.display = checkbox.checked ? 'block' : 'none';
+    }
+
+    function calcularImpacto() {
+        const montoInput = parseFloat(document.getElementById('monto').value) || 0;
+        const texto = document.getElementById('impactoTexto');
+        
+        if (montoInput === 0) {
+            texto.innerHTML = `Tu saldo actual es de <strong>$${saldoActual.toLocaleString('es-CO')} COP</strong> y tu límite diario es de <strong>${Math.round(saldoActual/diasRestantes).toLocaleString('es-CO')} COP</strong> (para ${diasRestantes} días).`;
+            return;
+        }
+
+        let nuevoSaldo = (tipoActual === 'gasto') ? (saldoActual - montoInput) : (saldoActual + montoInput);
+        let nuevoLimite = Math.max(0, Math.round(nuevoSaldo / diasRestantes));
+
+        if (tipoActual === 'gasto') {
+            if (nuevoSaldo < 0) {
+                texto.innerHTML = `<span style="color: #DC2626; font-weight: bold;">⚠️ ¡Alerta! Este gasto supera tu saldo disponible. Quedarías en saldo negativo ($${nuevoSaldo.toLocaleString('es-CO')}).</span>`;
+            } else {
+                texto.innerHTML = `Con este gasto de <strong>$${montoInput.toLocaleString('es-CO')} COP</strong>, tu nuevo saldo será <strong>$${nuevoSaldo.toLocaleString('es-CO')} COP</strong> y tu límite diario se ajustará a <strong>$${nuevoLimite.toLocaleString('es-CO')} COP / día</strong>.`;
+            }
+        } else {
+            texto.innerHTML = `Con este ingreso de <strong>$${montoInput.toLocaleString('es-CO')} COP</strong>, tu saldo subirá a <strong>$${nuevoSaldo.toLocaleString('es-CO')} COP</strong> y tu límite diario aumentará a <strong>$${nuevoLimite.toLocaleString('es-CO')} COP / día</strong>. 🎉`;
+        }
+    }
+</script>
+{% endblock %}

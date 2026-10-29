@@ -1,0 +1,69 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mishi | Tu plata, bajo control{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+
+    <!-- Barra de Navegación Principal -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="{% url 'dashboard' %}" class="brand">
+                <div class="brand-icon">🐱</div>
+                <div class="brand-text">
+                    <span class="brand-title">mishi</span>
+                    <span class="brand-subtitle">Tu plata, bajo control</span>
+                </div>
+            </a>
+
+            <nav>
+                <ul class="nav-links">
+                    <li>
+                        <a href="{% url 'dashboard' %}" class="nav-link {% if pestana_activa == 'dashboard' %}active{% endif %}">
+                            <span>🏠</span> Inicio
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'registro' %}" class="nav-link {% if pestana_activa == 'registro' %}active{% endif %}">
+                            <span>➕</span> Registrar
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'historial' %}" class="nav-link {% if pestana_activa == 'historial' %}active{% endif %}">
+                            <span>📋</span> Historial
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'metas' %}" class="nav-link {% if pestana_activa == 'metas' %}active{% endif %}">
+                            <span>🎯</span> Metas & Préstamos
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="user-chip">
+                <div class="user-avatar">🎓</div>
+                <span>Karla A.</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal Dinámico -->
+    <main class="main-container">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Pie de Página -->
+    <footer class="footer">
+        <p><strong>Mishi</strong> · Control de gastos para estudiantes universitarios</p>
+        <p>Corporación Universitaria Rafael Núñez · Proyecto Integrador - Aplicaciones Web II · 2026</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

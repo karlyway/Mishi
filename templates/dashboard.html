@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio | Mishi - Tu plata, bajo control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">¡Hola, {{ usuario.nombre }}! 🐾</h1>
+        <p class="page-desc">{{ usuario.universidad }} · Planificación activa</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="{% url 'registro' %}" class="btn btn-primary">➕ Registrar movimiento</a>
+        <a href="{% url 'historial' %}" class="btn btn-secondary">📋 Ver historial</a>
+    </div>
+</div>
+
+<!-- Alerta Preventiva (RF-05) -->
+{% if alerta_activa %}
+<div class="alert-banner">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">
+        <h4>Alerta preventiva de gasto diario</h4>
+        <p>Llevas gastado <strong>${{ gasto_hoy }} COP</strong> (el {{ porcentaje_gasto_hoy }}% de tu límite diario de hoy: ${{ limite_diario }} COP). Modera tus gastos de ocio y refrigerios para evitar quedarte sin dinero antes de tus {{ dias_restantes }} días restantes.</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tarjetas de Métricas Principales (RF-03, RF-04) -->
+<div class="dashboard-grid">
+    <!-- Saldo Disponible -->
+    <div class="card metric-card">
+        <div class="metric-header">
+            <span class="metric-label">Saldo disponible</span>
+            <span class="metric-badge green">Activo</span>
+        </div>
+        <div class="metric-value">${{ saldo }} <span style="font-size: 1rem; font-weight: 500; color: #718096;">COP</span></div>
+        <div class="metric-subtitle">
+            <span>🗓️</span> {{ dias_restantes }} días hasta tu próximo ingreso / mesada
+        </div>
+    </div>
+
+    <!-- Límite Diario Calculado (RF-04) -->
+    <div class="card metric-card" style="border-left: 4px solid var(--primary);">
+        <div class="metric-header">
+            <span class="metric-label">Límite diario recomendado</span>
+            <span class="metric-badge orange">Cálculo Automático</span>
+        </div>
+        <div class="metric-value" style="color: var(--primary-hover);">${{ limite_diario }} <span style="font-size: 1rem; font-weight: 500; color: #718096;">COP / día</span></div>
+        <div class="formula-pill">
+            Fórmula: Saldo (${{ saldo }}) ÷ {{ dias_restantes }} días
+        </div>
+    </div>
+
+    <!-- Gasto de Hoy y Alerta de Consumo -->
+    <div class="card metric-card">
+        <div class="metric-header">
+            <span class="metric-label">Gastado hoy</span>
+            <span class="metric-badge orange">{{ porcentaje_gasto_hoy }}% del límite</span>
+        </div>
+        <div class="metric-value">${{ gasto_hoy }} <span style="font-size: 1rem; font-weight: 500; color: #718096;">COP</span></div>
+        <div class="progress-container">
+            <div class="progress-bar orange" style="width: {{ porcentaje_gasto_hoy }}%;"></div>
+        </div>
+        <div class="metric-subtitle">
+            <span>🐜</span> Gastos hormiga acumulados este mes: <strong>${{ total_hormiga }} COP</strong>
+        </div>
+    </div>
+</div>
+
+<!-- Sección Dividida: Categorías y Últimos Movimientos -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+    <!-- Últimos Movimientos -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 800;">Últimos Movimientos</h3>
+            <a href="{% url 'historial' %}" style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Ver todos →</a>
+        </div>
+        
+        <div class="transactions-list">
+            {% for m in ultimos_movimientos %}
+            <div class="transaction-item">
+                <div class="tx-left">
+                    <div class="tx-icon">
+                        {% if m.categoria == 'Alimentación' %}🍔
+                        {% elif m.categoria == 'Transporte' %}🚌
+                        {% elif m.categoria == 'Ocio y Salidas' %}🍿
+                        {% elif m.categoria == 'Refrigerios y Dulces' %}☕
+                        {% elif m.categoria == 'Gastos Universitarios' %}📚
+                        {% else %}💰{% endif %}
+                    </div>
+                    <div class="tx-info">
+                        <h5>{{ m.titulo }}</h5>
+                        <div class="tx-meta">
+                            <span>{{ m.fecha }}</span> · <span>{{ m.categoria }}</span>
+                            {% if m.es_hormiga %}
+                            <span class="badge-hormiga">Gasto Hormiga 🐜</span>
+                            {% endif %}
+                            {% if m.es_compartido %}
+                            <span class="badge-shared">Compartido con {{ m.amigo }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="tx-amount {% if m.tipo == 'gasto' %}gasto{% else %}ingreso{% endif %}">
+                    {% if m.tipo == 'gasto' %}- ${{ m.monto }}{% else %}+ ${{ m.monto }}{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Metas de Ahorro y Distribución -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 800;">Metas de Ahorro Activas</h3>
+            <a href="{% url 'metas' %}" style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Gestionar →</a>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1.2rem;">
+            {% for meta in metas_destacadas %}
+            <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; background: #FAFAFA;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="font-weight: 700; font-size: 0.95rem;">🎯 {{ meta.nombre }}</span>
+                    <span style="font-weight: 800; font-size: 0.85rem; color: var(--primary);">{{ meta.porcentaje }}%</span>
+                </div>
+                <div class="progress-container" style="height: 8px;">
+                    <div class="progress-bar primary" style="width: {{ meta.porcentaje }}%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: #718096; margin-top: 0.4rem;">
+                    <span>Ahorrado: ${{ meta.acumulado }} COP</span>
+                    <span>Meta: ${{ meta.objetivo }} COP</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 1.5rem; background: #FFF7ED; border: 1px dashed #FDBA74; border-radius: 12px; padding: 1rem; text-align: center;">
+            <p style="font-size: 0.88rem; font-weight: 700; color: #9A3412;">💡 Consejo Mishi de la semana</p>
+            <p style="font-size: 0.82rem; color: #C2410C; margin-top: 0.25rem;">Si reduces los cafés y dulces de $4.500 al día, ahorrarás <strong>$45.000 COP</strong> en diez días para tus fotocopias de parciales.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

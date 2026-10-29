@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Metas y Préstamos | Mishi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Metas de Ahorro y Préstamos</h1>
+        <p class="page-desc">Construye tu colchón de ahorro y gestiona las cuentas compartidas con tus compañeros</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-primary" onclick="alert('Funcionalidad de crear nueva meta habilitada para el siguiente sprint')">🎯 Nueva Meta</button>
+        <button class="btn btn-secondary" onclick="alert('Funcionalidad de nuevo préstamo habilitada')">👥 Registrar Préstamo</button>
+    </div>
+</div>
+
+<!-- Sección 1: Metas de Ahorro (RF-10) -->
+<div style="margin-bottom: 2rem;">
+    <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>🎯</span> Tus Metas de Ahorro Universitarias
+    </h3>
+    
+    <div class="goals-grid">
+        {% for meta in metas %}
+        <div class="goal-card">
+            <div class="goal-header">
+                <div class="goal-icon">
+                    {% if meta.categoria == 'Universidad' %}📚
+                    {% elif meta.categoria == 'Ahorro' %}🐷
+                    {% else %}🎉{% endif %}
+                </div>
+                <div class="goal-info">
+                    <h4>{{ meta.nombre }}</h4>
+                    <span style="font-size: 0.78rem; color: #64748B;">Categoría: {{ meta.categoria }}</span>
+                </div>
+            </div>
+
+            <div class="progress-container" style="height: 10px; margin: 0.75rem 0;">
+                <div class="progress-bar {% if meta.porcentaje >= 70 %}green{% else %}primary{% endif %}" style="width: {{ meta.porcentaje }}%;"></div>
+            </div>
+
+            <div class="goal-amounts">
+                <span>Acumulado: <strong>${{ meta.acumulado }}</strong></span>
+                <span>Objetivo: <strong>${{ meta.objetivo }}</strong></span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 0.75rem;">
+                <span style="font-size: 0.85rem; font-weight: 800; color: var(--primary);">{{ meta.porcentaje }}% completado</span>
+                <button class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">+ Aportar ahorro</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Sección 2: Módulo Social / Préstamos y Cuentas Compartidas (RF-12) -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+            <h3 style="font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                <span>👥</span> Cuentas Compartidas y Préstamos
+            </h3>
+            <p style="font-size: 0.84rem; color: #64748B;">Nunca más olvides un préstamo o una división de comida entre amigos</p>
+        </div>
+        <div style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; padding: 0.4rem 0.85rem; border-radius: 9999px; font-size: 0.82rem; font-weight: 700;">
+            Te deben: <strong>$11.000 COP</strong> · Debes: <strong>$4.000 COP</strong>
+        </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        {% for p in prestamos %}
+        <div class="loan-item">
+            <div style="display: flex; align-items: center; gap: 0.85rem;">
+                <div style="width: 38px; height: 38px; border-radius: 50%; background: {% if p.tipo == 'por_cobrar' %}#ECFDF5{% else %}#FEF2F2{% endif %}; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                    {% if p.tipo == 'por_cobrar' %}📥{% else %}📤{% endif %}
+                </div>
+                <div>
+                    <h5 style="font-size: 0.95rem; font-weight: 700;">{{ p.persona }}</h5>
+                    <div style="font-size: 0.8rem; color: #64748B;">
+                        {{ p.concepto }} · <span>{{ p.fecha }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                <div style="text-align: right;">
+                    <div style="font-size: 1rem; font-weight: 800; color: {% if p.tipo == 'por_cobrar' %}#059669{% else %}#DC2626{% endif %};">
+                        {% if p.tipo == 'por_cobrar' %}Te debe: ${{ p.monto }}{% else %}Le debes: ${{ p.monto }}{% endif %}
+                    </div>
+                    <span style="font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 9999px; font-weight: 700; background: {% if p.estado == 'Pendiente' %}#FEF3C7; color: #B45309;{% else %}#E2E8F0; color: #475569;{% endif %}">
+                        {{ p.estado }}
+                    </span>
+                </div>
+                {% if p.estado == 'Pendiente' %}
+                <button class="btn btn-secondary btn-sm" onclick="alert('Préstamo marcado como cobrado')">✓ Cobrar</button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
