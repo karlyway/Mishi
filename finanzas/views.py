@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 
+# Datos de prueba para visualizar informacion en las pantallas
 DATOS_DEMO = {
     'usuario': {
         'nombre': 'Camila Perez',
@@ -129,31 +130,33 @@ DATOS_DEMO = {
 }
 
 
+# Pagina de presentacion publica
 def landing_view(request):
-    """Pagina publica informativa de Mishi."""
     return render(request, 'landing.html')
 
 
+# Formulario de acceso de usuarios
 def login_view(request):
-    """Pantalla de inicio de sesion (RF-14)."""
     if request.method == 'POST':
         return redirect('dashboard')
     return render(request, 'login.html')
 
 
+# Formulario para registro de nuevos estudiantes
 def registro_usuario_view(request):
-    """Pantalla de creacion de cuenta (RF-14)."""
     if request.method == 'POST':
         return redirect('dashboard')
     return render(request, 'registro_usuario.html')
 
 
+# Panel principal: calculo del limite diario segun saldo y dias restantes
 def dashboard_view(request):
-    """Panel principal de la aplicacion."""
     saldo = DATOS_DEMO['usuario']['saldo_disponible']
     dias = max(DATOS_DEMO['usuario']['dias_restantes'], 1)
+    # Formula: saldo dividido entre dias restantes
     limite_diario = round(saldo / dias)
     
+    # Calculo para evaluar si se supera el 80% del presupuesto diario
     gasto_hoy = 16500
     porcentaje_gasto_hoy = min(round((gasto_hoy / limite_diario) * 100), 100) if limite_diario > 0 else 100
     alerta_activa = porcentaje_gasto_hoy >= 80
@@ -174,12 +177,13 @@ def dashboard_view(request):
     return render(request, 'dashboard.html', context)
 
 
+# Vista para agregar un movimiento (ingreso o gasto)
 def movimiento_view(request):
-    """Formulario para registrar gasto o ingreso."""
     saldo = DATOS_DEMO['usuario']['saldo_disponible']
     dias = max(DATOS_DEMO['usuario']['dias_restantes'], 1)
     limite_diario = round(saldo / dias)
     
+    # Opciones de categoria para el formulario
     categorias = [
         'Alimentacion',
         'Transporte',
@@ -199,8 +203,8 @@ def movimiento_view(request):
     return render(request, 'registro.html', context)
 
 
+# Historial de gastos e ingresos registrados
 def historial_view(request):
-    """Listado completo de movimientos."""
     movimientos = DATOS_DEMO['movimientos']
     total_ingresos = sum(m['monto'] for m in movimientos if m['tipo'] == 'ingreso')
     total_gastos = sum(m['monto'] for m in movimientos if m['tipo'] == 'gasto')
@@ -215,8 +219,8 @@ def historial_view(request):
     return render(request, 'historial.html', context)
 
 
+# Visualizacion de metas de ahorro y deudas pendientes
 def metas_view(request):
-    """Metas de ahorro y prestamos."""
     context = {
         'metas': DATOS_DEMO['metas'],
         'prestamos': DATOS_DEMO['prestamos'],

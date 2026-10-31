@@ -25,7 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Aplicaciones del proyecto Mishi
+    # Aplicacion principal del proyecto
     'finanzas',
 ]
 

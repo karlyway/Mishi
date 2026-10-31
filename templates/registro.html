@@ -68,10 +68,12 @@
     const saldoActual = {{ saldo }};
     const diasRestantes = {{ dias_restantes }};
 
+    // Muestra u oculta los campos para gastos compartidos
     function toggleCompartido(checkbox) {
         document.getElementById('seccionCompartido').style.display = checkbox.checked ? 'block' : 'none';
     }
 
+    // Calcula en pantalla como cambiaria el limite diario con este monto
     function actualizarImpacto() {
         const monto = parseFloat(document.getElementById('monto').value) || 0;
         const tipo = document.getElementById('tipo').value;
