@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 DATOS_DEMO = {
     'usuario': {
         'nombre': 'Camila Perez',
-        'universidad': 'Corporación Universitaria Rafael Núñez',
+        'universidad': 'Universidad de Cartagena',
         'mesada_base': 350000,
         'saldo_disponible': 135000,
         'dias_restantes': 9,
