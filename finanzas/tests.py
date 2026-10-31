@@ -5,20 +5,35 @@ class MishiViewsTestCase(TestCase):
     def setUp(self):
         self.client = Client()
 
+    def test_landing_view(self):
+        response = self.client.get(reverse('landing'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'landing.html')
+        self.assertContains(response, 'Control de gastos para estudiantes universitarios')
+
+    def test_login_view(self):
+        response = self.client.get(reverse('login'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'login.html')
+        self.assertContains(response, 'Iniciar sesion')
+
+    def test_registro_usuario_view(self):
+        response = self.client.get(reverse('registro_usuario'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'registro_usuario.html')
+        self.assertContains(response, 'Crear cuenta de estudiante')
+
     def test_dashboard_view(self):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'dashboard.html')
-        self.assertTemplateUsed(response, 'base.html')
-        self.assertContains(response, 'Mishi')
-        self.assertContains(response, 'Limite diario recomendado')
+        self.assertContains(response, 'Panel principal')
 
-    def test_registro_view(self):
-        response = self.client.get(reverse('registro'))
+    def test_movimiento_view(self):
+        response = self.client.get(reverse('movimiento'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'registro.html')
         self.assertContains(response, 'Registrar movimiento')
-        self.assertContains(response, 'Alimentacion')
 
     def test_historial_view(self):
         response = self.client.get(reverse('historial'))

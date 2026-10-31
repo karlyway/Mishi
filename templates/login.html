@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Iniciar Sesion - Mishi{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 420px; margin: 40px auto; padding: 30px 25px;">
+    <h2 style="margin-bottom: 8px;">Iniciar sesion</h2>
+    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Ingresa a tu cuenta de estudiante en Mishi</p>
+
+    <form action="{% url 'dashboard' %}" method="GET">
+        <div class="form-group">
+            <label for="usuario">Correo electronico o usuario</label>
+            <input type="text" id="usuario" name="usuario" class="form-control" placeholder="ejemplo@curnvirtual.edu.co" required value="karla.amaranto">
+        </div>
+
+        <div class="form-group">
+            <label for="password">Contrasena</label>
+            <input type="password" id="password" name="password" class="form-control" placeholder="********" required value="123456">
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Ingresar</button>
+        </div>
+    </form>
+
+    <div style="margin-top: 20px; text-align: center; font-size: 13px; color: #666;">
+        No tienes una cuenta? <a href="{% url 'registro_usuario' %}">Crear cuenta</a>
+    </div>
+</div>
+{% endblock %}

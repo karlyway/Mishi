@@ -1,6 +1,5 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
-# Datos iniciales para pruebas y navegacion de las pantallas
 DATOS_DEMO = {
     'usuario': {
         'nombre': 'Karla Amaranto',
@@ -130,7 +129,27 @@ DATOS_DEMO = {
 }
 
 
+def landing_view(request):
+    """Pagina publica informativa de Mishi."""
+    return render(request, 'landing.html')
+
+
+def login_view(request):
+    """Pantalla de inicio de sesion (RF-14)."""
+    if request.method == 'POST':
+        return redirect('dashboard')
+    return render(request, 'login.html')
+
+
+def registro_usuario_view(request):
+    """Pantalla de creacion de cuenta (RF-14)."""
+    if request.method == 'POST':
+        return redirect('dashboard')
+    return render(request, 'registro_usuario.html')
+
+
 def dashboard_view(request):
+    """Panel principal de la aplicacion."""
     saldo = DATOS_DEMO['usuario']['saldo_disponible']
     dias = max(DATOS_DEMO['usuario']['dias_restantes'], 1)
     limite_diario = round(saldo / dias)
@@ -155,7 +174,8 @@ def dashboard_view(request):
     return render(request, 'dashboard.html', context)
 
 
-def registro_view(request):
+def movimiento_view(request):
+    """Formulario para registrar gasto o ingreso."""
     saldo = DATOS_DEMO['usuario']['saldo_disponible']
     dias = max(DATOS_DEMO['usuario']['dias_restantes'], 1)
     limite_diario = round(saldo / dias)
@@ -174,12 +194,13 @@ def registro_view(request):
         'dias_restantes': dias,
         'limite_diario': limite_diario,
         'categorias': categorias,
-        'pestana_activa': 'registro'
+        'pestana_activa': 'movimiento'
     }
     return render(request, 'registro.html', context)
 
 
 def historial_view(request):
+    """Listado completo de movimientos."""
     movimientos = DATOS_DEMO['movimientos']
     total_ingresos = sum(m['monto'] for m in movimientos if m['tipo'] == 'ingreso')
     total_gastos = sum(m['monto'] for m in movimientos if m['tipo'] == 'gasto')
@@ -195,6 +216,7 @@ def historial_view(request):
 
 
 def metas_view(request):
+    """Metas de ahorro y prestamos."""
     context = {
         'metas': DATOS_DEMO['metas'],
         'prestamos': DATOS_DEMO['prestamos'],

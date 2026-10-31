@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Mishi - Control de Gastos{% endblock %}</title>
+    <title>{% block title %}Mishi - Control de Gastos Estudiantiles{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
@@ -12,32 +12,35 @@
     <header class="navbar">
         <div class="nav-container">
             <div class="brand">
-                <a href="{% url 'dashboard' %}" style="color: inherit; text-decoration: none;">
+                <a href="{% url 'landing' %}" style="color: inherit; text-decoration: none;">
                     <strong>Mishi</strong>
                 </a>
-                <span>Control de gastos estudiantiles</span>
+                <span>Control de gastos universitarios</span>
             </div>
 
             <nav>
                 <ul class="nav-links">
-                    <li>
-                        <a href="{% url 'dashboard' %}" class="{% if pestana_activa == 'dashboard' %}active{% endif %}">Inicio</a>
-                    </li>
-                    <li>
-                        <a href="{% url 'registro' %}" class="{% if pestana_activa == 'registro' %}active{% endif %}">Registrar</a>
-                    </li>
-                    <li>
-                        <a href="{% url 'historial' %}" class="{% if pestana_activa == 'historial' %}active{% endif %}">Historial</a>
-                    </li>
-                    <li>
-                        <a href="{% url 'metas' %}" class="{% if pestana_activa == 'metas' %}active{% endif %}">Metas y prestamos</a>
-                    </li>
+                    {% if pestana_activa %}
+                        <!-- Menu interno de la aplicacion -->
+                        <li><a href="{% url 'dashboard' %}" class="{% if pestana_activa == 'dashboard' %}active{% endif %}">Inicio</a></li>
+                        <li><a href="{% url 'movimiento' %}" class="{% if pestana_activa == 'movimiento' %}active{% endif %}">Registrar gasto</a></li>
+                        <li><a href="{% url 'historial' %}" class="{% if pestana_activa == 'historial' %}active{% endif %}">Historial</a></li>
+                        <li><a href="{% url 'metas' %}" class="{% if pestana_activa == 'metas' %}active{% endif %}">Metas y prestamos</a></li>
+                        <li><a href="{% url 'landing' %}">Salir</a></li>
+                    {% else %}
+                        <!-- Menu publico -->
+                        <li><a href="{% url 'landing' %}">Inicio</a></li>
+                        <li><a href="{% url 'login' %}">Iniciar sesion</a></li>
+                        <li><a href="{% url 'registro_usuario' %}">Crear cuenta</a></li>
+                    {% endif %}
                 </ul>
             </nav>
 
+            {% if pestana_activa %}
             <div class="user-info">
                 <span>Karla Amaranto</span>
             </div>
+            {% endif %}
         </div>
     </header>
 
@@ -47,8 +50,8 @@
     </main>
 
     <footer class="footer">
-        <p>Mishi - Sistema de Control Financiero Universitario</p>
-        <p>Corporación Universitaria Rafael Núñez - Aplicaciones Web II - 2026</p>
+        <p>Mishi - Sistema de Control de Gastos Personales para Estudiantes</p>
+        <p>Corporacion Universitaria Rafael Nunez - Proyecto Integrador Aplicaciones Web II - 2026</p>
     </footer>
 
     {% block extra_js %}{% endblock %}

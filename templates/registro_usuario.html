@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Cuenta - Mishi{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 480px; margin: 30px auto; padding: 30px 25px;">
+    <h2 style="margin-bottom: 8px;">Crear cuenta de estudiante</h2>
+    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Registrate para comenzar a organizar tu presupuesto universitario</p>
+
+    <form action="{% url 'dashboard' %}" method="GET">
+        <div class="form-group">
+            <label for="nombre">Nombre completo</label>
+            <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Ej: Karla Amaranto" required>
+        </div>
+
+        <div class="form-group">
+            <label for="universidad">Institucion universitaria</label>
+            <input type="text" id="universidad" name="universidad" class="form-control" value="Corporación Universitaria Rafael Núñez" required>
+        </div>
+
+        <div class="form-group">
+            <label for="frecuencia">Frecuencia de mesada o ingresos</label>
+            <select id="frecuencia" name="frecuencia" class="form-control">
+                <option value="diario">Diariamente</option>
+                <option value="semanal">Semanalmente</option>
+                <option value="quincenal" selected>Quincenalmente</option>
+                <option value="mensual">Mensualmente</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="mesada">Mesada o ingreso aproximado (COP)</label>
+            <input type="number" id="mesada" name="mesada" class="form-control" placeholder="Ej: 350000" step="1000">
+        </div>
+
+        <div class="form-group">
+            <label for="correo">Correo electronico</label>
+            <input type="email" id="correo" name="correo" class="form-control" placeholder="ejemplo@curnvirtual.edu.co" required>
+        </div>
+
+        <div class="form-group">
+            <label for="pass">Contrasena</label>
+            <input type="password" id="pass" name="pass" class="form-control" placeholder="********" required>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Registrarme e ingresar</button>
+        </div>
+    </form>
+
+    <div style="margin-top: 20px; text-align: center; font-size: 13px; color: #666;">
+        Ya tienes una cuenta? <a href="{% url 'login' %}">Iniciar sesion</a>
+    </div>
+</div>
+{% endblock %}
