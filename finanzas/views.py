@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 
 DATOS_DEMO = {
     'usuario': {
-        'nombre': 'Karla Amaranto',
+        'nombre': 'Camila Perez',
         'universidad': 'Corporación Universitaria Rafael Núñez',
         'mesada_base': 350000,
         'saldo_disponible': 135000,
@@ -58,7 +58,7 @@ DATOS_DEMO = {
             'fecha': '24/10/2026',
             'es_hormiga': False,
             'es_compartido': True,
-            'amigo': 'Melvis M.',
+            'amigo': 'Andres G.',
         },
         {
             'id': 6,
@@ -100,7 +100,7 @@ DATOS_DEMO = {
     'prestamos': [
         {
             'id': 1,
-            'persona': 'Harrison Bonilla',
+            'persona': 'Andres Gomez',
             'concepto': 'Parte de la pizza',
             'monto': 11000,
             'tipo': 'Por cobrar',
@@ -109,7 +109,7 @@ DATOS_DEMO = {
         },
         {
             'id': 2,
-            'persona': 'Isabel Alvarez',
+            'persona': 'Laura Mendoza',
             'concepto': 'Impresiones en grupo',
             'monto': 4000,
             'tipo': 'Por pagar',
@@ -118,7 +118,7 @@ DATOS_DEMO = {
         },
         {
             'id': 3,
-            'persona': 'Melvis Morales',
+            'persona': 'Santiago Ruiz',
             'concepto': 'Almuerzo',
             'monto': 12000,
             'tipo': 'Por cobrar',

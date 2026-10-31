@@ -4,7 +4,7 @@ Proyecto Integrador - Aplicaciones Web II
 Corporacion Universitaria Rafael Nunez  
 Facultad de Ingenieria - Cartagena, Colombia  
 Docente: Maybelline Castro  
-Integrantes: Karla Amaranto, Melvis Morales, Isabel Alvarez, Harrinson Bonilla  
+Equipo: Grupo de Desarrollo Mishi  
 
 ---
 
