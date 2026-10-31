@@ -1,98 +1,75 @@
 {% extends 'base.html' %}
 
-{% block title %}Historial de Movimientos | Mishi{% endblock %}
+{% block title %}Historial de Movimientos - Mishi{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1 class="page-title">Historial Financiero</h1>
-        <p class="page-desc">Consulta, filtra y gestiona cada transacción de tu mesada</p>
-    </div>
-    <a href="{% url 'registro' %}" class="btn btn-primary">➕ Nuevo movimiento</a>
+<div class="page-title">
+    <h1>Historial de transacciones</h1>
+    <p>Registro de ingresos y egresos registrados durante el periodo</p>
 </div>
 
-<!-- Resumen Estadístico Rápido (RF-07) -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-    <div class="card" style="padding: 1.1rem; border-top: 4px solid #10B981;">
-        <span style="font-size: 0.8rem; font-weight: 700; color: #64748B;">TOTAL INGRESOS</span>
-        <div style="font-size: 1.4rem; font-weight: 800; color: #10B981; margin-top: 0.2rem;">+${{ total_ingresos }}</div>
-        <small style="color: #94A3B8; font-size: 0.75rem;">Mesadas y apoyos</small>
+<div class="grid-3">
+    <div class="metric-box">
+        <div class="metric-title">Total ingresos</div>
+        <div class="metric-number text-success">+${{ total_ingresos }} COP</div>
     </div>
 
-    <div class="card" style="padding: 1.1rem; border-top: 4px solid #EF4444;">
-        <span style="font-size: 0.8rem; font-weight: 700; color: #64748B;">TOTAL GASTOS</span>
-        <div style="font-size: 1.4rem; font-weight: 800; color: #EF4444; margin-top: 0.2rem;">-${{ total_gastos }}</div>
-        <small style="color: #94A3B8; font-size: 0.75rem;">Consumos del periodo</small>
+    <div class="metric-box">
+        <div class="metric-title">Total gastos</div>
+        <div class="metric-number text-danger">-${{ total_gastos }} COP</div>
     </div>
 
-    <div class="card" style="padding: 1.1rem; border-top: 4px solid #F59E0B;">
-        <span style="font-size: 0.8rem; font-weight: 700; color: #64748B;">GASTOS HORMIGA 🐜</span>
-        <div style="font-size: 1.4rem; font-weight: 800; color: #D97706; margin-top: 0.2rem;">${{ total_hormiga }}</div>
-        <small style="color: #94A3B8; font-size: 0.75rem;">{{ conteo_hormiga }} compras menores a $10.000</small>
-    </div>
-
-    <div class="card" style="padding: 1.1rem; border-top: 4px solid var(--primary);">
-        <span style="font-size: 0.8rem; font-weight: 700; color: #64748B;">BALANCE DEL MES</span>
-        <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary-hover); margin-top: 0.2rem;">${{ total_ingresos|add:"-57000" }}</div>
-        <small style="color: #94A3B8; font-size: 0.75rem;">Superávit actual</small>
+    <div class="metric-box">
+        <div class="metric-title">Balance neto</div>
+        <div class="metric-number">${{ balance }} COP</div>
     </div>
 </div>
 
-<!-- Filtros Interactivos (RF-06) -->
-<div class="card" style="margin-bottom: 1.5rem; padding: 1.1rem;">
-    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn btn-secondary btn-sm" style="background: var(--primary-light); color: var(--primary); border-color: var(--primary);">Todos ({{ movimientos|length }})</button>
-            <button class="btn btn-secondary btn-sm">🍔 Alimentación</button>
-            <button class="btn btn-secondary btn-sm">🍿 Ocio</button>
-            <button class="btn btn-secondary btn-sm">🚌 Transporte</button>
-            <button class="btn btn-secondary btn-sm">🐜 Gastos Hormiga</button>
-        </div>
-        <div style="font-size: 0.85rem; color: #64748B;">
-            Mostrando <strong>{{ movimientos|length }} transacciones</strong>
-        </div>
-    </div>
-</div>
-
-<!-- Listado Completo de Transacciones (RF-06) -->
 <div class="card">
-    <div class="transactions-list">
-        {% for m in movimientos %}
-        <div class="transaction-item">
-            <div class="tx-left">
-                <div class="tx-icon">
-                    {% if m.categoria == 'Alimentación' %}🍔
-                    {% elif m.categoria == 'Transporte' %}🚌
-                    {% elif m.categoria == 'Ocio y Salidas' %}🍿
-                    {% elif m.categoria == 'Refrigerios y Dulces' %}☕
-                    {% elif m.categoria == 'Gastos Universitarios' %}📚
-                    {% else %}💰{% endif %}
-                </div>
-                <div class="tx-info">
-                    <h5>{{ m.titulo }}</h5>
-                    <div class="tx-meta">
-                        <span>{{ m.fecha }}</span> · 
-                        <strong>{{ m.categoria }}</strong>
-                        {% if m.es_hormiga %}
-                        <span class="badge-hormiga">🐜 Gasto Hormiga (&lt; $10k)</span>
-                        {% endif %}
-                        {% if m.es_compartido %}
-                        <span class="badge-shared">👥 Cuenta dividida con {{ m.amigo }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 1.5rem;">
-                <div class="tx-amount {% if m.tipo == 'gasto' %}gasto{% else %}ingreso{% endif %}">
-                    {% if m.tipo == 'gasto' %}- ${{ m.monto }} COP{% else %}+ ${{ m.monto }} COP{% endif %}
-                </div>
-                <div style="display: flex; gap: 0.35rem;">
-                    <button class="btn btn-secondary btn-sm" title="Editar movimiento" style="padding: 0.3rem 0.6rem;">✏️</button>
-                    <button class="btn btn-secondary btn-sm" title="Eliminar" style="padding: 0.3rem 0.6rem; color: #EF4444;">🗑️</button>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2>Listado de movimientos</h2>
+        <a href="{% url 'registro' %}" class="btn btn-primary">Nuevo registro</a>
     </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Descripcion</th>
+                <th>Categoria</th>
+                <th>Tipo</th>
+                <th>Monto</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in movimientos %}
+            <tr>
+                <td>{{ m.id }}</td>
+                <td>{{ m.fecha }}</td>
+                <td>
+                    {{ m.titulo }}
+                    {% if m.es_hormiga %}<span class="tag">Gasto menor</span>{% endif %}
+                    {% if m.es_compartido %}<span class="tag">Deuda: {{ m.amigo }}</span>{% endif %}
+                </td>
+                <td>{{ m.categoria }}</td>
+                <td>
+                    {% if m.tipo == 'gasto' %}
+                        <span class="text-danger">Gasto</span>
+                    {% else %}
+                        <span class="text-success">Ingreso</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if m.tipo == 'gasto' %}
+                        <span class="text-danger">-${{ m.monto }} COP</span>
+                    {% else %}
+                        <span class="text-success">+${{ m.monto }} COP</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}

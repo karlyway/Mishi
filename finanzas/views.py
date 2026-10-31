@@ -1,6 +1,6 @@
 from django.shortcuts import render
 
-# Datos iniciales simulados para que las pantallas sean totalmente navegables y ricas en datos
+# Datos iniciales para pruebas y navegacion de las pantallas
 DATOS_DEMO = {
     'usuario': {
         'nombre': 'Karla Amaranto',
@@ -12,68 +12,62 @@ DATOS_DEMO = {
     'movimientos': [
         {
             'id': 1,
-            'titulo': 'Almuerzo en cafetería',
-            'categoria': 'Alimentación',
-            'icono': 'utensils',
+            'titulo': 'Almuerzo en cafeteria',
+            'categoria': 'Alimentacion',
             'tipo': 'gasto',
             'monto': 12000,
-            'fecha': 'Hoy, 1:15 p.m.',
+            'fecha': '29/10/2026',
             'es_hormiga': False,
             'es_compartido': False,
         },
         {
             'id': 2,
-            'titulo': 'Café y galletas (Snack)',
-            'categoria': 'Refrigerios y Dulces',
-            'icono': 'coffee',
+            'titulo': 'Cafe y galletas',
+            'categoria': 'Refrigerios',
             'tipo': 'gasto',
             'monto': 4500,
-            'fecha': 'Hoy, 10:30 a.m.',
+            'fecha': '29/10/2026',
             'es_hormiga': True,
             'es_compartido': False,
         },
         {
             'id': 3,
-            'titulo': 'Recarga de pasajes / Transcaribe',
+            'titulo': 'Pasajes de transporte',
             'categoria': 'Transporte',
-            'icono': 'bus',
             'tipo': 'gasto',
             'monto': 15000,
-            'fecha': 'Ayer',
+            'fecha': '28/10/2026',
             'es_hormiga': False,
             'es_compartido': False,
         },
         {
             'id': 4,
-            'titulo': 'Apoyo familiar (Mesada parcial)',
-            'categoria': 'Mesada / Ingreso',
-            'icono': 'wallet',
+            'titulo': 'Mesada quincenal',
+            'categoria': 'Mesada',
             'tipo': 'ingreso',
             'monto': 150000,
-            'fecha': '25 Oct 2026',
+            'fecha': '25/10/2026',
             'es_hormiga': False,
             'es_compartido': False,
         },
         {
             'id': 5,
-            'titulo': 'Salida a cine con amigos',
-            'categoria': 'Ocio y Salidas',
-            'icono': 'film',
+            'titulo': 'Salida a cine',
+            'categoria': 'Ocio',
             'tipo': 'gasto',
             'monto': 22000,
-            'fecha': '24 Oct 2026',
+            'fecha': '24/10/2026',
             'es_hormiga': False,
             'es_compartido': True,
             'amigo': 'Melvis M.',
         },
         {
             'id': 6,
-            'titulo': 'Fotocopias de Guías de Estudio',
-            'categoria': 'Gastos Universitarios',
-            'icono': 'book-open',
+            'titulo': 'Fotocopias de estudio',
+            'categoria': 'Universidad',
             'tipo': 'gasto',
             'monto': 3500,
-            'fecha': '23 Oct 2026',
+            'fecha': '23/10/2026',
             'es_hormiga': True,
             'es_compartido': False,
         },
@@ -81,78 +75,69 @@ DATOS_DEMO = {
     'metas': [
         {
             'id': 1,
-            'nombre': 'Fondo para parciales y fotocopias',
+            'nombre': 'Fotocopias y parciales',
             'objetivo': 60000,
             'acumulado': 45000,
             'porcentaje': 75,
             'categoria': 'Universidad',
-            'icono': 'graduation-cap',
         },
         {
             'id': 2,
-            'nombre': 'Colchón de imprevistos',
+            'nombre': 'Fondo de emergencia',
             'objetivo': 100000,
             'acumulado': 60000,
             'porcentaje': 60,
             'categoria': 'Ahorro',
-            'icono': 'piggy-bank',
         },
         {
             'id': 3,
-            'nombre': 'Salida de fin de semestre',
+            'nombre': 'Salida de semestre',
             'objetivo': 80000,
             'acumulado': 25000,
             'porcentaje': 31,
             'categoria': 'Ocio',
-            'icono': 'sparkles',
         },
     ],
     'prestamos': [
         {
             'id': 1,
-            'persona': 'Harrison B.',
-            'concepto': 'Parte de la pizza compartida',
+            'persona': 'Harrison Bonilla',
+            'concepto': 'Parte de la pizza',
             'monto': 11000,
-            'tipo': 'por_cobrar', # Me debe
+            'tipo': 'Por cobrar',
             'estado': 'Pendiente',
-            'fecha': '26 Oct 2026'
+            'fecha': '26/10/2026'
         },
         {
             'id': 2,
-            'persona': 'Isabel A.',
-            'concepto': 'Impresiones trabajo en grupo',
+            'persona': 'Isabel Alvarez',
+            'concepto': 'Impresiones en grupo',
             'monto': 4000,
-            'tipo': 'por_pagar', # Yo le debo
+            'tipo': 'Por pagar',
             'estado': 'Pendiente',
-            'fecha': '27 Oct 2026'
+            'fecha': '27/10/2026'
         },
         {
             'id': 3,
-            'persona': 'Melvis M.',
-            'concepto': 'Almuerzo en la U',
+            'persona': 'Melvis Morales',
+            'concepto': 'Almuerzo',
             'monto': 12000,
-            'tipo': 'por_cobrar',
+            'tipo': 'Por cobrar',
             'estado': 'Pagado',
-            'fecha': '22 Oct 2026'
+            'fecha': '22/10/2026'
         }
     ]
 }
 
 
 def dashboard_view(request):
-    """Pantalla principal de Mishi con resumen financiero y cálculo de límite diario."""
     saldo = DATOS_DEMO['usuario']['saldo_disponible']
     dias = max(DATOS_DEMO['usuario']['dias_restantes'], 1)
     limite_diario = round(saldo / dias)
     
-    # Gasto de hoy (acumulado)
     gasto_hoy = 16500
     porcentaje_gasto_hoy = min(round((gasto_hoy / limite_diario) * 100), 100) if limite_diario > 0 else 100
-    
-    # Alerta preventiva según RF-05
     alerta_activa = porcentaje_gasto_hoy >= 80
-    
-    # Suma de gastos hormiga
     total_hormiga = sum(m['monto'] for m in DATOS_DEMO['movimientos'] if m.get('es_hormiga') and m['tipo'] == 'gasto')
     
     context = {
@@ -165,25 +150,23 @@ def dashboard_view(request):
         'alerta_activa': alerta_activa,
         'total_hormiga': total_hormiga,
         'ultimos_movimientos': DATOS_DEMO['movimientos'][:4],
-        'metas_destacadas': DATOS_DEMO['metas'][:2],
         'pestana_activa': 'dashboard'
     }
     return render(request, 'dashboard.html', context)
 
 
 def registro_view(request):
-    """Pantalla para registrar rápidamente ingresos o gastos."""
     saldo = DATOS_DEMO['usuario']['saldo_disponible']
     dias = max(DATOS_DEMO['usuario']['dias_restantes'], 1)
     limite_diario = round(saldo / dias)
     
     categorias = [
-        {'id': 'alimentacion', 'nombre': 'Alimentación', 'icono': 'utensils'},
-        {'id': 'ocio', 'nombre': 'Ocio y Salidas', 'icono': 'film'},
-        {'id': 'transporte', 'nombre': 'Transporte', 'icono': 'bus'},
-        {'id': 'refrigerios', 'nombre': 'Refrigerios, Dulces y Bebidas', 'icono': 'coffee'},
-        {'id': 'universidad', 'nombre': 'Gastos Universitarios', 'icono': 'book-open'},
-        {'id': 'servicios', 'nombre': 'Servicios y Recargas', 'icono': 'wifi'},
+        'Alimentacion',
+        'Transporte',
+        'Ocio y Salidas',
+        'Refrigerios',
+        'Gastos Universitarios',
+        'Otros'
     ]
     
     context = {
@@ -197,27 +180,21 @@ def registro_view(request):
 
 
 def historial_view(request):
-    """Pantalla con el historial completo de movimientos, filtros y gastos hormiga."""
     movimientos = DATOS_DEMO['movimientos']
-    
     total_ingresos = sum(m['monto'] for m in movimientos if m['tipo'] == 'ingreso')
     total_gastos = sum(m['monto'] for m in movimientos if m['tipo'] == 'gasto')
-    total_hormiga = sum(m['monto'] for m in movimientos if m.get('es_hormiga') and m['tipo'] == 'gasto')
-    conteo_hormiga = len([m for m in movimientos if m.get('es_hormiga')])
     
     context = {
         'movimientos': movimientos,
         'total_ingresos': total_ingresos,
         'total_gastos': total_gastos,
-        'total_hormiga': total_hormiga,
-        'conteo_hormiga': conteo_hormiga,
+        'balance': total_ingresos - total_gastos,
         'pestana_activa': 'historial'
     }
     return render(request, 'historial.html', context)
 
 
 def metas_view(request):
-    """Pantalla de metas de ahorro y módulo social de préstamos."""
     context = {
         'metas': DATOS_DEMO['metas'],
         'prestamos': DATOS_DEMO['prestamos'],

@@ -7,3 +7,4 @@ urlpatterns = [
     path('historial/', views.historial_view, name='historial'),
     path('metas/', views.metas_view, name='metas'),
 ]
+

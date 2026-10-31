@@ -10,25 +10,24 @@ class MishiViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'dashboard.html')
         self.assertTemplateUsed(response, 'base.html')
-        self.assertContains(response, 'mishi')
-        self.assertContains(response, 'Límite diario recomendado')
+        self.assertContains(response, 'Mishi')
+        self.assertContains(response, 'Limite diario recomendado')
 
     def test_registro_view(self):
         response = self.client.get(reverse('registro'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'registro.html')
-        self.assertContains(response, 'Registrar Movimiento')
-        self.assertContains(response, 'Alimentación')
+        self.assertContains(response, 'Registrar movimiento')
+        self.assertContains(response, 'Alimentacion')
 
     def test_historial_view(self):
         response = self.client.get(reverse('historial'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'historial.html')
-        self.assertContains(response, 'Historial Financiero')
-        self.assertContains(response, 'GASTOS HORMIGA')
+        self.assertContains(response, 'Historial de transacciones')
 
     def test_metas_view(self):
         response = self.client.get(reverse('metas'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'metas.html')
-        self.assertContains(response, 'Metas de Ahorro y Préstamos')
+        self.assertContains(response, 'Metas de ahorro')
