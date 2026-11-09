@@ -7,15 +7,20 @@
     <h2 style="margin-bottom: 8px;">Iniciar sesion</h2>
     <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Ingresa a tu cuenta de estudiante en Mishi</p>
 
-    <form action="{% url 'dashboard' %}" method="GET">
+    <form action="{% url 'login' %}" method="POST">
+    {% csrf_token %}
+
+    {% if error %}
+        <p style="color: red; margin-bottom: 15px;">{{ error }}</p>
+    {% endif %}
         <div class="form-group">
             <label for="usuario">Correo electronico o usuario</label>
-            <input type="text" id="usuario" name="usuario" class="form-control" placeholder="usuario@universidad.edu.co" required value="estudiante.demo">
+            <input type="text" id="usuario" name="usuario" class="form-control" placeholder="usuario@universidad.edu.co" required value="">
         </div>
 
         <div class="form-group">
             <label for="password">Contrasena</label>
-            <input type="password" id="password" name="password" class="form-control" placeholder="********" required value="123456">
+            <input type="password" id="password" name="password" class="form-control" placeholder="********" required value="">
         </div>
 
         <div style="margin-top: 20px;">

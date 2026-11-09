@@ -7,7 +7,15 @@
     <h2 style="margin-bottom: 8px;">Crear cuenta de estudiante</h2>
     <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Registrate para comenzar a organizar tu presupuesto universitario</p>
 
-    <form action="{% url 'dashboard' %}" method="GET">
+    <form action="{% url 'registro_usuario' %}" method="POST">
+    {% csrf_token %}
+
+    {% if error %}
+        <p style="color: red; margin-bottom: 15px;">{{ error }}</p>
+    {% endif %}
+
+    <div class="form-group">
+        <label for="nombre">Nombre completo</label>
         <div class="form-group">
             <label for="nombre">Nombre completo</label>
             <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Ej: Camila Perez" required>

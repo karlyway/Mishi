@@ -1,3 +1,4 @@
+
 {% extends 'base.html' %}
 
 {% block title %}Registrar Movimiento - Mishi{% endblock %}
@@ -5,98 +6,60 @@
 {% block content %}
 <div class="page-title">
     <h1>Registrar movimiento</h1>
-    <p>Ingresa los datos del gasto o ingreso para actualizar tu saldo</p>
+    <p>Ingresa los datos del gasto o ingreso.</p>
 </div>
 
 <div class="card" style="max-width: 600px; margin: 0 auto;">
-    <form action="{% url 'dashboard' %}" method="GET">
+    <form action="{% url 'movimiento' %}" method="POST">
+        {% csrf_token %}
+
+        {% if error %}
+            <p style="color: red;">{{ error }}</p>
+        {% endif %}
+
         <div class="form-group">
-            <label for="tipo">Tipo de transaccion</label>
-            <select id="tipo" name="tipo" class="form-control" onchange="actualizarImpacto()">
-                <option value="gasto" selected>Gasto</option>
+            <label for="tipo">Tipo de transacción</label>
+            <select id="tipo" name="tipo" class="form-control" required>
+                <option value="gasto">Gasto</option>
                 <option value="ingreso">Ingreso</option>
             </select>
         </div>
 
         <div class="form-group">
             <label for="monto">Monto (COP)</label>
-            <input type="number" id="monto" name="monto" class="form-control" placeholder="Ej: 10000" min="100" step="100" required oninput="actualizarImpacto()">
+            <input type="number" id="monto" name="monto"
+                   class="form-control" min="100" step="100" required>
         </div>
 
         <div class="form-group">
-            <label for="categoria">Categoria</label>
+            <label for="categoria">Categoría</label>
             <select id="categoria" name="categoria" class="form-control" required>
                 {% for cat in categorias %}
-                <option value="{{ cat }}">{{ cat }}</option>
+                    <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
                 {% endfor %}
             </select>
         </div>
 
         <div class="form-group">
-            <label for="descripcion">Descripcion o detalle</label>
-            <input type="text" id="descripcion" name="descripcion" class="form-control" placeholder="Ej: Almuerzo, transporte, copias">
+            <label for="descripcion">Descripción</label>
+            <input type="text" id="descripcion" name="descripcion"
+                   class="form-control" placeholder="Ej: Almuerzo, transporte">
         </div>
 
         <div class="form-group">
             <label for="fecha">Fecha</label>
-            <input type="date" id="fecha" name="fecha" class="form-control" value="2026-10-29" required>
+            <input type="date" id="fecha" name="fecha"
+                   class="form-control" value="{% now 'Y-m-d' %}" required>
         </div>
 
-        <div class="form-group">
-            <div class="form-check">
-                <input type="checkbox" id="checkCompartido" onchange="toggleCompartido(this)">
-                <label for="checkCompartido" style="margin-bottom: 0; font-weight: normal;">Es un gasto compartido o prestamo entre companeros</label>
-            </div>
-            <div id="seccionCompartido" style="display: none; margin-top: 10px;">
-                <input type="text" placeholder="Nombre del companero" class="form-control" style="margin-bottom: 8px;">
-                <input type="number" placeholder="Monto correspondiente" class="form-control">
-            </div>
-        </div>
-
-        <div id="impactoCalculo" class="alert alert-warning" style="display: none; margin-top: 15px;"></div>
-
-        <div style="margin-top: 20px; display: flex; gap: 10px;">
-            <button type="submit" class="btn btn-primary">Guardar movimiento</button>
-            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn btn-primary">
+                Guardar movimiento
+            </button>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                Cancelar
+            </a>
         </div>
     </form>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    const saldoActual = {{ saldo }};
-    const diasRestantes = {{ dias_restantes }};
-
-    // Muestra u oculta los campos para gastos compartidos
-    function toggleCompartido(checkbox) {
-        document.getElementById('seccionCompartido').style.display = checkbox.checked ? 'block' : 'none';
-    }
-
-    // Calcula en pantalla como cambiaria el limite diario con este monto
-    function actualizarImpacto() {
-        const monto = parseFloat(document.getElementById('monto').value) || 0;
-        const tipo = document.getElementById('tipo').value;
-        const caja = document.getElementById('impactoCalculo');
-
-        if (monto <= 0) {
-            caja.style.display = 'none';
-            return;
-        }
-
-        caja.style.display = 'block';
-        let nuevoSaldo = (tipo === 'gasto') ? (saldoActual - monto) : (saldoActual + monto);
-        let nuevoLimite = Math.max(0, Math.round(nuevoSaldo / diasRestantes));
-
-        if (tipo === 'gasto') {
-            if (nuevoSaldo < 0) {
-                caja.innerHTML = '<strong>Atencion:</strong> Este gasto excede tu saldo disponible actual ($' + saldoActual.toLocaleString() + ' COP).';
-            } else {
-                caja.innerHTML = 'Nuevo saldo estimado: <strong>$' + nuevoSaldo.toLocaleString() + ' COP</strong> | Nuevo limite diario: <strong>$' + nuevoLimite.toLocaleString() + ' COP/dia</strong>.';
-            }
-        } else {
-            caja.innerHTML = 'Nuevo saldo estimado: <strong>$' + nuevoSaldo.toLocaleString() + ' COP</strong> | Nuevo limite diario: <strong>$' + nuevoLimite.toLocaleString() + ' COP/dia</strong>.';
-        }
-    }
-</script>
 {% endblock %}

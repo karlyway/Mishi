@@ -1,35 +1,89 @@
+ 
 {% extends 'base.html' %}
 
-{% block title %}Metas y Prestamos - Mishi{% endblock %}
+{% block title %}Metas y Préstamos - Mishi{% endblock %}
 
 {% block content %}
 <div class="page-title">
-    <h1>Metas de ahorro y control de prestamos</h1>
-    <p>Seguimiento de objetivos financieros y cuentas pendientes entre companeros</p>
+    <h1>Metas de ahorro y control de préstamos</h1>
+    <p>Seguimiento de objetivos financieros y cuentas pendientes.</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <p style="color: red;">{{ message }}</p>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <h2>Crear meta de ahorro</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear_meta">
+
+        <div class="form-group">
+            <label>Nombre de la meta</label>
+            <input type="text" name="nombre" class="form-control"
+                   placeholder="Ej: Comprar computador" required>
+        </div>
+
+        <div class="form-group">
+            <label>Categoría</label>
+            <input type="text" name="categoria" class="form-control"
+                   placeholder="Ej: Estudios, tecnología">
+        </div>
+
+        <div class="form-group">
+            <label>Monto objetivo (COP)</label>
+            <input type="number" name="objetivo" class="form-control"
+                   min="1" step="100" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Guardar meta</button>
+    </form>
 </div>
 
 <div class="card">
-    <h2>Metas de ahorro estudiantiles</h2>
-    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Objetivos para parciales, imprevistos y proyectos academicos</p>
+    <h2>Mis metas de ahorro</h2>
 
     <table class="table">
         <thead>
             <tr>
                 <th>Meta</th>
-                <th>Categoria</th>
-                <th>Monto actual</th>
+                <th>Categoría</th>
+                <th>Acumulado</th>
                 <th>Objetivo</th>
                 <th>Progreso</th>
+                <th>Agregar ahorro</th>
             </tr>
         </thead>
         <tbody>
             {% for meta in metas %}
             <tr>
-                <td><strong>{{ meta.nombre }}</strong></td>
+                <td>{{ meta.nombre }}</td>
                 <td>{{ meta.categoria }}</td>
                 <td>${{ meta.acumulado }} COP</td>
                 <td>${{ meta.objetivo }} COP</td>
-                <td>{{ meta.porcentaje }}%</td>
+                <td>
+                    {% widthratio meta.acumulado meta.objetivo 100 %}%
+                </td>
+                <td>
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="actualizar_meta">
+        <input type="hidden" name="meta_id" value="{{ meta.idMeta }}">
+
+        <input type="number" name="ahorro" min="1"
+               placeholder="Cantidad" required>
+
+        <button type="submit">Agregar ahorro</button>
+    </form>
+</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">Todavía no tienes metas registradas.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -37,13 +91,48 @@
 </div>
 
 <div class="card">
-    <h2>Control de prestamos y cuentas compartidas</h2>
-    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Registro de deudas para evitar olvidos en gastos de estudio y salidas</p>
+    <h2>Registrar préstamo</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear_prestamo">
+
+        <div class="form-group">
+            <label>Nombre del compañero</label>
+            <input type="text" name="deudor" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label>Concepto</label>
+            <input type="text" name="concepto" class="form-control"
+                   placeholder="Ej: Dinero para almuerzo" required>
+        </div>
+
+        <div class="form-group">
+            <label>Tipo</label>
+            <select name="tipo" class="form-control">
+                <option value="Por cobrar">Me deben</option>
+                <option value="Por pagar">Debo</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Monto (COP)</label>
+            <input type="number" name="monto" class="form-control"
+                   min="1" step="100" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Guardar préstamo</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Mis préstamos</h2>
 
     <table class="table">
         <thead>
             <tr>
-                <th>Companero</th>
+                <th>Compañero</th>
                 <th>Concepto</th>
                 <th>Fecha</th>
                 <th>Tipo</th>
@@ -54,12 +143,30 @@
         <tbody>
             {% for p in prestamos %}
             <tr>
-                <td>{{ p.persona }}</td>
+                <td>{{ p.deudor }}</td>
                 <td>{{ p.concepto }}</td>
                 <td>{{ p.fecha }}</td>
                 <td>{{ p.tipo }}</td>
-                <td><strong>${{ p.monto }} COP</strong></td>
-                <td><span class="tag">{{ p.estado }}</span></td>
+                <td>${{ p.monto }} COP</td>
+                <td>
+    {{ p.estado }}
+
+    {% if p.estado != 'Pagado' %}
+        <form method="POST" style="margin-top: 5px;">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="pagar_prestamo">
+            <input type="hidden" name="prestamo_id" value="{{ p.idPrestamo }}">
+
+            <button type="submit" class="btn btn-primary">
+                Marcar como pagado
+            </button>
+        </form>
+    {% endif %}
+</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">Todavía no tienes préstamos registrados.</td>
             </tr>
             {% endfor %}
         </tbody>

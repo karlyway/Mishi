@@ -2,15 +2,40 @@ from decimal import Decimal
 
 from django.db import models
 
+from django.conf import settings
 
 class Usuario(models.Model):
     idUsuario = models.AutoField(primary_key=True, db_column='idUsuario')
+
+    cuenta = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='perfil_mishi'
+    )
+
     nombre = models.CharField(max_length=100)
-    mesada = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    universidad = models.CharField(
+        max_length=150,
+        blank=True,
+        default=''
+    )
+
+    frecuencia = models.CharField(
+        max_length=20,
+        default='quincenal'
+    )
+
+    mesada = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
 
     class Meta:
         db_table = 'Usuario'
-
 
 class Presupuesto(models.Model):
     idPresupuesto = models.AutoField(primary_key=True, db_column='idPresupuesto')
@@ -29,11 +54,9 @@ class Presupuesto(models.Model):
 
 class MetaAhorro(models.Model):
     idMeta = models.AutoField(primary_key=True, db_column='idMeta')
-    idUsuario = models.ForeignKey(
-        Usuario,
-        on_delete=models.CASCADE,
-        db_column='idUsuario',
-    )
+    idUsuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='idUsuario')
+    nombre = models.CharField(max_length=100, default='Mi meta')
+    categoria = models.CharField(max_length=100, default='General')
     objetivo = models.DecimalField(max_digits=10, decimal_places=2)
     acumulado = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
@@ -51,6 +74,12 @@ class Categoria(models.Model):
 
 class Transaccion(models.Model):
     idTransaccion = models.AutoField(primary_key=True, db_column='idTransaccion')
+
+    descripcion = models.CharField(
+        max_length=255,
+        blank=True,
+        default=''
+    )
     idUsuario = models.ForeignKey(
         Usuario,
         on_delete=models.CASCADE,
@@ -71,14 +100,13 @@ class Transaccion(models.Model):
 
 class Prestamo(models.Model):
     idPrestamo = models.AutoField(primary_key=True, db_column='idPrestamo')
-    idUsuario = models.ForeignKey(
-        Usuario,
-        on_delete=models.CASCADE,
-        db_column='idUsuario',
-    )
+    idUsuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='idUsuario')
     deudor = models.CharField(max_length=100)
+    concepto = models.CharField(max_length=255, default='')
+    fecha = models.DateField(auto_now_add=True)
+    tipo = models.CharField(max_length=50, default='Por cobrar')
     monto = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=50)
+    estado = models.CharField(max_length=50, default='Pendiente')
 
     class Meta:
         db_table = 'Prestamo'
