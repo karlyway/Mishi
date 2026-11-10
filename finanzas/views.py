@@ -1,21 +1,23 @@
+
 from django.shortcuts import render, redirect
-
-
 from decimal import Decimal, InvalidOperation
+from datetime import date, timedelta
 from django.contrib.auth import get_user_model, login, authenticate
 from django.db import transaction
 from django.contrib import messages
-from .models import Usuario, Transaccion, Categoria, MetaAhorro, Prestamo
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.utils import timezone
 
-# Pagina de presentacion publica
+from .models import Usuario, Transaccion, Categoria, MetaAhorro, Prestamo
+
+
+# Página de presentación pública
 def landing_view(request):
     return render(request, 'landing.html')
 
 
-# Formulario de acceso de usuarios
+# Acceso de usuarios
 def login_view(request):
     if request.method == 'POST':
         correo = request.POST.get('usuario', '').strip().lower()
@@ -38,7 +40,7 @@ def login_view(request):
     return render(request, 'login.html')
 
 
-# Formulario para registro de nuevos estudiantes
+# Registro de usuarios
 def registro_usuario_view(request):
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
@@ -57,8 +59,10 @@ def registro_usuario_view(request):
 
         try:
             mesada = Decimal(mesada_texto or '0')
-            if mesada < 0:
+
+            if not mesada.is_finite() or mesada < 0:
                 raise InvalidOperation
+
         except InvalidOperation:
             return render(request, 'registro_usuario.html', {
                 'error': 'Ingresa una mesada válida.'
@@ -96,9 +100,22 @@ def registro_usuario_view(request):
     return render(request, 'registro_usuario.html')
 
 
-# Panel principal: calculo del limite diario segun saldo y dias restantes
+# Calcular días según frecuencia de ingreso
+def calcular_dias_frecuencia(frecuencia):
+    dias_por_frecuencia = {
+        'diario': 1,
+        'semanal': 7,
+        'quincenal': 15,
+        'mensual': 30,
+    }
+
+    return dias_por_frecuencia.get(frecuencia, 15)
+
+
+# Panel principal
 @login_required
 def dashboard_view(request):
+
     perfil = Usuario.objects.filter(cuenta=request.user).first()
 
     if perfil is None:
@@ -106,7 +123,9 @@ def dashboard_view(request):
 
     movimientos = Transaccion.objects.filter(
         idUsuario=perfil
-    ).select_related('idCategoria').order_by('-fecha', '-idTransaccion')
+    ).select_related('idCategoria').order_by(
+        '-fecha', '-idTransaccion'
+    )
 
     ingresos = movimientos.filter(
         tipo__iexact='ingreso'
@@ -118,20 +137,28 @@ def dashboard_view(request):
 
     saldo = perfil.mesada + ingresos - gastos
 
-    dias = 15 if perfil.frecuencia == 'quincenal' else 30
+    dias = calcular_dias_frecuencia(perfil.frecuencia)
     limite_diario = round(saldo / dias) if saldo > 0 else 0
 
     hoy = timezone.localdate()
 
+    fecha_inicio_periodo = hoy - timedelta(days=dias - 1)
+
     gasto_hoy = movimientos.filter(
-        tipo__iexact='gasto',
-        fecha=hoy
-    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+    tipo__iexact='gasto',
+    fecha__gte=fecha_inicio_periodo,
+    fecha__lte=hoy
+).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+    porcentaje_gasto_hoy = (
+        round(float(gasto_hoy / limite_diario) * 100, 2)
+        if limite_diario > 0 else 0
+        )
 
-    porcentaje_gasto_hoy = min(
-        round((gasto_hoy / limite_diario) * 100), 100
-    ) if limite_diario > 0 else 100
+    limite_superado = (
+    gasto_hoy >= limite_diario and limite_diario > 0
+)
 
+    # Últimos movimientos
     ultimos_movimientos = []
 
     for movimiento in movimientos[:4]:
@@ -145,6 +172,49 @@ def dashboard_view(request):
             'es_compartido': False,
         })
 
+    # Seleccionar periodo de estadísticas
+    periodo = request.GET.get('periodo', 'semanal')
+
+    if periodo not in ['semanal', 'mensual']:
+        periodo = 'semanal'
+
+    if periodo == 'semanal':
+        fecha_inicio = hoy - timedelta(days=hoy.weekday())
+    else:
+        fecha_inicio = hoy.replace(day=1)
+
+    movimientos_periodo = movimientos.filter(
+        fecha__gte=fecha_inicio,
+        fecha__lte=hoy
+    )
+
+    ingresos_periodo = movimientos_periodo.filter(
+        tipo__iexact='ingreso'
+    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+
+    gastos_periodo = movimientos_periodo.filter(
+        tipo__iexact='gasto'
+    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+
+    # Gastos por categoría
+    gastos_categorias = movimientos_periodo.filter(
+        tipo__iexact='gasto'
+    ).values(
+        'idCategoria__nombre'
+    ).annotate(
+        total=Sum('monto')
+    ).order_by('idCategoria__nombre')
+
+    etiquetas_categorias = [
+        item['idCategoria__nombre']
+        for item in gastos_categorias
+    ]
+
+    valores_categorias = [
+        float(item['total'])
+        for item in gastos_categorias
+    ]
+
     context = {
         'usuario': perfil,
         'saldo': saldo,
@@ -152,21 +222,24 @@ def dashboard_view(request):
         'limite_diario': limite_diario,
         'gasto_hoy': gasto_hoy,
         'porcentaje_gasto_hoy': porcentaje_gasto_hoy,
-        'alerta_activa': porcentaje_gasto_hoy >= 80,
+        'alerta_activa': True,
+        'limite_superado': limite_superado,
         'total_hormiga': 0,
         'ultimos_movimientos': ultimos_movimientos,
+        'periodo': periodo,
+        'ingresos_periodo': float(ingresos_periodo),
+        'gastos_periodo': float(gastos_periodo),
+        'etiquetas_categorias': etiquetas_categorias,
+        'valores_categorias': valores_categorias,
         'pestana_activa': 'dashboard',
     }
 
     return render(request, 'dashboard.html', context)
 
 
-# Vista para agregar un movimiento (ingreso o gasto)
+# Registrar ingresos y gastos
 @login_required
-
-
 def movimiento_view(request):
-    from datetime import date
 
     perfil = Usuario.objects.filter(cuenta=request.user).first()
 
@@ -175,16 +248,17 @@ def movimiento_view(request):
 
     movimientos = Transaccion.objects.filter(idUsuario=perfil)
 
-    ingresos = movimientos.filter(tipo__iexact='ingreso').aggregate(
-        total=Sum('monto')
-    )['total'] or Decimal('0.00')
+    ingresos = movimientos.filter(
+        tipo__iexact='ingreso'
+    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
-    gastos = movimientos.filter(tipo__iexact='gasto').aggregate(
-        total=Sum('monto')
-    )['total'] or Decimal('0.00')
+    gastos = movimientos.filter(
+        tipo__iexact='gasto'
+    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
     saldo = perfil.mesada + ingresos - gastos
-    dias = 15 if perfil.frecuencia == 'quincenal' else 30
+
+    dias = calcular_dias_frecuencia(perfil.frecuencia)
     limite_diario = round(saldo / dias) if saldo > 0 else 0
 
     categorias = Categoria.objects.all()
@@ -197,11 +271,9 @@ def movimiento_view(request):
         fecha = request.POST.get('fecha', '').strip()
 
         try:
-            # Validar tipo de movimiento
             if tipo not in ['gasto', 'ingreso']:
                 raise ValueError
 
-            # Validar monto
             monto = Decimal(monto_texto)
 
             if not monto.is_finite() or monto < 100:
@@ -210,18 +282,15 @@ def movimiento_view(request):
             if monto.as_tuple().exponent < -2:
                 raise ValueError
 
-            # Validar categoría
             categoria = Categoria.objects.get(
                 idCategoria=categoria_id
             )
 
-            # Validar fecha
             fecha_movimiento = date.fromisoformat(fecha)
 
             if fecha_movimiento > timezone.localdate():
                 raise ValueError
 
-            # Registrar movimiento
             Transaccion.objects.create(
                 idUsuario=perfil,
                 idCategoria=categoria,
@@ -265,9 +334,11 @@ def movimiento_view(request):
         'pestana_activa': 'movimiento'
     })
 
-# Historial de gastos e ingresos registrados
+
+# Historial de ingresos y gastos
 @login_required
 def historial_view(request):
+
     perfil = Usuario.objects.filter(cuenta=request.user).first()
 
     if perfil is None:
@@ -275,10 +346,48 @@ def historial_view(request):
 
     movimientos_db = Transaccion.objects.filter(
         idUsuario=perfil
-    ).select_related('idCategoria').order_by('-fecha', '-idTransaccion')
+    ).select_related('idCategoria').order_by(
+        '-fecha', '-idTransaccion'
+    )
+
+    fecha_inicio = request.GET.get('fecha_inicio', '').strip()
+    fecha_fin = request.GET.get('fecha_fin', '').strip()
+    categoria_id = request.GET.get('categoria', '').strip()
+
+    error_filtros = ''
+
+    try:
+        if fecha_inicio:
+            inicio = date.fromisoformat(fecha_inicio)
+            movimientos_db = movimientos_db.filter(fecha__gte=inicio)
+
+        if fecha_fin:
+            fin = date.fromisoformat(fecha_fin)
+            movimientos_db = movimientos_db.filter(fecha__lte=fin)
+
+        if fecha_inicio and fecha_fin:
+            if inicio > fin:
+                raise ValueError
+
+    except ValueError:
+        error_filtros = 'Verifica las fechas seleccionadas.'
+
+        movimientos_db = Transaccion.objects.filter(
+            idUsuario=perfil
+        ).select_related('idCategoria').order_by(
+            '-fecha', '-idTransaccion'
+        )
+
+    if categoria_id:
+        if Categoria.objects.filter(idCategoria=categoria_id).exists():
+            movimientos_db = movimientos_db.filter(
+                idCategoria_id=categoria_id
+            )
+        else:
+            error_filtros = 'La categoría seleccionada no es válida.'
 
     total_ingresos = movimientos_db.filter(
-        tipo__iexact='ingreso'  
+        tipo__iexact='ingreso'
     ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
     total_gastos = movimientos_db.filter(
@@ -304,13 +413,21 @@ def historial_view(request):
         'total_ingresos': total_ingresos,
         'total_gastos': total_gastos,
         'balance': total_ingresos - total_gastos,
+        'categorias': Categoria.objects.all().order_by('nombre'),
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+        'categoria_seleccionada': categoria_id,
+        'error_filtros': error_filtros,
         'pestana_activa': 'historial'
     }
 
     return render(request, 'historial.html', context)
 
+
+# Editar movimiento
 @login_required
 def editar_movimiento_view(request, movimiento_id):
+
     perfil = Usuario.objects.filter(cuenta=request.user).first()
 
     if perfil is None:
@@ -334,7 +451,17 @@ def editar_movimiento_view(request, movimiento_id):
             descripcion = request.POST.get('descripcion', '').strip()
             fecha = request.POST.get('fecha')
 
-            if tipo not in ['gasto', 'ingreso'] or monto < 100 or not fecha:
+            if (
+                tipo not in ['gasto', 'ingreso']
+                or not monto.is_finite()
+                or monto < 100
+                or not fecha
+            ):
+                raise ValueError
+
+            fecha_movimiento = date.fromisoformat(fecha)
+
+            if fecha_movimiento > timezone.localdate():
                 raise ValueError
 
             categoria = Categoria.objects.get(
@@ -345,10 +472,13 @@ def editar_movimiento_view(request, movimiento_id):
             movimiento.monto = monto
             movimiento.idCategoria = categoria
             movimiento.descripcion = descripcion
-            movimiento.fecha = fecha
+            movimiento.fecha = fecha_movimiento
             movimiento.save()
 
-            messages.success(request, 'Movimiento actualizado correctamente.')
+            messages.success(
+                request,
+                'Movimiento actualizado correctamente.'
+            )
 
             return redirect('historial')
 
@@ -358,23 +488,24 @@ def editar_movimiento_view(request, movimiento_id):
             TypeError,
             Categoria.DoesNotExist
         ):
-            error = 'Verifica los datos ingresados.'
-
-
-        return render(request, 'editar_movimiento.html', {
-            'movimiento': movimiento,
-            'categorias': categorias,
-            'error': error,
-            'pestana_activa': 'historial'
-        })
+            return render(request, 'editar_movimiento.html', {
+                'movimiento': movimiento,
+                'categorias': categorias,
+                'error': 'Verifica los datos ingresados.',
+                'pestana_activa': 'historial'
+            })
 
     return render(request, 'editar_movimiento.html', {
         'movimiento': movimiento,
         'categorias': categorias,
         'pestana_activa': 'historial'
     })
+
+
+# Eliminar movimiento
 @login_required
 def eliminar_movimiento_view(request, movimiento_id):
+
     perfil = Usuario.objects.filter(cuenta=request.user).first()
 
     if perfil is None:
@@ -388,20 +519,23 @@ def eliminar_movimiento_view(request, movimiento_id):
 
         if movimiento.exists():
             movimiento.delete()
-            messages.success(request, 'Movimiento eliminado correctamente.')
+            messages.success(
+                request,
+                'Movimiento eliminado correctamente.'
+            )
         else:
-            messages.error(request, 'No se encontró el movimiento.')
+            messages.error(
+                request,
+                'No se encontró el movimiento.'
+            )
 
     return redirect('historial')
-# Visualizacion de metas de ahorro y deudas pendientes
-@login_required
-@login_required
 
-@login_required
 
+# Metas de ahorro y préstamos
 @login_required
-
 def metas_view(request):
+
     perfil = Usuario.objects.filter(cuenta=request.user).first()
 
     if perfil is None:
@@ -416,7 +550,7 @@ def metas_view(request):
                 categoria = request.POST.get('categoria', '').strip()
                 objetivo = Decimal(request.POST.get('objetivo', '0'))
 
-                if not nombre or objetivo <= 0:
+                if not nombre or not objetivo.is_finite() or objetivo <= 0:
                     raise ValueError
 
                 MetaAhorro.objects.create(
@@ -435,7 +569,7 @@ def metas_view(request):
                 meta_id = request.POST.get('meta_id')
                 ahorro = Decimal(request.POST.get('ahorro', '0'))
 
-                if ahorro <= 0:
+                if not ahorro.is_finite() or ahorro <= 0:
                     raise ValueError
 
                 meta = MetaAhorro.objects.get(
@@ -457,7 +591,12 @@ def metas_view(request):
                 tipo = request.POST.get('tipo', 'Por cobrar')
                 monto = Decimal(request.POST.get('monto', '0'))
 
-                if not deudor or not concepto or monto <= 0:
+                if (
+                    not deudor
+                    or not concepto
+                    or not monto.is_finite()
+                    or monto <= 0
+                ):
                     raise ValueError
 
                 Prestamo.objects.create(

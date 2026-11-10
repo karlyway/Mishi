@@ -27,6 +27,53 @@
 </div>
 
 <div class="card">
+    <h2>Filtrar movimientos</h2>
+
+    <form method="GET" action="{% url 'historial' %}">
+        <div class="grid-3">
+            <div class="form-group">
+                <label for="fecha_inicio">Desde:</label>
+                <input type="date" id="fecha_inicio"
+                       name="fecha_inicio" class="form-control"
+                       value="{{ fecha_inicio }}">
+            </div>
+
+            <div class="form-group">
+                <label for="fecha_fin">Hasta:</label>
+                <input type="date" id="fecha_fin"
+                       name="fecha_fin" class="form-control"
+                       value="{{ fecha_fin }}">
+            </div>
+
+            <div class="form-group">
+                <label for="categoria">Categoría:</label>
+                <select id="categoria" name="categoria" class="form-control">
+                    <option value="">Todas las categorías</option>
+                    {% for cat in categorias %}
+                        <option value="{{ cat.idCategoria }}"
+                            {% if categoria_seleccionada == cat.idCategoria|stringformat:"s" %}selected{% endif %}>
+                            {{ cat.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        {% if error_filtros %}
+            <p style="color: red;">{{ error_filtros }}</p>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary">
+            Aplicar filtros
+        </button>
+
+        <a href="{% url 'historial' %}" class="btn btn-secondary">
+            Limpiar filtros
+        </a>
+    </form>
+</div>
+
+<div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h2>Listado de movimientos</h2>
         <a href="{% url 'movimiento' %}" class="btn btn-primary">Nuevo registro</a>

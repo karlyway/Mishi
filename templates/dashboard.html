@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Inicio - Mishi{% endblock %}
 
@@ -8,10 +9,22 @@
     <p>Estudiante: {{ usuario.nombre }} | {{ usuario.universidad }}</p>
 </div>
 
+
 {% if alerta_activa %}
-<div class="alert alert-warning">
-    <strong>Aviso preventivo:</strong> Has consumido el {{ porcentaje_gasto_hoy }}% de tu limite diario recomendado (${{ gasto_hoy }} COP de ${{ limite_diario }} COP). Restan {{ dias_restantes }} dias para tu proximo ingreso.
-</div>
+    {% if limite_superado %}
+        <div class="alert alert-danger">
+            <strong>¡Límite diario superado!</strong>
+            Has gastado el {{ porcentaje_gasto_hoy }}% de tu límite diario
+            (${{ gasto_hoy }} COP de ${{ limite_diario }} COP).
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            <strong>Aviso preventivo:</strong>
+            Has consumido el {{ porcentaje_gasto_hoy }}% de tu límite diario
+            (${{ gasto_hoy }} COP de ${{ limite_diario }} COP).
+            Restan {{ dias_restantes }} días para tu próximo ingreso.
+        </div>
+    {% endif %}
 {% endif %}
 
 <div class="grid-3">
@@ -33,6 +46,33 @@
         <div class="metric-note">Gastos menores acumulados: ${{ total_hormiga }} COP</div>
     </div>
 </div>
+
+<div class="card">
+    <h2>Estadísticas financieras</h2>
+
+    <form method="GET" action="{% url 'dashboard' %}" style="margin-bottom: 20px;">
+        <label for="periodo">Consultar periodo:</label>
+        <select name="periodo" id="periodo" class="form-control" onchange="this.form.submit()">
+            <option value="semanal" {% if periodo == 'semanal' %}selected{% endif %}>Esta semana</option>
+            <option value="mensual" {% if periodo == 'mensual' %}selected{% endif %}>Este mes</option>
+        </select>
+    </form>
+
+    <h3>Ingresos y gastos</h3>
+    <div style="position: relative; height: 280px; margin-bottom: 30px;">
+        <canvas id="graficaIngresosGastos"></canvas>
+    </div>
+
+    <h3>Gastos por categoría</h3>
+    <div style="position: relative; height: 280px;">
+        <canvas id="graficaCategorias"></canvas>
+    </div>
+</div>
+
+{{ ingresos_periodo|json_script:"datos-ingresos" }}
+{{ gastos_periodo|json_script:"datos-gastos" }}
+{{ etiquetas_categorias|json_script:"etiquetas-categorias" }}
+{{ valores_categorias|json_script:"valores-categorias" }}
 
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -78,8 +118,80 @@
             {% endfor %}
         </tbody>
     </table>
+
     <div style="margin-top: 15px;">
         <a href="{% url 'historial' %}">Ver historial completo</a>
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const ingresos = JSON.parse(
+        document.getElementById('datos-ingresos').textContent
+    );
+
+    const gastos = JSON.parse(
+        document.getElementById('datos-gastos').textContent
+    );
+
+    const etiquetas = JSON.parse(
+        document.getElementById('etiquetas-categorias').textContent
+    );
+
+    const valores = JSON.parse(
+        document.getElementById('valores-categorias').textContent
+    );
+
+    new Chart(document.getElementById('graficaIngresosGastos'), {
+        type: 'bar',
+        data: {
+            labels: ['Ingresos', 'Gastos'],
+            datasets: [{
+                label: 'Monto en COP',
+                data: [ingresos, gastos],
+                backgroundColor: ['#22C55E', '#EF4444']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('graficaCategorias'), {
+        type: 'doughnut',
+        data: {
+            labels: etiquetas,
+            datasets: [{
+                data: valores,
+                backgroundColor: [
+                    '#3B82F6',
+                    '#22C55E',
+                    '#EAB308',
+                    '#EF4444',
+                    '#A855F7',
+                    '#F97316',
+                    '#06B6D4'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+});
+</script>
+{% endblock %}
+```
