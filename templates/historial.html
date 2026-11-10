@@ -1,3 +1,4 @@
+
 {% extends 'base.html' %}
 
 {% block title %}Historial de Movimientos - Mishi{% endblock %}
@@ -40,8 +41,10 @@
                 <th>Categoria</th>
                 <th>Tipo</th>
                 <th>Monto</th>
+                <th>Acciones</th>
             </tr>
         </thead>
+
         <tbody>
             {% for m in movimientos %}
             <tr>
@@ -53,6 +56,7 @@
                     {% if m.es_compartido %}<span class="tag">Deuda: {{ m.amigo }}</span>{% endif %}
                 </td>
                 <td>{{ m.categoria }}</td>
+
                 <td>
                     {% if m.tipo == 'gasto' %}
                         <span class="text-danger">Gasto</span>
@@ -60,6 +64,7 @@
                         <span class="text-success">Ingreso</span>
                     {% endif %}
                 </td>
+
                 <td>
                     {% if m.tipo == 'gasto' %}
                         <span class="text-danger">-${{ m.monto }} COP</span>
@@ -67,6 +72,27 @@
                         <span class="text-success">+${{ m.monto }} COP</span>
                     {% endif %}
                 </td>
+
+                <td>
+                    <a href="{% url 'editar_movimiento' m.id %}" class="btn btn-primary">
+                        Editar
+                    </a>
+
+                    <form method="POST"
+                          action="{% url 'eliminar_movimiento' m.id %}"
+                          style="display: inline;"
+                          onsubmit="return confirm('¿Estás seguro de eliminar este movimiento?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary">
+                            Eliminar
+                        </button>
+                    </form>
+                </td>
+            </tr>
+
+            {% empty %}
+            <tr>
+                <td colspan="7">Todavía no tienes movimientos registrados.</td>
             </tr>
             {% endfor %}
         </tbody>

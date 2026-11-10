@@ -1,0 +1,71 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Editar Movimiento - Mishi{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <h1>Editar movimiento</h1>
+    <p>Modifica los datos de tu ingreso o gasto.</p>
+</div>
+
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <form method="POST">
+        {% csrf_token %}
+
+        {% if error %}
+            <p style="color: red;">{{ error }}</p>
+        {% endif %}
+
+        <div class="form-group">
+            <label for="tipo">Tipo de transacción</label>
+            <select id="tipo" name="tipo" class="form-control" required>
+                <option value="gasto" {% if movimiento.tipo == 'gasto' %}selected{% endif %}>Gasto</option>
+                <option value="ingreso" {% if movimiento.tipo == 'ingreso' %}selected{% endif %}>Ingreso</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="monto">Monto (COP)</label>
+            <input type="number" id="monto" name="monto"
+                   class="form-control" min="100" step="100"
+                   value="{{ movimiento.monto }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="categoria">Categoría</label>
+            <select id="categoria" name="categoria" class="form-control" required>
+                {% for cat in categorias %}
+                    <option value="{{ cat.idCategoria }}"
+                    {% if cat.idCategoria == movimiento.idCategoria.idCategoria %}selected{% endif %}>
+                        {{ cat.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="descripcion">Descripción</label>
+            <input type="text" id="descripcion" name="descripcion"
+                   class="form-control"
+                   value="{{ movimiento.descripcion }}">
+        </div>
+
+        <div class="form-group">
+            <label for="fecha">Fecha</label>
+            <input type="date" id="fecha" name="fecha"
+                   class="form-control"
+                   value="{{ movimiento.fecha|date:'Y-m-d' }}" required>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn btn-primary">
+                Guardar cambios
+            </button>
+            <a href="{% url 'historial' %}" class="btn btn-secondary">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

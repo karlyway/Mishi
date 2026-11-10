@@ -14,5 +14,7 @@ urlpatterns = [
     path('app/', views.dashboard_view, name='dashboard'),
     path('app/movimiento/', views.movimiento_view, name='movimiento'),
     path('app/historial/', views.historial_view, name='historial'),
+    path('app/historial/editar/<int:movimiento_id>/', views.editar_movimiento_view, name='editar_movimiento'),
+    path('app/historial/eliminar/<int:movimiento_id>/', views.eliminar_movimiento_view, name='eliminar_movimiento'),
     path('app/metas/', views.metas_view, name='metas'),
 ]

@@ -163,7 +163,11 @@ def dashboard_view(request):
 
 # Vista para agregar un movimiento (ingreso o gasto)
 @login_required
+
+
 def movimiento_view(request):
+    from datetime import date
+
     perfil = Usuario.objects.filter(cuenta=request.user).first()
 
     if perfil is None:
@@ -186,38 +190,71 @@ def movimiento_view(request):
     categorias = Categoria.objects.all()
 
     if request.method == 'POST':
-        tipo = request.POST.get('tipo')
+        tipo = request.POST.get('tipo', '').strip()
         monto_texto = request.POST.get('monto', '').strip()
         categoria_id = request.POST.get('categoria')
         descripcion = request.POST.get('descripcion', '').strip()
-        fecha = request.POST.get('fecha')
+        fecha = request.POST.get('fecha', '').strip()
 
         try:
+            # Validar tipo de movimiento
+            if tipo not in ['gasto', 'ingreso']:
+                raise ValueError
+
+            # Validar monto
             monto = Decimal(monto_texto)
 
-            if monto <= 0:
-                raise InvalidOperation
+            if not monto.is_finite() or monto < 100:
+                raise ValueError
 
-            categoria = Categoria.objects.get(idCategoria=categoria_id)
+            if monto.as_tuple().exponent < -2:
+                raise ValueError
 
+            # Validar categoría
+            categoria = Categoria.objects.get(
+                idCategoria=categoria_id
+            )
+
+            # Validar fecha
+            fecha_movimiento = date.fromisoformat(fecha)
+
+            if fecha_movimiento > timezone.localdate():
+                raise ValueError
+
+            # Registrar movimiento
             Transaccion.objects.create(
                 idUsuario=perfil,
                 idCategoria=categoria,
                 monto=monto,
-                fecha=fecha,
+                fecha=fecha_movimiento,
                 tipo=tipo,
                 descripcion=descripcion
             )
 
+            messages.success(
+                request,
+                'Movimiento registrado correctamente.'
+            )
+
             return redirect('dashboard')
 
-        except (InvalidOperation, ValueError, TypeError, Categoria.DoesNotExist):
+        except (
+            InvalidOperation,
+            ValueError,
+            TypeError,
+            Categoria.DoesNotExist
+        ):
+            messages.error(
+                request,
+                'Verifica los datos. El monto mínimo es $100 y la fecha no puede ser futura.'
+            )
+
             return render(request, 'registro.html', {
                 'saldo': saldo,
                 'dias_restantes': dias,
                 'limite_diario': limite_diario,
                 'categorias': categorias,
-                'error': 'Verifica los datos del movimiento.'
+                'pestana_activa': 'movimiento'
             })
 
     return render(request, 'registro.html', {
@@ -241,7 +278,7 @@ def historial_view(request):
     ).select_related('idCategoria').order_by('-fecha', '-idTransaccion')
 
     total_ingresos = movimientos_db.filter(
-        tipo__iexact='ingreso'
+        tipo__iexact='ingreso'  
     ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
     total_gastos = movimientos_db.filter(
@@ -272,7 +309,90 @@ def historial_view(request):
 
     return render(request, 'historial.html', context)
 
+@login_required
+def editar_movimiento_view(request, movimiento_id):
+    perfil = Usuario.objects.filter(cuenta=request.user).first()
 
+    if perfil is None:
+        return redirect('login')
+
+    movimiento = Transaccion.objects.filter(
+        idTransaccion=movimiento_id,
+        idUsuario=perfil
+    ).first()
+
+    if movimiento is None:
+        return redirect('historial')
+
+    categorias = Categoria.objects.all()
+
+    if request.method == 'POST':
+        try:
+            tipo = request.POST.get('tipo')
+            monto = Decimal(request.POST.get('monto', '0'))
+            categoria_id = request.POST.get('categoria')
+            descripcion = request.POST.get('descripcion', '').strip()
+            fecha = request.POST.get('fecha')
+
+            if tipo not in ['gasto', 'ingreso'] or monto < 100 or not fecha:
+                raise ValueError
+
+            categoria = Categoria.objects.get(
+                idCategoria=categoria_id
+            )
+
+            movimiento.tipo = tipo
+            movimiento.monto = monto
+            movimiento.idCategoria = categoria
+            movimiento.descripcion = descripcion
+            movimiento.fecha = fecha
+            movimiento.save()
+
+            messages.success(request, 'Movimiento actualizado correctamente.')
+
+            return redirect('historial')
+
+        except (
+            InvalidOperation,
+            ValueError,
+            TypeError,
+            Categoria.DoesNotExist
+        ):
+            error = 'Verifica los datos ingresados.'
+
+
+        return render(request, 'editar_movimiento.html', {
+            'movimiento': movimiento,
+            'categorias': categorias,
+            'error': error,
+            'pestana_activa': 'historial'
+        })
+
+    return render(request, 'editar_movimiento.html', {
+        'movimiento': movimiento,
+        'categorias': categorias,
+        'pestana_activa': 'historial'
+    })
+@login_required
+def eliminar_movimiento_view(request, movimiento_id):
+    perfil = Usuario.objects.filter(cuenta=request.user).first()
+
+    if perfil is None:
+        return redirect('login')
+
+    if request.method == 'POST':
+        movimiento = Transaccion.objects.filter(
+            idTransaccion=movimiento_id,
+            idUsuario=perfil
+        )
+
+        if movimiento.exists():
+            movimiento.delete()
+            messages.success(request, 'Movimiento eliminado correctamente.')
+        else:
+            messages.error(request, 'No se encontró el movimiento.')
+
+    return redirect('historial')
 # Visualizacion de metas de ahorro y deudas pendientes
 @login_required
 @login_required
@@ -280,6 +400,7 @@ def historial_view(request):
 @login_required
 
 @login_required
+
 def metas_view(request):
     perfil = Usuario.objects.filter(cuenta=request.user).first()
 
@@ -305,6 +426,11 @@ def metas_view(request):
                     objetivo=objetivo
                 )
 
+                messages.success(
+                    request,
+                    'Meta de ahorro creada correctamente.'
+                )
+
             elif accion == 'actualizar_meta':
                 meta_id = request.POST.get('meta_id')
                 ahorro = Decimal(request.POST.get('ahorro', '0'))
@@ -316,8 +442,14 @@ def metas_view(request):
                     idMeta=meta_id,
                     idUsuario=perfil
                 )
+
                 meta.acumulado += ahorro
                 meta.save()
+
+                messages.success(
+                    request,
+                    'Ahorro agregado correctamente.'
+                )
 
             elif accion == 'crear_prestamo':
                 deudor = request.POST.get('deudor', '').strip()
@@ -337,6 +469,11 @@ def metas_view(request):
                     estado='Pendiente'
                 )
 
+                messages.success(
+                    request,
+                    'Préstamo registrado correctamente.'
+                )
+
             elif accion == 'pagar_prestamo':
                 prestamo_id = request.POST.get('prestamo_id')
 
@@ -344,8 +481,17 @@ def metas_view(request):
                     idPrestamo=prestamo_id,
                     idUsuario=perfil
                 )
+
                 prestamo.estado = 'Pagado'
                 prestamo.save()
+
+                messages.success(
+                    request,
+                    'Préstamo marcado como pagado.'
+                )
+
+            else:
+                messages.error(request, 'Acción no válida.')
 
             return redirect('metas')
 
@@ -355,7 +501,10 @@ def metas_view(request):
             MetaAhorro.DoesNotExist,
             Prestamo.DoesNotExist
         ):
-            messages.error(request, 'Verifica los datos ingresados.')
+            messages.error(
+                request,
+                'Verifica los datos ingresados.'
+            )
 
     metas = MetaAhorro.objects.filter(idUsuario=perfil)
     prestamos = Prestamo.objects.filter(idUsuario=perfil)
