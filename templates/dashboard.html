@@ -203,7 +203,11 @@ document.addEventListener('DOMContentLoaded', function () {
         let oculto = false;
         toggleBtn.addEventListener('click', function () {
             oculto = !oculto;
-            saldoEl.textContent = oculto ? '$ ••••••' : saldoEl.getAttribute('data-real');
+            saldoEl.classList.add('is-blur-swap');
+            setTimeout(function () {
+                saldoEl.textContent = oculto ? '$ ••••••' : saldoEl.getAttribute('data-real');
+                saldoEl.classList.remove('is-blur-swap');
+            }, 95);
         });
     }
 

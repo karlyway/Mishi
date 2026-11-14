@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#F97A22">
+    <meta name="theme-color" content="#FFFFFF">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>{% block title %}Mishi - Tu plata, bajo control{% endblock %}</title>
@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="manifest" href="{% static 'manifest.json' %}">
     <link rel="icon" type="image/svg+xml" href="{% static 'img/mishi-icon.svg' %}">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=6">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=7">
 </head>
 <body class="{% if ocultar_chrome %}is-fullbleed-body{% elif pestana_activa %}is-app-body{% endif %}">
 
@@ -143,6 +143,30 @@
     </script>
     {% endif %}
 
+    <script>
+    (function () {
+        document.querySelectorAll('.segmented-control').forEach(function (ctrl) {
+            var radios = Array.from(ctrl.querySelectorAll('input[type="radio"]'));
+            if (radios.length < 2) return;
+            var thumb = document.createElement('span');
+            thumb.className = 'seg-glass-thumb';
+            thumb.setAttribute('aria-hidden', 'true');
+            ctrl.insertBefore(thumb, ctrl.firstChild);
+            ctrl.classList.add('has-seg-thumb');
+
+            function syncThumb() {
+                var idx = radios.findIndex(function (r) { return r.checked; });
+                if (idx < 0) idx = 0;
+                thumb.style.width = 'calc((100% - 10px) / ' + radios.length + ')';
+                thumb.style.transform = 'translateX(' + (idx * 100) + '%)';
+            }
+            radios.forEach(function (r) {
+                r.addEventListener('change', syncThumb);
+            });
+            syncThumb();
+        });
+    })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,14 +1,29 @@
 /* ==========================================================================
-   Mishi - Sistema de Diseño Oficial (Identidad Visual & App Web)
-   Paleta: Naranja gato (#FF8C3A), Amarillo moneda (#FFD028),
-           Crema (#F7F4EE), Carbón (#292929)
+   Mishi - Sistema de Diseño Oficial (White Canvas, Liquid Glass & Apple Motion)
+   Paleta: Blanco Luminoso (#FFFFFF), Naranja gato (#F97A22),
+           Amarillo moneda (#F5B82E), Carbón (#1F242D)
    Tipografía: Plus Jakarta Sans
    ========================================================================== */
 
 :root {
-    --bg-cream: #FCF9F2;
+    --bg-cream: #FFFFFF;
     --bg-card: #FFFFFF;
-    --bg-muted: #F2EEE4;
+    --bg-muted: #F4F5F8;
+    --glass-surface: rgba(255, 255, 255, 0.78);
+    --glass-surface-strong: rgba(255, 255, 255, 0.90);
+    --glass-chrome: rgba(255, 255, 255, 0.72);
+    --glass-subtle: rgba(244, 246, 250, 0.86);
+    --glass-outline: rgba(24, 28, 36, 0.068);
+    --glass-edge-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.94),
+        inset 0 -1px 0 rgba(24, 28, 36, 0.025),
+        0 8px 26px rgba(17, 24, 39, 0.042),
+        0 1px 3px rgba(17, 24, 39, 0.03);
+    --glass-float-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.96),
+        0 16px 38px rgba(17, 24, 39, 0.095),
+        0 2px 8px rgba(17, 24, 39, 0.04),
+        0 0 0 1px rgba(24, 28, 36, 0.055);
     --orange: #F97A22;
     --orange-hover: #E66812;
     --orange-soft: #FCECD9;
@@ -18,9 +33,9 @@
     --carbon: #1F242D;
     --carbon-soft: #313744;
     --fg-muted: #666A73;
-    --fg-subtle: rgba(41, 41, 41, 0.44);
-    --border-hairline: rgba(41, 41, 41, 0.08);
-    --border-strong: rgba(41, 41, 41, 0.16);
+    --fg-subtle: rgba(31, 36, 45, 0.44);
+    --border-hairline: rgba(31, 36, 45, 0.075);
+    --border-strong: rgba(31, 36, 45, 0.15);
     --green: #22A06B;
     --green-soft: #E6F7EE;
     --red: #D64038;
@@ -32,27 +47,41 @@
     --radius-card: 26px;
     --radius-inner: 18px;
     --radius-pill: 9999px;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dur-tap: 140ms;
+    --dur-ui: 240ms;
+    --dur-sheet: 340ms;
 }
 
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    -webkit-tap-highlight-color: transparent;
 }
 
 html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    background-color: #FFFFFF;
 }
 
 body {
     font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-    background-color: var(--bg-cream);
+    background-color: #FFFFFF;
+    background-image:
+        radial-gradient(58% 42% at 12% -6%, rgba(255, 168, 92, 0.055) 0%, rgba(255, 168, 92, 0) 68%),
+        radial-gradient(50% 42% at 92% 8%, rgba(255, 214, 112, 0.055) 0%, rgba(255, 214, 112, 0) 66%),
+        radial-gradient(56% 48% at 50% 100%, rgba(226, 232, 248, 0.22) 0%, rgba(255, 255, 255, 0) 72%);
+    background-attachment: fixed;
     color: var(--carbon);
     line-height: 1.55;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -67,22 +96,44 @@ select {
 }
 
 /* ==========================================================================
-   Animación suave de entrada
+   Animación suave de entrada (Apple GPU-only)
    ========================================================================== */
 
 @keyframes mishiFadeUp {
     from {
         opacity: 0;
-        transform: translateY(14px);
+        transform: translateY(12px) scale(0.985);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes mishiPanelIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes mishiBarRise {
+    from {
+        opacity: 0;
+        transform: scaleY(0.15);
+    }
+    to {
+        opacity: 1;
+        transform: scaleY(1);
     }
 }
 
 .reveal {
-    animation: mishiFadeUp 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+    animation: mishiFadeUp 340ms var(--ease-ios) both;
 }
 
 .is-app-body .reveal,
@@ -93,11 +144,11 @@ select {
 }
 
 .reveal-delay-1 {
-    animation-delay: 0.08s;
+    animation-delay: 50ms;
 }
 
 .reveal-delay-2 {
-    animation-delay: 0.16s;
+    animation-delay: 100ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -106,25 +157,60 @@ select {
     }
     .reveal,
     .reveal-delay-1,
-    .reveal-delay-2 {
-        animation: none;
+    .reveal-delay-2,
+    .app-screen > *,
+    .weekly-bar-fill,
+    .filter-drawer.is-open,
+    .mobile-public-drawer.is-open,
+    .animo-cat-img {
+        animation: none !important;
+    }
+    .seg-glass-thumb,
+    .btn,
+    .wallet-combo-balance,
+    .cat-picker-box,
+    .quick-action-circle,
+    .bottom-nav-item {
+        transition: none !important;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .navbar,
+    .mobile-public-drawer,
+    .app-card,
+    .goal-app-card,
+    .auth-card,
+    .empty-soft-card,
+    .amount-hero-box,
+    .bottom-nav,
+    .m-promo-banner,
+    .mishi-banner-card,
+    .insight-hero-card,
+    .mishi-tip-card {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background-color: #FFFFFF !important;
     }
 }
 
 /* ==========================================================================
-   Barra Superior (App & Landing Top Bar)
+   Barra Superior (App & Landing Top Bar — Liquid Glass Chrome)
    ========================================================================== */
 
 .navbar {
     position: sticky;
     top: 0;
     z-index: 35;
-    background-color: var(--bg-cream);
-    border-bottom: 1px solid var(--border-hairline);
+    background-color: var(--glass-chrome);
+    backdrop-filter: blur(22px) saturate(185%);
+    -webkit-backdrop-filter: blur(22px) saturate(185%);
+    border-bottom: 1px solid rgba(24, 28, 36, 0.055);
+    box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .navbar--public {
-    border-bottom: none;
+    border-bottom: 1px solid rgba(24, 28, 36, 0.04);
 }
 
 .nav-container {
@@ -175,13 +261,19 @@ select {
     font-size: 14px;
     font-weight: 500;
     color: var(--fg-muted);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out), transform var(--dur-tap) var(--ease-out);
 }
 
-.nav-links a:hover {
-    background-color: var(--bg-muted);
-    color: var(--carbon);
-    text-decoration: none;
+.nav-links a:active {
+    transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .nav-links a:hover {
+        background-color: var(--bg-muted);
+        color: var(--carbon);
+        text-decoration: none;
+    }
 }
 
 .nav-links a.active {
@@ -194,11 +286,14 @@ select {
     background-color: var(--orange);
     color: #FFFFFF;
     font-weight: 600;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 4px 12px rgba(249, 122, 34, 0.2);
 }
 
-.nav-links a.nav-cta:hover {
-    background-color: var(--orange-hover);
-    color: #FFFFFF;
+@media (hover: hover) and (pointer: fine) {
+    .nav-links a.nav-cta:hover {
+        background-color: var(--orange-hover);
+        color: #FFFFFF;
+    }
 }
 
 .nav-toggle {
@@ -212,22 +307,32 @@ select {
     background: transparent;
     color: var(--carbon);
     cursor: pointer;
+    transition: background-color 180ms var(--ease-out), transform var(--dur-tap) var(--ease-out);
 }
 
-.nav-toggle:hover {
-    background-color: var(--bg-muted);
+.nav-toggle:active {
+    transform: scale(0.93);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .nav-toggle:hover {
+        background-color: var(--bg-muted);
+    }
 }
 
 .mobile-public-drawer {
     display: none;
     padding: 8px 20px 18px 20px;
-    border-top: 1px solid var(--border-hairline);
-    background-color: var(--bg-cream);
+    border-top: 1px solid rgba(24, 28, 36, 0.055);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(22px) saturate(185%);
+    -webkit-backdrop-filter: blur(22px) saturate(185%);
 }
 
 .mobile-public-drawer.is-open {
     display: flex;
     flex-direction: column;
+    animation: mishiPanelIn 240ms var(--ease-ios) both;
     gap: 8px;
 }
 
@@ -261,8 +366,11 @@ select {
     align-items: center;
     gap: 8px;
     padding: 5px 12px 5px 6px;
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-hairline);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border: 1px solid var(--glass-outline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 8px rgba(17, 24, 39, 0.035);
     border-radius: var(--radius-pill);
     font-size: 13px;
     font-weight: 500;
@@ -290,19 +398,25 @@ select {
     min-height: 36px;
     padding: 0 14px;
     border-radius: var(--radius-pill);
-    background-color: transparent;
+    background-color: var(--glass-surface);
     border: 1px solid var(--border-strong);
     color: var(--carbon);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    transition: background-color 200ms var(--ease-out), border-color 200ms var(--ease-out), color 200ms var(--ease-out), transform var(--dur-tap) var(--ease-out);
 }
 
-.btn-nav-logout:hover {
-    background-color: var(--red-soft);
-    border-color: rgba(214, 64, 56, 0.35);
-    color: var(--red);
+.btn-nav-logout:active {
+    transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .btn-nav-logout:hover {
+        background-color: var(--red-soft);
+        border-color: rgba(214, 64, 56, 0.35);
+        color: var(--red);
+    }
 }
 
 /* ==========================================================================
@@ -376,12 +490,25 @@ select {
     border: 1px solid transparent;
     cursor: pointer;
     text-align: center;
-    transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    transition:
+        background-color var(--dur-ui) var(--ease-out),
+        transform var(--dur-tap) var(--ease-out),
+        border-color var(--dur-ui) var(--ease-out),
+        box-shadow var(--dur-ui) var(--ease-out);
 }
 
-.btn:hover {
-    text-decoration: none;
-    transform: translateY(-1px);
+.btn:active {
+    transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .btn:hover {
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+    .btn:active {
+        transform: scale(0.97);
+    }
 }
 
 .btn-sm {
@@ -393,38 +520,53 @@ select {
 .btn-primary {
     background-color: var(--orange);
     color: #FFFFFF;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30), 0 6px 18px rgba(249, 122, 34, 0.22);
 }
 
-.btn-primary:hover {
-    background-color: var(--orange-hover);
+@media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover {
+        background-color: var(--orange-hover);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30), 0 10px 22px rgba(249, 122, 34, 0.28);
+    }
 }
 
 .btn-dark {
     background-color: var(--carbon);
     color: #FFFFFF;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 4px 12px rgba(17, 24, 39, 0.12);
 }
 
-.btn-dark:hover {
-    background-color: var(--carbon-soft);
+@media (hover: hover) and (pointer: fine) {
+    .btn-dark:hover {
+        background-color: var(--carbon-soft);
+    }
 }
 
 .btn-light-pill {
-    background-color: #FFFFFF;
+    background-color: var(--glass-surface-strong);
     color: var(--carbon);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 2px 10px rgba(17, 24, 39, 0.05);
 }
 
-.btn-light-pill:hover {
-    background-color: var(--bg-cream);
+@media (hover: hover) and (pointer: fine) {
+    .btn-light-pill:hover {
+        background-color: #FFFFFF;
+    }
 }
 
 .btn-secondary {
-    background-color: var(--bg-card);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     color: var(--carbon);
-    border-color: var(--border-hairline);
+    border-color: var(--glass-outline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 2px 10px rgba(17, 24, 39, 0.04);
 }
 
-.btn-secondary:hover {
-    background-color: var(--bg-muted);
+@media (hover: hover) and (pointer: fine) {
+    .btn-secondary:hover {
+        background-color: rgba(243, 245, 249, 0.96);
+    }
 }
 
 .btn-danger-outline {
@@ -607,21 +749,26 @@ select {
 }
 
 .btn-play-pill {
-    background-color: var(--bg-card);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
     color: var(--carbon);
-    border: 1px solid rgba(31, 36, 45, 0.12);
+    border: 1px solid var(--glass-outline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 4px 14px rgba(17, 24, 39, 0.045);
 }
 
-.btn-play-pill:hover {
-    background-color: var(--bg-muted);
-    color: var(--carbon);
+@media (hover: hover) and (pointer: fine) {
+    .btn-play-pill:hover {
+        background-color: #FFFFFF;
+        color: var(--carbon);
+    }
 }
 
 .play-dot {
     width: 22px;
     height: 22px;
     border-radius: var(--radius-pill);
-    background-color: var(--bg-cream);
+    background-color: #F2F4F8;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -650,13 +797,13 @@ select {
 .m-cat-halo::before {
     content: "";
     position: absolute;
-    width: 80%;
+    width: 82%;
     aspect-ratio: 1;
     top: 6%;
     left: 50%;
     transform: translateX(-50%);
     border-radius: 50%;
-    background: radial-gradient(circle at 50% 46%, #FCECD2 0%, rgba(252, 236, 210, 0.52) 56%, rgba(252, 249, 242, 0) 76%);
+    background: radial-gradient(circle at 50% 46%, rgba(255, 232, 198, 0.68) 0%, rgba(255, 238, 214, 0.34) 56%, rgba(255, 255, 255, 0) 76%);
     z-index: 0;
     pointer-events: none;
 }
@@ -668,7 +815,8 @@ select {
     display: block;
     position: relative;
     z-index: 1;
-    filter: drop-shadow(0 10px 18px rgba(175, 108, 38, 0.14));
+    mix-blend-mode: multiply;
+    filter: drop-shadow(0 12px 22px rgba(175, 108, 38, 0.14));
 }
 
 /* Sección ¿Por qué Mishi? (Editorial en escritorio, lista abierta sin cajas) */
@@ -714,13 +862,25 @@ select {
     padding: 14px 12px;
     border-radius: 20px;
     background-color: transparent;
-    border: none;
-    transition: background-color 0.2s ease;
+    border: 1px solid transparent;
+    transition: background-color 200ms var(--ease-out), border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform var(--dur-tap) var(--ease-out);
 }
 
-.m-feature-item:hover {
-    background-color: rgba(235, 227, 210, 0.45);
-    text-decoration: none;
+.m-feature-item:active {
+    transform: scale(0.985);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .m-feature-item:hover {
+        background-color: var(--glass-surface-strong);
+        border-color: var(--glass-outline);
+        box-shadow: var(--glass-edge-shadow);
+        text-decoration: none;
+    }
+    .m-feature-item:hover .m-feature-arrow {
+        transform: translateX(4px);
+        color: var(--carbon);
+    }
 }
 
 .m-feature-icon {
@@ -781,19 +941,18 @@ select {
 .m-feature-arrow {
     color: #7D838E;
     flex-shrink: 0;
-    transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.m-feature-item:hover .m-feature-arrow {
-    transform: translateX(4px);
-    color: var(--carbon);
+    transition: transform 200ms var(--ease-out), color 200ms var(--ease-out);
 }
 
 /* Banner inferior con teléfono Dynamic Island inclinado */
 .m-promo-banner {
     position: relative;
     margin-top: 12px;
-    background-color: #EFECE2;
+    background: linear-gradient(135deg, rgba(247, 249, 253, 0.92) 0%, rgba(239, 243, 250, 0.86) 100%);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid var(--glass-outline);
+    box-shadow: var(--glass-edge-shadow);
     border-radius: 28px;
     padding: 40px 44px 0 44px;
     display: grid;
@@ -823,7 +982,7 @@ select {
 }
 
 .m-promo-copy .pill-badge {
-    background-color: #F7EAD6;
+    background-color: var(--orange-soft);
 }
 
 .m-promo-copy h2 {
@@ -866,12 +1025,12 @@ select {
 
 .m-phone-shell {
     width: 248px;
-    background-color: #FFFDF9;
+    background-color: #FFFFFF;
     border: 5px solid #1C2029;
     border-bottom: none;
     border-radius: 30px 30px 0 0;
     padding: 10px 12px 18px 12px;
-    box-shadow: 0 18px 38px rgba(31, 36, 45, 0.16);
+    box-shadow: 0 18px 38px rgba(17, 24, 39, 0.16);
     transform: rotate(-6deg) translateY(14px);
     transform-origin: bottom center;
 }
@@ -1069,8 +1228,11 @@ select {
    ========================================================================== */
 
 .card {
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-hairline);
+    background-color: var(--glass-surface);
+    backdrop-filter: blur(22px) saturate(185%);
+    -webkit-backdrop-filter: blur(22px) saturate(185%);
+    border: 1px solid var(--glass-outline);
+    box-shadow: var(--glass-edge-shadow);
     border-radius: var(--radius-card);
     padding: 24px;
     margin-bottom: 20px;
@@ -1246,7 +1408,7 @@ select {
 .progress-track {
     width: 100%;
     height: 8px;
-    background-color: var(--bg-muted);
+    background-color: #EAEFF5;
     border-radius: var(--radius-pill);
     overflow: hidden;
 }
@@ -1450,18 +1612,19 @@ table.table tbody tr:hover {
     width: 100%;
     min-height: 46px;
     padding: 10px 14px;
-    background-color: var(--bg-cream);
-    border: 1px solid var(--border-hairline);
+    background-color: rgba(244, 246, 250, 0.85);
+    border: 1px solid rgba(24, 28, 36, 0.08);
     border-radius: 14px;
     font-size: 15px;
     color: var(--carbon);
-    transition: border-color 0.2s ease, background-color 0.2s ease;
+    transition: border-color 180ms var(--ease-out), background-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
 }
 
 .form-control:focus {
     outline: none;
-    background-color: var(--bg-card);
+    background-color: #FFFFFF;
     border-color: var(--orange);
+    box-shadow: 0 0 0 4px rgba(249, 122, 34, 0.10);
 }
 
 .input-monto-grande {
@@ -1473,13 +1636,34 @@ table.table tbody tr:hover {
 }
 
 .segmented-control {
+    position: relative;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
     padding: 5px;
-    background-color: var(--bg-cream);
+    background-color: rgba(241, 243, 248, 0.9);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border-radius: var(--radius-pill);
-    border: 1px solid var(--border-hairline);
+    border: 1px solid rgba(24, 28, 36, 0.06);
+    box-shadow: inset 0 1px 2px rgba(17, 24, 39, 0.04);
+}
+
+.seg-glass-thumb {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: calc((100% - 16px) / 2);
+    height: calc(100% - 10px);
+    border-radius: var(--radius-pill);
+    background: linear-gradient(180deg, #FF9342 0%, #F46D1B 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.34),
+        0 4px 12px rgba(249, 122, 34, 0.28);
+    z-index: 0;
+    pointer-events: none;
+    transition: transform 320ms var(--ease-ios);
+    will-change: transform;
 }
 
 .segmented-control input[type="radio"] {
@@ -1489,6 +1673,8 @@ table.table tbody tr:hover {
 }
 
 .segmented-control label {
+    position: relative;
+    z-index: 1;
     margin: 0;
     min-height: 40px;
     display: flex;
@@ -1499,12 +1685,20 @@ table.table tbody tr:hover {
     font-weight: 600;
     color: var(--fg-muted);
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: color 200ms var(--ease-out), background-color 200ms var(--ease-out), transform var(--dur-tap) var(--ease-out);
+}
+
+.segmented-control label:active {
+    transform: scale(0.97);
 }
 
 .segmented-control input[type="radio"]:checked + label {
     background-color: var(--orange);
     color: #FFFFFF;
+}
+
+.segmented-control.has-seg-thumb input[type="radio"]:checked + label {
+    background-color: transparent;
 }
 
 .segmented-control input[type="radio"]:focus-visible + label {
@@ -1587,10 +1781,12 @@ table.table tbody tr:hover {
 }
 
 .empty-soft-card {
-    background-color: #FFFFFF;
-    border: 1px solid rgba(31, 36, 45, 0.06);
+    background-color: var(--glass-surface);
+    backdrop-filter: blur(22px) saturate(185%);
+    -webkit-backdrop-filter: blur(22px) saturate(185%);
+    border: 1px solid var(--glass-outline);
     border-radius: 22px;
-    box-shadow: 0 4px 16px rgba(31, 36, 45, 0.03);
+    box-shadow: var(--glass-edge-shadow);
     text-align: center;
     padding: 28px 20px;
     display: flex;
@@ -1660,6 +1856,26 @@ table.table tbody tr:hover {
     width: 100%;
 }
 
+.app-screen > * {
+    animation: mishiFadeUp 300ms var(--ease-ios) both;
+}
+
+.app-screen > *:nth-child(2) {
+    animation-delay: 35ms;
+}
+
+.app-screen > *:nth-child(3) {
+    animation-delay: 70ms;
+}
+
+.app-screen > *:nth-child(4) {
+    animation-delay: 105ms;
+}
+
+.app-screen > *:nth-child(5) {
+    animation-delay: 140ms;
+}
+
 .app-screen--narrow {
     max-width: 520px;
     margin: 0 auto;
@@ -1715,34 +1931,42 @@ table.table tbody tr:hover {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background-color: #FFFFFF;
-    border: 1px solid rgba(31, 36, 45, 0.08);
-    box-shadow: 0 2px 8px rgba(31, 36, 45, 0.04);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(16px) saturate(165%);
+    -webkit-backdrop-filter: blur(16px) saturate(165%);
+    border: 1px solid var(--glass-outline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 3px 10px rgba(17, 24, 39, 0.045);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--carbon);
     cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition: transform var(--dur-tap) var(--ease-out), border-color 180ms var(--ease-out), color 180ms var(--ease-out), background-color 180ms var(--ease-out);
     text-decoration: none;
     flex-shrink: 0;
 }
 
-.icon-circle-btn:hover {
-    border-color: var(--orange);
-    color: var(--orange);
+.icon-circle-btn:active {
+    transform: scale(0.92);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .icon-circle-btn:hover {
+        border-color: var(--orange);
+        color: var(--orange);
+        background-color: #FFFFFF;
+    }
+    .icon-circle-btn.is-primary:hover {
+        background-color: var(--orange-hover);
+        color: #FFFFFF;
+    }
 }
 
 .icon-circle-btn.is-primary {
     background-color: var(--orange);
     border-color: var(--orange);
     color: #FFFFFF;
-    box-shadow: 0 6px 14px rgba(249, 122, 34, 0.25);
-}
-
-.icon-circle-btn.is-primary:hover {
-    background-color: var(--orange-hover);
-    color: #FFFFFF;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 6px 14px rgba(249, 122, 34, 0.25);
 }
 
 /* Segmented tabs (Este mes / Últimos 3 meses) */
@@ -1751,7 +1975,11 @@ table.table tbody tr:hover {
     align-items: center;
     gap: 4px;
     padding: 4px;
-    background-color: #F0ECE1;
+    background-color: rgba(241, 243, 248, 0.9);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border: 1px solid rgba(24, 28, 36, 0.055);
+    box-shadow: inset 0 1px 2px rgba(17, 24, 39, 0.04);
     border-radius: var(--radius-pill);
     margin-bottom: 18px;
 }
@@ -1763,26 +1991,34 @@ table.table tbody tr:hover {
     font-weight: 600;
     color: var(--fg-muted);
     text-decoration: none;
-    transition: background-color 0.16s ease, color 0.16s ease;
+    transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out), transform var(--dur-tap) var(--ease-out), box-shadow 180ms var(--ease-out);
 }
 
-.pill-tab:hover {
-    color: var(--carbon);
+.pill-tab:active {
+    transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .pill-tab:hover {
+        color: var(--carbon);
+    }
 }
 
 .pill-tab.is-active {
     background-color: var(--orange);
     color: #FFFFFF;
-    box-shadow: 0 4px 10px rgba(249, 122, 34, 0.24);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30), 0 4px 12px rgba(249, 122, 34, 0.24);
 }
 
-/* Superficie de tarjetas internas */
+/* Superficie de tarjetas internas (Liquid Glass) */
 .app-card {
-    background-color: #FFFFFF;
-    border: 1px solid rgba(31, 36, 45, 0.06);
+    background-color: var(--glass-surface);
+    backdrop-filter: blur(22px) saturate(185%);
+    -webkit-backdrop-filter: blur(22px) saturate(185%);
+    border: 1px solid var(--glass-outline);
     border-radius: 22px;
     padding: 18px 20px;
-    box-shadow: 0 4px 16px rgba(31, 36, 45, 0.03);
+    box-shadow: var(--glass-edge-shadow);
     margin-bottom: 16px;
 }
 
@@ -1860,7 +2096,7 @@ table.table tbody tr:hover {
     border-radius: var(--radius-pill);
     font-size: 10.5px;
     font-weight: 600;
-    background-color: #F3EFE6;
+    background-color: #EEF1F6;
     color: var(--fg-muted);
     margin-left: 6px;
     vertical-align: middle;
@@ -1900,12 +2136,12 @@ table.table tbody tr:hover {
 }
 
 .btn-soft-pill.is-neutral {
-    background-color: #F2EEE4;
+    background-color: #EEF1F6;
     color: var(--carbon);
 }
 
 .btn-soft-pill.is-neutral:hover {
-    background-color: #E8E2D4;
+    background-color: #E3E8F0;
 }
 
 .btn-soft-pill.is-danger {
@@ -1964,11 +2200,13 @@ table.table tbody tr:hover {
 }
 
 .auth-card {
-    background-color: #FFFFFF;
-    border: 1px solid rgba(31, 36, 45, 0.07);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+    border: 1px solid var(--glass-outline);
     border-radius: 26px;
     padding: 26px 24px;
-    box-shadow: 0 12px 30px rgba(31, 36, 45, 0.04);
+    box-shadow: var(--glass-float-shadow);
 }
 
 .auth-card h2 {
@@ -2079,13 +2317,18 @@ table.table tbody tr:hover {
     min-width: 0;
 }
 
-/* Tarjeta combinada Saldo + Gastos de este mes */
+/* Tarjeta combinada Saldo + Gastos de este mes (Liquid Glass Shell) */
 .wallet-combo-card {
     border-radius: 24px;
     overflow: hidden;
-    background-color: #FFFFFF;
-    border: 1px solid rgba(31, 36, 45, 0.06);
-    box-shadow: 0 12px 28px rgba(244, 111, 26, 0.14);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(22px) saturate(185%);
+    -webkit-backdrop-filter: blur(22px) saturate(185%);
+    border: 1px solid var(--glass-outline);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        0 14px 32px rgba(244, 111, 26, 0.14),
+        0 2px 8px rgba(17, 24, 39, 0.04);
 }
 
 .wallet-combo-top {
@@ -2118,18 +2361,26 @@ table.table tbody tr:hover {
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.25);
     background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
     color: #FFFFFF;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     padding: 0;
+    transition: background-color 180ms var(--ease-out), transform var(--dur-tap) var(--ease-out);
 }
 
-.wallet-eye-btn:hover {
-    background-color: rgba(255, 255, 255, 0.3);
+.wallet-eye-btn:active {
+    transform: scale(0.9);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .wallet-eye-btn:hover {
+        background-color: rgba(255, 255, 255, 0.32);
+    }
 }
 
 .wallet-combo-balance {
@@ -2139,6 +2390,13 @@ table.table tbody tr:hover {
     line-height: 1.08;
     font-variant-numeric: tabular-nums;
     margin-bottom: 4px;
+    transition: opacity 220ms var(--ease-out), filter 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+
+.wallet-combo-balance.is-blur-swap {
+    opacity: 0.35;
+    filter: blur(6px);
+    transform: scale(0.985);
 }
 
 .wallet-combo-hint {
@@ -2158,7 +2416,9 @@ table.table tbody tr:hover {
 }
 
 .wallet-combo-bottom {
-    background-color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     padding: 15px 20px 17px;
 }
 
@@ -2198,7 +2458,7 @@ table.table tbody tr:hover {
 .wallet-month-track {
     flex: 1;
     height: 8px;
-    background-color: #EFEAE0;
+    background-color: #EAEFF5;
     border-radius: var(--radius-pill);
     overflow: hidden;
 }
@@ -2247,20 +2507,29 @@ table.table tbody tr:hover {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background-color: #FFFFFF;
-    border: 1px solid rgba(31, 36, 45, 0.08);
-    box-shadow: 0 3px 10px rgba(31, 36, 45, 0.04);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(18px) saturate(175%);
+    -webkit-backdrop-filter: blur(18px) saturate(175%);
+    border: 1px solid var(--glass-outline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 4px 12px rgba(17, 24, 39, 0.045);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--carbon);
-    transition: transform 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    transition: transform var(--dur-tap) var(--ease-spring), border-color 180ms var(--ease-out), color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
 }
 
-.quick-action-tile:hover .quick-action-circle {
-    transform: translateY(-2px);
-    border-color: var(--orange);
-    color: var(--orange);
+.quick-action-tile:active .quick-action-circle {
+    transform: scale(0.92);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .quick-action-tile:hover .quick-action-circle {
+        transform: translateY(-2px);
+        border-color: var(--orange);
+        color: var(--orange);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 8px 18px rgba(249, 122, 34, 0.14);
+    }
 }
 
 /* Lista de categorías (Inicio) */
@@ -2322,6 +2591,16 @@ table.table tbody tr:hover {
     margin-bottom: 0;
 }
 
+.gastos-hero-kicker {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-bottom: 6px;
+}
+
 .gastos-hero-total {
     font-size: clamp(28px, 3.6vw, 36px);
     font-weight: 800;
@@ -2375,15 +2654,23 @@ table.table tbody tr:hover {
     border-radius: 999px;
     background-color: #FFBE69;
     min-height: 10px;
-    transition: height 0.35s ease;
+    transform-origin: bottom center;
+    animation: mishiBarRise 420ms var(--ease-spring) both;
 }
+
+.weekly-bar-col:nth-child(2) .weekly-bar-fill { animation-delay: 30ms; }
+.weekly-bar-col:nth-child(3) .weekly-bar-fill { animation-delay: 60ms; }
+.weekly-bar-col:nth-child(4) .weekly-bar-fill { animation-delay: 90ms; }
+.weekly-bar-col:nth-child(5) .weekly-bar-fill { animation-delay: 120ms; }
+.weekly-bar-col:nth-child(6) .weekly-bar-fill { animation-delay: 150ms; }
+.weekly-bar-col:nth-child(7) .weekly-bar-fill { animation-delay: 180ms; }
 
 .weekly-bar-fill.is-peak {
     background-color: var(--orange);
 }
 
 .weekly-bar-fill.is-empty {
-    background-color: #EAE4D7;
+    background-color: #EAEFF5;
     min-height: 8px;
 }
 
@@ -2400,6 +2687,14 @@ table.table tbody tr:hover {
 .filter-drawer.is-open {
     display: block;
     margin-bottom: 18px;
+    animation: mishiPanelIn 280ms var(--ease-ios) both;
+}
+
+@starting-style {
+    .filter-drawer.is-open {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+    }
 }
 
 .mov-list {
@@ -2514,26 +2809,35 @@ table.table tbody tr:hover {
     width: 52px;
     height: 52px;
     border-radius: 16px;
-    background-color: #FFFFFF;
-    border: 1px solid rgba(31, 36, 45, 0.08);
-    box-shadow: 0 2px 8px rgba(31, 36, 45, 0.03);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border: 1px solid var(--glass-outline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 3px 10px rgba(17, 24, 39, 0.035);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--carbon);
-    transition: all 0.16s ease;
+    transition: transform var(--dur-tap) var(--ease-spring), border-color 180ms var(--ease-out), background-color 180ms var(--ease-out), color 180ms var(--ease-out), box-shadow 200ms var(--ease-out);
 }
 
-.cat-picker-tile:hover .cat-picker-box {
-    border-color: var(--orange);
-    color: var(--orange);
+.cat-picker-tile:active .cat-picker-box {
+    transform: scale(0.92);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .cat-picker-tile:hover .cat-picker-box {
+        border-color: var(--orange);
+        color: var(--orange);
+    }
 }
 
 .cat-picker-tile.is-selected .cat-picker-box {
     background-color: var(--orange);
     border-color: var(--orange);
     color: #FFFFFF;
-    box-shadow: 0 6px 16px rgba(249, 122, 34, 0.30);
+    transform: scale(1.03);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30), 0 8px 18px rgba(249, 122, 34, 0.28);
 }
 
 .cat-picker-label {
@@ -2549,19 +2853,24 @@ table.table tbody tr:hover {
 }
 
 .amount-hero-box {
-    background-color: #FFFFFF;
-    border: 1px solid rgba(31, 36, 45, 0.08);
+    background-color: var(--glass-surface-strong);
+    backdrop-filter: blur(18px) saturate(175%);
+    -webkit-backdrop-filter: blur(18px) saturate(175%);
+    border: 1px solid var(--glass-outline);
     border-radius: 20px;
     padding: 14px 18px;
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 14px;
-    box-shadow: 0 3px 12px rgba(31, 36, 45, 0.03);
+    box-shadow: var(--glass-edge-shadow);
+    transition: border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out), background-color 180ms var(--ease-out);
 }
 
 .amount-hero-box:focus-within {
     border-color: var(--orange);
+    background-color: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(249, 122, 34, 0.10), 0 8px 24px rgba(17, 24, 39, 0.045);
 }
 
 .amount-hero-box--compact {
@@ -2601,15 +2910,18 @@ table.table tbody tr:hover {
     font-size: 12px;
     font-weight: 700;
     color: var(--fg-muted);
-    background-color: var(--bg-cream);
+    background-color: #EEF1F6;
     padding: 6px 12px;
     border-radius: var(--radius-pill);
 }
 
 /* Metas & Crear meta (Pantallas 5 y 6) */
 .mishi-banner-card {
-    background: linear-gradient(135deg, #FFF5E8 0%, #FDE7CE 100%);
+    background: linear-gradient(135deg, rgba(255, 250, 244, 0.90) 0%, rgba(253, 236, 214, 0.80) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid rgba(249, 122, 34, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 8px 24px rgba(249, 122, 34, 0.06);
     border-radius: 22px;
     padding: 18px 20px;
     display: flex;
@@ -2658,11 +2970,13 @@ table.table tbody tr:hover {
 }
 
 .goal-app-card {
-    background-color: #FFFFFF;
-    border: 1px solid rgba(31, 36, 45, 0.06);
+    background-color: var(--glass-surface);
+    backdrop-filter: blur(22px) saturate(185%);
+    -webkit-backdrop-filter: blur(22px) saturate(185%);
+    border: 1px solid var(--glass-outline);
     border-radius: 22px;
     padding: 18px 20px;
-    box-shadow: 0 4px 16px rgba(31, 36, 45, 0.03);
+    box-shadow: var(--glass-edge-shadow);
     margin-bottom: 0;
 }
 
@@ -2714,7 +3028,7 @@ table.table tbody tr:hover {
 .goal-app-progress-row .progress-track {
     flex: 1;
     height: 8px;
-    background-color: #EFEAE0;
+    background-color: #EAEFF5;
 }
 
 .goal-app-pct {
@@ -2749,8 +3063,11 @@ table.table tbody tr:hover {
 }
 
 .mishi-tip-card {
-    background-color: #FFF2E3;
+    background: linear-gradient(135deg, rgba(255, 250, 244, 0.90) 0%, rgba(255, 241, 224, 0.80) 100%);
+    backdrop-filter: blur(18px) saturate(175%);
+    -webkit-backdrop-filter: blur(18px) saturate(175%);
     border: 1px solid rgba(249, 122, 34, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 6px 18px rgba(249, 122, 34, 0.05);
     border-radius: 18px;
     padding: 12px 16px;
     display: flex;
@@ -2865,7 +3182,7 @@ table.table tbody tr:hover {
     display: flex;
     align-items: center;
     gap: 16px;
-    background: linear-gradient(135deg, #FFFFFF 0%, #FFF5E9 100%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.90) 0%, rgba(255, 245, 232, 0.82) 100%);
 }
 
 .insight-hero-cat {
@@ -3011,7 +3328,9 @@ table.table tbody tr:hover {
     width: 72px;
     height: 72px;
     border-radius: 50%;
-    background-color: #EFEAE0;
+    background: linear-gradient(180deg, #F3F5F9 0%, #E8ECF3 100%);
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 12px rgba(17, 24, 39, 0.06);
     color: var(--carbon);
     font-size: 26px;
     font-weight: 800;
@@ -3080,14 +3399,22 @@ table.table tbody tr:hover {
     text-decoration: none;
     cursor: pointer;
     text-align: left;
+    transition: background-color 160ms var(--ease-out), transform var(--dur-tap) var(--ease-out);
 }
 
 .perfil-menu-row:last-child {
     border-bottom: none;
 }
 
-.perfil-menu-row:hover {
-    background-color: #FCF9F2;
+.perfil-menu-row:active {
+    background-color: rgba(241, 244, 249, 0.9);
+    transform: scale(0.992);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .perfil-menu-row:hover {
+        background-color: rgba(241, 244, 249, 0.72);
+    }
 }
 
 .perfil-menu-row.is-logout {
@@ -3184,6 +3511,7 @@ table.table tbody tr:hover {
     max-width: 72vw;
     height: auto;
     filter: drop-shadow(0 18px 34px rgba(124, 42, 0, 0.28));
+    animation: mishiFadeUp 460ms var(--ease-spring) both;
 }
 
 .animo-quote {
@@ -3201,19 +3529,27 @@ table.table tbody tr:hover {
     min-height: 44px;
     padding: 10px 28px;
     border-radius: var(--radius-pill);
-    background-color: rgba(255, 255, 255, 0.16);
-    border: 1.5px solid rgba(255, 255, 255, 0.48);
+    background-color: rgba(255, 255, 255, 0.20);
+    border: 1.5px solid rgba(255, 255, 255, 0.56);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 8px 24px rgba(124, 42, 0, 0.16);
     color: #FFFFFF;
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
-    backdrop-filter: blur(8px);
-    transition: background-color 0.18s ease, transform 0.18s ease;
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    transition: background-color 180ms var(--ease-out), transform var(--dur-tap) var(--ease-out);
 }
 
-.animo-btn:hover {
-    background-color: rgba(255, 255, 255, 0.26);
-    transform: translateY(-1px);
+.animo-btn:active {
+    transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .animo-btn:hover {
+        background-color: rgba(255, 255, 255, 0.30);
+        transform: translateY(-1px);
+    }
 }
 
 /* ==========================================================================
@@ -3518,7 +3854,7 @@ table.table tbody tr:hover {
     }
 
     .container-app {
-        padding: 16px 16px 96px;
+        padding: 16px 16px 110px;
     }
 
     .app-home-grid,
@@ -3584,22 +3920,26 @@ table.table tbody tr:hover {
     }
 
     .footer-with-bottom-nav {
-        padding-bottom: 94px;
+        padding-bottom: 112px;
     }
 
     .bottom-nav {
         position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        left: 14px;
+        right: 14px;
         z-index: 40;
-        background-color: rgba(255, 253, 249, 0.97);
-        backdrop-filter: blur(12px);
-        border-top: 1px solid rgba(31, 36, 45, 0.08);
+        background-color: rgba(255, 255, 255, 0.76);
+        backdrop-filter: blur(26px) saturate(200%);
+        -webkit-backdrop-filter: blur(26px) saturate(200%);
+        border: 1px solid rgba(255, 255, 255, 0.92);
+        box-shadow: var(--glass-float-shadow);
+        border-radius: 28px;
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         align-items: center;
-        padding: 6px 8px calc(6px + env(safe-area-inset-bottom)) 8px;
+        gap: 4px;
+        padding: 6px 8px;
     }
 
     .bottom-nav-item {
@@ -3612,8 +3952,13 @@ table.table tbody tr:hover {
         font-size: 11px;
         font-weight: 500;
         color: var(--fg-muted);
-        border-radius: 14px;
+        border-radius: 20px;
         text-decoration: none;
+        transition: transform var(--dur-tap) var(--ease-out), color 180ms var(--ease-out), background-color 180ms var(--ease-out);
+    }
+
+    .bottom-nav-item:active {
+        transform: scale(0.92);
     }
 
     .bottom-nav-item svg {
@@ -3624,5 +3969,7 @@ table.table tbody tr:hover {
     .bottom-nav-item.active {
         color: var(--orange-text);
         font-weight: 700;
+        background-color: rgba(249, 122, 34, 0.11);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
     }
 }

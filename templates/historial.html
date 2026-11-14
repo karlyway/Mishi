@@ -29,23 +29,24 @@
     </div>
 
     <div class="gastos-hero-wrap">
-        <div class="gastos-hero-summary">
+        <div class="app-card gastos-hero-summary">
+            <span class="gastos-hero-kicker">Resumen del periodo</span>
             <div class="gastos-hero-total money-num">$ {{ total_gastos_fmt }}</div>
             <div class="gastos-hero-label">Total gastado · Ingresos: <span class="text-success">+$ {{ total_ingresos_fmt }}</span></div>
+        </div>
 
-            <div class="weekly-bars-card" aria-label="Gastos de esta semana de lunes a domingo">
-                <div class="weekly-bars-grid">
-                    {% for b in barras_semana %}
-                    <div class="weekly-bar-col">
-                        <div class="weekly-bar-track">
-                            <div class="weekly-bar-fill {% if b.destacada %}is-peak{% endif %} {% if b.vacia %}is-empty{% endif %}"
-                                 style="height: {{ b.altura }}%;"
-                                 title="{{ b.fecha|date:'d M' }}: ${{ b.total_fmt }}"></div>
-                        </div>
-                        <span class="weekly-bar-day">{{ b.letra }}</span>
+        <div class="app-card weekly-bars-card" aria-label="Gastos de esta semana de lunes a domingo">
+            <div class="weekly-bars-grid">
+                {% for b in barras_semana %}
+                <div class="weekly-bar-col">
+                    <div class="weekly-bar-track">
+                        <div class="weekly-bar-fill {% if b.destacada %}is-peak{% endif %} {% if b.vacia %}is-empty{% endif %}"
+                             style="height: {{ b.altura }}%;"
+                             title="{{ b.fecha|date:'d M' }}: ${{ b.total_fmt }}"></div>
                     </div>
-                    {% endfor %}
+                    <span class="weekly-bar-day">{{ b.letra }}</span>
                 </div>
+                {% endfor %}
             </div>
         </div>
     </div>
