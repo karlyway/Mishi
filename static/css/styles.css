@@ -241,9 +241,28 @@ select {
     z-index: 4;
 }
 
+@keyframes mishiCardSheen {
+    0% {
+        transform: translateX(-140%) skewX(-18deg);
+    }
+    45%, 100% {
+        transform: translateX(220%) skewX(-18deg);
+    }
+}
+
 .reveal {
     animation: mishiFadeUp 380ms var(--ease-out) both;
 }
+
+.app-home-primary > *,
+.app-home-secondary > * {
+    animation: mishiFadeUp 460ms var(--ease-out) both;
+}
+
+.app-home-primary > *:nth-child(2) { animation-delay: 55ms; }
+.app-home-primary > *:nth-child(3) { animation-delay: 110ms; }
+.app-home-primary > *:nth-child(4) { animation-delay: 165ms; }
+.app-home-secondary > *:nth-child(2) { animation-delay: 95ms; }
 
 [data-scroll-reveal] {
     opacity: 0;
@@ -272,6 +291,7 @@ select {
 /* Brillo especular interactivo en superficies Liquid Glass */
 .app-card,
 .wallet-combo-card,
+.kpi-glass-tile,
 .m-feature-item,
 .m-hero-glass-stage,
 .m-promo-banner,
@@ -283,6 +303,7 @@ select {
 }
 
 .app-card::before,
+.kpi-glass-tile::before,
 .goal-app-card::before,
 .auth-card::before,
 .m-feature-item::before,
@@ -312,6 +333,9 @@ select {
     .reveal,
     .reveal-delay-1,
     .reveal-delay-2,
+    .app-home-primary > *,
+    .app-home-secondary > *,
+    .wallet-card-peek-front::after,
     .app-screen > *,
     .weekly-bar-fill,
     .wallet-month-fill,
@@ -2416,15 +2440,20 @@ table.table tbody tr:hover {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30), 0 4px 12px rgba(249, 122, 34, 0.24);
 }
 
-/* Superficie de tarjetas internas (Liquid Glass) */
+/* Superficie de tarjetas internas (Apple Liquid Glass real) */
 .app-card {
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.56) 100%);
-    backdrop-filter: blur(28px) saturate(215%);
-    -webkit-backdrop-filter: blur(28px) saturate(215%);
-    border: 1.5px solid var(--glass-outline);
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.62) 0%, rgba(246, 249, 255, 0.44) 100%);
+    backdrop-filter: blur(28px) saturate(235%);
+    -webkit-backdrop-filter: blur(28px) saturate(235%);
+    border: 1.5px solid rgba(255, 255, 255, 0.96);
     border-radius: 24px;
     padding: 18px 20px;
-    box-shadow: var(--glass-edge-shadow);
+    box-shadow:
+        inset 0 2px 1px rgba(255, 255, 255, 0.98),
+        inset 0 -1px 4px rgba(249, 122, 34, 0.06),
+        0 16px 38px -8px rgba(17, 24, 39, 0.085),
+        0 2px 8px rgba(17, 24, 39, 0.035),
+        0 0 0 1px rgba(24, 28, 36, 0.045);
     margin-bottom: 16px;
     transition: transform 240ms var(--ease-out), box-shadow 260ms var(--ease-out);
 }
@@ -2638,11 +2667,54 @@ table.table tbody tr:hover {
 
 /* Inicio / Dashboard (Pantalla 2) */
 .app-greeting-bar {
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 18px;
+}
+
+.app-greeting-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.app-hero-cta-pill {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(135deg, #FFA048 0%, #F97A22 60%, #E7630C 100%);
+    color: #FFFFFF;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow:
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.44),
+        0 10px 22px -4px rgba(249, 122, 34, 0.34);
+    transition: transform var(--dur-tap) var(--ease-spring), box-shadow 200ms var(--ease-out);
+}
+
+.app-hero-cta-pill:active {
+    transform: scale(0.95);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .app-hero-cta-pill:hover {
+        transform: translateY(-2px);
+        color: #FFFFFF;
+        box-shadow:
+            inset 0 1.5px 0 rgba(255, 255, 255, 0.48),
+            0 14px 26px -4px rgba(249, 122, 34, 0.42);
+    }
 }
 
 .app-greeting-user {
@@ -2755,14 +2827,45 @@ table.table tbody tr:hover {
 }
 
 .app-home-grid {
+    position: relative;
     display: grid;
     grid-template-columns: 1.04fr 0.96fr;
     gap: 22px;
     align-items: start;
 }
 
+/* Manchas luminosas concentradas detrás de las tarjetas para refracción Liquid Glass real sobre blanco */
+.app-home-grid::before,
+.app-home-grid::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    border-radius: 50%;
+    z-index: 0;
+}
+
+.app-home-grid::before {
+    top: 170px;
+    left: -36px;
+    width: 360px;
+    height: 360px;
+    background: radial-gradient(circle at 50% 50%, rgba(249, 122, 34, 0.19) 0%, rgba(245, 184, 46, 0.11) 42%, rgba(255, 255, 255, 0) 68%);
+    filter: blur(22px);
+}
+
+.app-home-grid::after {
+    top: 28px;
+    right: -28px;
+    width: 400px;
+    height: 420px;
+    background: radial-gradient(circle at 50% 50%, rgba(196, 214, 246, 0.42) 0%, rgba(249, 122, 34, 0.14) 44%, rgba(255, 255, 255, 0) 68%);
+    filter: blur(24px);
+}
+
 .app-home-primary,
 .app-home-secondary {
+    position: relative;
+    z-index: 2;
     min-width: 0;
 }
 
@@ -2771,11 +2874,14 @@ table.table tbody tr:hover {
     position: relative;
     border-radius: 28px;
     overflow: hidden;
-    background: linear-gradient(155deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.50) 100%);
-    backdrop-filter: blur(28px) saturate(220%);
-    -webkit-backdrop-filter: blur(28px) saturate(220%);
-    border: 1.5px solid rgba(255, 255, 255, 0.96);
-    box-shadow: var(--glass-float-shadow);
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.64) 0%, rgba(247, 249, 254, 0.48) 100%);
+    backdrop-filter: blur(28px) saturate(230%);
+    -webkit-backdrop-filter: blur(28px) saturate(230%);
+    border: 1.5px solid rgba(255, 255, 255, 0.98);
+    box-shadow:
+        inset 0 2px 1px rgba(255, 255, 255, 0.98),
+        0 22px 46px -8px rgba(17, 24, 39, 0.12),
+        0 0 0 1px rgba(24, 28, 36, 0.045);
     transition: transform 260ms var(--ease-out), box-shadow 260ms var(--ease-out);
 }
 
@@ -2785,52 +2891,90 @@ table.table tbody tr:hover {
     pointer-events: none;
     overflow: hidden;
     z-index: 1;
-    -webkit-mask-image: linear-gradient(180deg, #000000 0%, #000000 50%, rgba(0, 0, 0, 0.55) 78%, rgba(0, 0, 0, 0) 98%);
-    mask-image: linear-gradient(180deg, #000000 0%, #000000 50%, rgba(0, 0, 0, 0.55) 78%, rgba(0, 0, 0, 0) 98%);
+    -webkit-mask-image: linear-gradient(180deg, #000000 0%, #000000 54%, rgba(0, 0, 0, 0.55) 82%, rgba(0, 0, 0, 0) 100%);
+    mask-image: linear-gradient(180deg, #000000 0%, #000000 54%, rgba(0, 0, 0, 0.55) 82%, rgba(0, 0, 0, 0) 100%);
 }
 
 .wallet-card-peek-back {
     position: absolute;
-    top: 10px;
-    right: 78px;
-    width: 156px;
-    height: 92px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #1F242D 0%, #313846 100%);
-    transform: rotate(-10deg);
-    opacity: 0.94;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 8px 18px rgba(31, 36, 45, 0.24);
+    top: 8px;
+    left: 20px;
+    right: 82px;
+    height: 118px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #1A1E26 0%, #2C3341 58%, #3B4454 100%);
+    transform: rotate(-3.5deg);
+    opacity: 0.95;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 12px 26px rgba(20, 24, 32, 0.28);
+    padding: 16px 20px;
+}
+
+.wallet-chip-gold {
+    display: block;
+    width: 28px;
+    height: 20px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #FFE18C 0%, #F5B82E 60%, #D9920B 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 2px 6px rgba(0, 0, 0, 0.25);
+    opacity: 0.92;
 }
 
 .wallet-card-peek-front {
     position: absolute;
-    top: 14px;
-    right: 20px;
-    width: 174px;
-    height: 98px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #FF9D42 0%, #F97A22 52%, #F5B82E 100%);
-    transform: rotate(6deg);
-    opacity: 0.96;
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.55), 0 10px 22px rgba(249, 122, 34, 0.28);
+    top: 15px;
+    left: 56px;
+    right: 18px;
+    height: 124px;
+    border-radius: 20px;
+    background: linear-gradient(130deg, #FFB054 0%, #F97A22 52%, #F5B82E 100%);
+    transform: rotate(2.4deg);
+    opacity: 0.98;
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow:
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.62),
+        0 14px 28px rgba(249, 122, 34, 0.30);
     display: flex;
     align-items: flex-start;
-    justify-content: flex-start;
-    padding: 10px 14px;
-    color: rgba(255, 255, 255, 0.96);
-    font-size: 11px;
+    justify-content: space-between;
+    padding: 12px 58px 12px 18px;
+    color: rgba(255, 255, 255, 0.98);
+    overflow: hidden;
+}
+
+.wallet-card-peek-front::after {
+    content: "";
+    position: absolute;
+    top: -10%;
+    left: 0;
+    width: 44%;
+    height: 130%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.32) 50%, transparent 100%);
+    animation: mishiCardSheen 7s var(--ease-out) infinite;
+    pointer-events: none;
+}
+
+.wallet-card-brand {
+    font-size: 13px;
     font-weight: 800;
     letter-spacing: -0.02em;
+    text-shadow: 0 1px 2px rgba(170, 68, 6, 0.25);
+}
+
+.wallet-card-digits {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.92;
 }
 
 .wallet-combo-top {
     position: relative;
     z-index: 2;
     color: var(--carbon);
-    padding: 18px 20px 18px 20px;
-    min-height: 158px;
+    padding: 14px 20px 18px 20px;
+    min-height: 170px;
     display: flex;
     align-items: stretch;
 }
@@ -2838,14 +2982,16 @@ table.table tbody tr:hover {
 .wallet-combo-top::before {
     content: "";
     position: absolute;
-    top: 52px;
+    top: 56px;
     inset-inline: 0;
     bottom: 0;
-    background: linear-gradient(178deg, rgba(255, 255, 255, 0.54) 0%, rgba(255, 255, 255, 0.74) 48%, rgba(255, 255, 255, 0.78) 100%);
-    backdrop-filter: blur(22px) saturate(230%);
-    -webkit-backdrop-filter: blur(22px) saturate(230%);
-    border-top: 1.5px solid rgba(255, 255, 255, 0.96);
-    box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.96);
+    background: linear-gradient(172deg, rgba(255, 255, 255, 0.50) 0%, rgba(255, 255, 255, 0.72) 54%, rgba(255, 255, 255, 0.84) 100%);
+    backdrop-filter: blur(22px) saturate(235%);
+    -webkit-backdrop-filter: blur(22px) saturate(235%);
+    border-top: 2px solid rgba(255, 255, 255, 0.98);
+    box-shadow:
+        inset 0 2px 2px rgba(255, 255, 255, 0.98),
+        0 -8px 20px rgba(31, 36, 45, 0.08);
     pointer-events: none;
     z-index: 0;
 }
@@ -2865,16 +3011,23 @@ table.table tbody tr:hover {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 18px;
 }
 
 .wallet-label-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--fg-muted);
+    padding: 4px 11px;
+    border-radius: var(--radius-pill);
+    background-color: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.98);
+    box-shadow: 0 3px 10px rgba(17, 24, 39, 0.08);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--carbon);
 }
 
 .wallet-label-chip svg {
@@ -3097,12 +3250,12 @@ table.table tbody tr:hover {
     text-align: right;
 }
 
-/* Acciones rápidas circulares */
+/* Acciones rápidas circulares (Payno Cristal Domo) */
 .quick-actions-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
-    margin: 18px 0 8px;
+    margin: 18px 0 12px;
 }
 
 .quick-action-tile {
@@ -3112,7 +3265,7 @@ table.table tbody tr:hover {
     gap: 7px;
     text-align: center;
     font-size: 11.5px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--carbon);
     text-decoration: none;
 }
@@ -3120,14 +3273,17 @@ table.table tbody tr:hover {
 .quick-action-circle {
     position: relative;
     overflow: hidden;
-    width: 50px;
-    height: 50px;
+    width: 54px;
+    height: 54px;
     border-radius: 50%;
-    background: linear-gradient(155deg, rgba(255, 255, 255, 0.80) 0%, rgba(255, 255, 255, 0.56) 100%);
-    backdrop-filter: blur(22px) saturate(200%);
-    -webkit-backdrop-filter: blur(22px) saturate(200%);
-    border: 1.5px solid var(--glass-outline);
-    box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.96), 0 6px 16px rgba(17, 24, 39, 0.055);
+    background: radial-gradient(circle at 30% 24%, #FFFFFF 0%, rgba(255, 255, 255, 0.72) 56%, rgba(226, 234, 248, 0.72) 100%);
+    backdrop-filter: blur(24px) saturate(215%);
+    -webkit-backdrop-filter: blur(24px) saturate(215%);
+    border: 1.5px solid rgba(255, 255, 255, 0.98);
+    box-shadow:
+        inset 0 2px 2px rgba(255, 255, 255, 0.98),
+        0 10px 22px -4px rgba(17, 24, 39, 0.095),
+        0 0 0 1px rgba(24, 28, 36, 0.04);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3135,60 +3291,271 @@ table.table tbody tr:hover {
     transition: transform var(--dur-tap) var(--ease-spring), border-color 180ms var(--ease-out), color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
 }
 
+.quick-action-tile.is-primary .quick-action-circle {
+    background: linear-gradient(145deg, #FFA24D 0%, #F97A22 58%, #E45E07 100%);
+    border-color: rgba(255, 255, 255, 0.65);
+    color: #FFFFFF;
+    box-shadow:
+        inset 0 2px 2px rgba(255, 255, 255, 0.50),
+        0 12px 24px -4px rgba(249, 122, 34, 0.36);
+}
+
 .quick-action-tile:active .quick-action-circle {
-    transform: scale(0.92);
+    transform: scale(0.91);
 }
 
 @media (hover: hover) and (pointer: fine) {
     .quick-action-tile:hover .quick-action-circle {
-        transform: translateY(-2px);
-        border-color: var(--orange);
+        transform: translateY(-3px);
+        border-color: rgba(249, 122, 34, 0.38);
         color: var(--orange);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 8px 18px rgba(249, 122, 34, 0.14);
+        box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.98), 0 14px 26px rgba(249, 122, 34, 0.16);
+    }
+    .quick-action-tile.is-primary:hover .quick-action-circle {
+        color: #FFFFFF;
+        box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.56), 0 16px 30px rgba(249, 122, 34, 0.44);
     }
 }
 
-/* Lista de categorías (Inicio) */
+/* Pulso financiero rápido (Bento Glass Strip) */
+.kpi-glass-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 14px 0 0;
+}
+
+.kpi-glass-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 13px 14px;
+    border-radius: 20px;
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.66) 0%, rgba(246, 249, 255, 0.48) 100%);
+    backdrop-filter: blur(26px) saturate(225%);
+    -webkit-backdrop-filter: blur(26px) saturate(225%);
+    border: 1.5px solid rgba(255, 255, 255, 0.96);
+    box-shadow:
+        inset 0 2px 1px rgba(255, 255, 255, 0.98),
+        0 12px 26px -6px rgba(17, 24, 39, 0.075),
+        0 0 0 1px rgba(24, 28, 36, 0.045);
+    text-decoration: none;
+    color: var(--carbon);
+    min-width: 0;
+    transition: transform var(--dur-tap) var(--ease-spring), border-color 200ms var(--ease-out), box-shadow 220ms var(--ease-out);
+}
+
+.kpi-glass-tile > * {
+    position: relative;
+    z-index: 2;
+}
+
+.kpi-glass-tile:active {
+    transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .kpi-glass-tile:hover {
+        transform: translateY(-2px);
+        border-color: rgba(249, 122, 34, 0.28);
+        box-shadow:
+            inset 0 2px 1px rgba(255, 255, 255, 0.98),
+            0 16px 32px -6px rgba(249, 122, 34, 0.14);
+        text-decoration: none;
+    }
+}
+
+.kpi-tile-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    white-space: nowrap;
+}
+
+.kpi-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.kpi-dot.is-orange {
+    background-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(249, 122, 34, 0.16);
+}
+
+.kpi-dot.is-gold {
+    background-color: var(--yellow);
+    box-shadow: 0 0 0 3px rgba(245, 184, 46, 0.20);
+}
+
+.kpi-dot.is-emerald {
+    background-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(34, 160, 107, 0.16);
+}
+
+.kpi-tile-val {
+    font-size: 15.5px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--carbon);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-tile-sub {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Lista de categorías (Inicio — cristal + barra proporcional) */
 .cat-list-card {
-    padding: 6px 18px;
+    padding: 8px 12px;
+    margin-bottom: 0;
 }
 
 .cat-row-item {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 10px;
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 180ms var(--ease-out), transform var(--dur-tap) var(--ease-out);
+}
+
+.cat-row-item:active {
+    transform: scale(0.985);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .cat-row-item:hover {
+        background-color: rgba(255, 255, 255, 0.68);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 4px 12px rgba(17, 24, 39, 0.04);
+        text-decoration: none;
+    }
+}
+
+.cat-row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cat-row-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(31, 36, 45, 0.06);
+    gap: 10px;
 }
 
-.cat-row-item:last-child {
-    border-bottom: none;
+.cat-row-nums {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .cat-row-name {
-    font-size: 14.5px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--carbon);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .cat-row-val {
-    font-size: 14.5px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--carbon);
     font-variant-numeric: tabular-nums;
 }
 
 .cat-row-pct {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--orange-text);
+    background-color: rgba(249, 122, 34, 0.11);
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+    min-width: 36px;
+    text-align: center;
+}
+
+.cat-row-track {
+    width: 100%;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background-color: rgba(31, 36, 45, 0.065);
+    overflow: hidden;
+}
+
+.cat-row-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, #F97A22 0%, #F5B82E 100%);
+    transform-origin: left center;
+    animation: mishiBarFillX 720ms var(--ease-out) both;
+}
+
+.visual-stat-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.visual-stat-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.96);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 4px 12px rgba(17, 24, 39, 0.035);
+    font-size: 11.5px;
+    font-weight: 600;
     color: var(--fg-muted);
-    margin-left: 6px;
+}
+
+.visual-stat-chip strong {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--carbon);
+}
+
+.visual-stat-chip.is-in strong {
+    color: var(--green);
+}
+
+.visual-stat-chip.is-out strong {
+    color: var(--orange-text);
 }
 
 .chart-box-sm {
     position: relative;
-    height: 185px;
+    height: 175px;
+}
+
+.chart-box-sm--donut {
+    height: 222px;
 }
 
 /* Gastos / Historial (Pantalla 3) */
@@ -3378,7 +3745,10 @@ table.table tbody tr:hover {
 }
 
 .mov-list {
-    padding: 4px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0;
 }
 
 .mov-list-row-wrap {
@@ -3391,11 +3761,33 @@ table.table tbody tr:hover {
 }
 
 .mov-list-item {
+    position: relative;
+    overflow: hidden;
     display: flex;
     align-items: center;
     gap: 12px;
+    padding: 10px 10px;
+    border-radius: 16px;
     text-decoration: none;
     color: inherit;
+    transition: background-color 180ms var(--ease-out), transform var(--dur-tap) var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.mov-list-item:active {
+    transform: scale(0.985);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .mov-list-item:hover {
+        background-color: rgba(255, 255, 255, 0.72);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 6px 14px rgba(17, 24, 39, 0.045);
+        text-decoration: none;
+    }
+}
+
+.mov-list-row-wrap .mov-list-item {
+    padding: 2px 0;
+    border-radius: 0;
 }
 
 .mov-list-info {
@@ -4616,7 +5008,8 @@ table.table tbody tr:hover {
     }
 
     .navbar--app,
-    .footer-app {
+    .footer-app,
+    .app-hero-cta-pill {
         display: none;
     }
 
@@ -4631,31 +5024,61 @@ table.table tbody tr:hover {
         gap: 14px;
     }
 
+    .app-home-grid::before {
+        top: 220px;
+        left: -40px;
+        width: 240px;
+        height: 240px;
+    }
+
+    .app-home-grid::after {
+        top: 520px;
+        right: -40px;
+        width: 250px;
+        height: 260px;
+    }
+
     .wallet-combo-top {
-        padding: 16px 16px 16px 16px;
-        min-height: 146px;
+        padding: 14px 16px 16px 16px;
+        min-height: 152px;
     }
 
     .wallet-combo-top::before {
-        top: 50px;
+        top: 52px;
     }
 
     .wallet-card-peek-back {
         top: 8px;
-        right: 60px;
-        width: 118px;
-        height: 76px;
-        border-radius: 14px;
+        left: 14px;
+        right: 64px;
+        height: 98px;
+        border-radius: 16px;
     }
 
     .wallet-card-peek-front {
-        top: 12px;
+        top: 14px;
+        left: 42px;
         right: 12px;
-        width: 132px;
-        height: 82px;
-        border-radius: 14px;
+        height: 102px;
+        border-radius: 16px;
+        padding: 10px 52px 10px 14px;
+    }
+
+    .kpi-glass-strip {
+        gap: 8px;
+    }
+
+    .kpi-glass-tile {
+        padding: 10px 10px;
+        border-radius: 16px;
+    }
+
+    .kpi-tile-val {
+        font-size: 13.5px;
+    }
+
+    .kpi-tile-sub {
         font-size: 9.5px;
-        padding: 8px 10px;
     }
 
     .wallet-combo-cat {

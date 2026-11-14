@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="manifest" href="{% static 'manifest.json' %}">
     <link rel="icon" type="image/svg+xml" href="{% static 'img/mishi-icon.svg' %}">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=10">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=11">
 </head>
 <body class="{% if ocultar_chrome %}is-fullbleed-body{% elif pestana_activa %}is-app-body{% endif %}">
     {% if not ocultar_chrome %}
@@ -212,7 +212,7 @@
         }
 
         if (!reduceMotion && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
-            var glassSelector = '.app-card, .wallet-combo-card, .m-feature-item, .m-hero-glass-stage, .m-promo-banner, .goal-app-card, .auth-card, .mishi-banner-card';
+            var glassSelector = '.app-card, .wallet-combo-card, .kpi-glass-tile, .m-feature-item, .m-hero-glass-stage, .m-promo-banner, .goal-app-card, .auth-card, .mishi-banner-card';
             document.querySelectorAll(glassSelector).forEach(function (card) {
                 var rafId = 0;
                 card.addEventListener('pointermove', function (e) {
@@ -234,7 +234,7 @@
         }
 
         if (!reduceMotion) {
-            var rippleSelector = '.btn, .m-feature-item, .quick-action-circle, .cat-picker-box, .icon-circle-btn, .bottom-nav-item, .bottom-nav-fab, .pill-tab';
+            var rippleSelector = '.btn, .m-feature-item, .quick-action-circle, .kpi-glass-tile, .mov-list-item, .cat-row-item, .cat-picker-box, .icon-circle-btn, .app-bell-btn, .wallet-corner-arrow, .bottom-nav-item, .bottom-nav-fab, .pill-tab, .app-hero-cta-pill';
             document.addEventListener('pointerdown', function (e) {
                 var host = e.target && e.target.closest ? e.target.closest(rippleSelector) : null;
                 if (!host || host.disabled) return;
