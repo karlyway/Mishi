@@ -53,6 +53,7 @@ a:hover {
 .nav-links {
     list-style: none;
     display: flex;
+    align-items: center;
     gap: 15px;
 }
 
@@ -71,6 +72,22 @@ a:hover {
 .nav-links a.active {
     background-color: #0056b3;
     color: #ffffff;
+}
+
+.btn-nav-logout {
+    background: none;
+    border: 1px solid #dcdcdc;
+    color: #c82333;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-nav-logout:hover {
+    background-color: #fdecea;
+    border-color: #f5c2c7;
 }
 
 .user-info {
@@ -153,6 +170,12 @@ a:hover {
     background-color: #fff3cd;
     color: #856404;
     border: 1px solid #ffeeba;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
 }
 
 /* Tablas */
@@ -296,10 +319,4 @@ table.table tr:hover {
     background-color: #ffebee;
     color: #c62828;
     border: 1px solid #ef9a9a;
-}
-
-.mensaje-exito {
-    background-color: #e8f5e9 !important;
-    color: #2e7d32 !important;
-    border: 1px solid #a5d6a7 !important;
 }

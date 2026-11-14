@@ -27,13 +27,13 @@
                         <li><a href="{% url 'historial' %}" class="{% if pestana_activa == 'historial' %}active{% endif %}">Historial</a></li>
                         <li><a href="{% url 'metas' %}" class="{% if pestana_activa == 'metas' %}active{% endif %}">Metas y prestamos</a></li>
                         <li>
-    <form method="POST" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="nav-links">
-            Cerrar sesión
-        </button>
-    </form>
-</li>
+                            <form method="POST" action="{% url 'logout' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-nav-logout">
+                                    Cerrar sesión
+                                </button>
+                            </form>
+                        </li>
                     {% else %}
                         <!-- Menu publico -->
                         <li><a href="{% url 'landing' %}">Inicio</a></li>
