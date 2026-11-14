@@ -14,8 +14,6 @@
         <p style="color: red; margin-bottom: 15px;">{{ error }}</p>
     {% endif %}
 
-    <div class="form-group">
-        <label for="nombre">Nombre completo</label>
         <div class="form-group">
             <label for="nombre">Nombre completo</label>
             <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Ej: Camila Perez" required>
@@ -38,7 +36,7 @@
 
         <div class="form-group">
             <label for="mesada">Mesada o ingreso aproximado (COP)</label>
-            <input type="number" id="mesada" name="mesada" class="form-control" placeholder="Ej: 350000" step="1000">
+            <input type="number" id="mesada" name="mesada" class="form-control" placeholder="Ej: 350000" min="0" step="0.01">
         </div>
 
         <div class="form-group">
