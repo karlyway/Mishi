@@ -56,7 +56,9 @@ Abrir en el navegador: http://127.0.0.1:8000/
 ## Pruebas
 ```bash
 python manage.py test
+pytest -v
 ```
+*(Si ejecutas localmente con SQLite mediante `local_settings.py`: `pytest -v --ds=local_settings`)*
 ---
 
 ---
@@ -81,3 +83,12 @@ En esta segunda fase del desarrollo del proyecto **Mishi**, nos enfocamos en la 
 
 * **Evidencias Gráficas:**
   * Se incorporaron capturas de pantalla detalladas en la carpeta `/evidencias` que comprueban la ejecución correcta de cada instrucción SQL y los resultados devueltos por el sistema de gestión de bases de datos.
+
+---
+
+## ✅ Avance - Clase 4: Pruebas y Correcciones
+
+* **Pruebas automatizadas (`pytest` y `pytest-django`):**
+  * Configuración en `pytest.ini` y suite completa en `finanzas/test_pytest.py` + `finanzas/tests.py` (**24 pruebas exitosas** cubriendo modelos, formularios, permisos/aislamiento de usuarios y flujos críticos).
+* **Registro de incidencias y reporte de ejecución:**
+  * Documentado en `documentacion/Reporte_Clase_4_Pruebas_y_Correcciones.md` con las **9 incidencias** corregidas y la evidencia de ejecución.
