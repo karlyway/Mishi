@@ -12,7 +12,7 @@
     <div class="m-hero-title-area">
         <h1 class="m-hero-title">
             Tu dinero,
-            <span class="text-orange">bajo control.</span>
+            <span class="text-orange m-title-gradient">bajo control.</span>
         </h1>
     </div>
 
@@ -50,21 +50,38 @@
     </div>
 
     <div class="m-hero-cat-area">
-        <div class="m-cat-halo">
-            <img src="{% static 'img/mishi-hero.png' %}" alt="Mishi sosteniendo una moneda dorada" class="m-cat-img" width="565" height="513">
+        <div class="m-hero-glass-stage">
+            <div class="m-hero-orb-aura" aria-hidden="true"></div>
+            <div class="m-glass-chip is-balance" aria-hidden="true">
+                <span class="m-chip-dot"></span>
+                <div>
+                    <small>Saldo disponible</small>
+                    <strong>$ 320.500</strong>
+                </div>
+            </div>
+            <div class="m-cat-halo">
+                <img src="{% static 'img/mishi-hero.png' %}" alt="Mishi sosteniendo una moneda dorada" class="m-cat-img" width="565" height="513">
+            </div>
+            <div class="m-glass-chip is-goal" aria-hidden="true">
+                <div class="m-chip-goal-top">
+                    <span>Meta · Ahorro</span>
+                    <strong>68%</strong>
+                </div>
+                <div class="m-chip-goal-bar"><span></span></div>
+            </div>
         </div>
     </div>
 </section>
 
-<section id="como-funciona" class="m-why reveal reveal-delay-1">
-    <div class="m-why-head">
-        <span class="pill-badge">¿Por qué Mishi?</span>
+<section id="como-funciona" class="m-why">
+    <div class="m-why-head" data-scroll-reveal>
+        <span class="pill-badge">✦ ¿Por qué Mishi?</span>
         <h2>Todo lo que necesitas en un solo lugar.</h2>
         <p>Herramientas simples y poderosas para que tomes mejores decisiones con tu dinero.</p>
     </div>
 
     <div class="m-feature-stack">
-        <a href="{% url 'login' %}" class="m-feature-item">
+        <a href="{% url 'login' %}" class="m-feature-item" data-scroll-reveal>
             <span class="m-feature-icon is-orange" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <rect x="4" y="5" width="16" height="14" rx="4" fill="#F97A22"/>
@@ -81,7 +98,7 @@
             </svg>
         </a>
 
-        <a href="{% url 'login' %}" class="m-feature-item">
+        <a href="{% url 'login' %}" class="m-feature-item" data-scroll-reveal style="transition-delay: 45ms;">
             <span class="m-feature-icon is-green" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="9" fill="#22A06B"/>
@@ -98,7 +115,7 @@
             </svg>
         </a>
 
-        <a href="{% url 'login' %}" class="m-feature-item">
+        <a href="{% url 'login' %}" class="m-feature-item" data-scroll-reveal style="transition-delay: 90ms;">
             <span class="m-feature-icon is-yellow" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path d="M12 3.2l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.2z" fill="#F5B400" stroke="#F5B400" stroke-width="1.4" stroke-linejoin="round"/>
@@ -114,12 +131,12 @@
             </svg>
         </a>
 
-        <a href="{% url 'login' %}" class="m-feature-item">
+        <a href="{% url 'login' %}" class="m-feature-item" data-scroll-reveal style="transition-delay: 135ms;">
             <span class="m-feature-icon is-indigo" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <rect x="4" y="13" width="3.5" height="6" rx="1.75" fill="#5B60E0"/>
-                    <rect x="10.25" y="9" width="3.5" height="10" rx="1.75" fill="#5B60E0"/>
-                    <rect x="16.5" y="5" width="3.5" height="14" rx="1.75" fill="#5B60E0"/>
+                    <rect x="4" y="13" width="3.5" height="6" rx="1.75" fill="#1F242D"/>
+                    <rect x="10.25" y="9" width="3.5" height="10" rx="1.75" fill="#F97A22"/>
+                    <rect x="16.5" y="5" width="3.5" height="14" rx="1.75" fill="#F5B82E"/>
                 </svg>
             </span>
             <div class="m-feature-text">
@@ -133,7 +150,7 @@
     </div>
 </section>
 
-<section class="m-promo-banner reveal reveal-delay-2">
+<section class="m-promo-banner" data-scroll-reveal>
     <div class="m-promo-leaf" aria-hidden="true"></div>
 
     <div class="m-promo-copy">

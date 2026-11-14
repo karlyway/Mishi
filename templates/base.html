@@ -13,9 +13,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="manifest" href="{% static 'manifest.json' %}">
     <link rel="icon" type="image/svg+xml" href="{% static 'img/mishi-icon.svg' %}">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=9">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=10">
 </head>
 <body class="{% if ocultar_chrome %}is-fullbleed-body{% elif pestana_activa %}is-app-body{% endif %}">
+    {% if not ocultar_chrome %}
+    <div class="ambient-canvas" aria-hidden="true">
+        <span class="ambient-orb is-orange"></span>
+        <span class="ambient-orb is-gold"></span>
+        <span class="ambient-orb is-silver"></span>
+    </div>
+    {% endif %}
 
     {% if not ocultar_chrome %}
     <header class="navbar {% if not pestana_activa %}navbar--public{% else %}navbar--app{% endif %}">
@@ -170,6 +177,99 @@
             });
             syncThumb();
         });
+
+        /* Apple Nav Spring Glass Pill + Specular Tracking + Google Material Ripple */
+        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var desktopNavList = document.querySelector('.navbar .nav-links');
+        if (desktopNavList) {
+            var navLinks = Array.from(desktopNavList.querySelectorAll('a:not(.nav-cta)'));
+            var activeLink = desktopNavList.querySelector('a.active:not(.nav-cta)');
+            if (navLinks.length >= 2) {
+                var navPill = document.createElement('span');
+                navPill.className = 'nav-glass-pill';
+                navPill.setAttribute('aria-hidden', 'true');
+                desktopNavList.insertBefore(navPill, desktopNavList.firstChild);
+
+                var moveNavPill = function (el) {
+                    if (!el || desktopNavList.offsetWidth === 0) {
+                        navPill.style.opacity = '0';
+                        return;
+                    }
+                    var listRect = desktopNavList.getBoundingClientRect();
+                    var elRect = el.getBoundingClientRect();
+                    navPill.style.width = elRect.width + 'px';
+                    navPill.style.transform = 'translateX(' + (elRect.left - listRect.left) + 'px)';
+                    navPill.style.opacity = '1';
+                };
+
+                moveNavPill(activeLink);
+                navLinks.forEach(function (link) {
+                    link.addEventListener('mouseenter', function () { moveNavPill(link); });
+                });
+                desktopNavList.addEventListener('mouseleave', function () { moveNavPill(activeLink); });
+                window.addEventListener('resize', function () { moveNavPill(activeLink); });
+            }
+        }
+
+        if (!reduceMotion && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
+            var glassSelector = '.app-card, .wallet-combo-card, .m-feature-item, .m-hero-glass-stage, .m-promo-banner, .goal-app-card, .auth-card, .mishi-banner-card';
+            document.querySelectorAll(glassSelector).forEach(function (card) {
+                var rafId = 0;
+                card.addEventListener('pointermove', function (e) {
+                    if (rafId) return;
+                    var rect = card.getBoundingClientRect();
+                    var px = ((e.clientX - rect.left) / rect.width) * 100;
+                    var py = ((e.clientY - rect.top) / rect.height) * 100;
+                    rafId = window.requestAnimationFrame(function () {
+                        card.style.setProperty('--mx', px.toFixed(1) + '%');
+                        card.style.setProperty('--my', py.toFixed(1) + '%');
+                        card.classList.add('is-glass-lit');
+                        rafId = 0;
+                    });
+                });
+                card.addEventListener('pointerleave', function () {
+                    card.classList.remove('is-glass-lit');
+                });
+            });
+        }
+
+        if (!reduceMotion) {
+            var rippleSelector = '.btn, .m-feature-item, .quick-action-circle, .cat-picker-box, .icon-circle-btn, .bottom-nav-item, .bottom-nav-fab, .pill-tab';
+            document.addEventListener('pointerdown', function (e) {
+                var host = e.target && e.target.closest ? e.target.closest(rippleSelector) : null;
+                if (!host || host.disabled) return;
+                var rect = host.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                var size = Math.max(rect.width, rect.height) * 1.9;
+                var rip = document.createElement('span');
+                rip.className = 'm-ripple';
+                rip.style.width = size + 'px';
+                rip.style.height = size + 'px';
+                rip.style.left = (e.clientX - rect.left - size / 2) + 'px';
+                rip.style.top = (e.clientY - rect.top - size / 2) + 'px';
+                host.appendChild(rip);
+                window.setTimeout(function () {
+                    if (rip.parentNode) rip.parentNode.removeChild(rip);
+                }, 480);
+            }, { passive: true });
+        }
+
+        if (!reduceMotion && 'IntersectionObserver' in window) {
+            var revealTargets = document.querySelectorAll('[data-scroll-reveal]');
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-inview');
+                        io.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
+            revealTargets.forEach(function (el) { io.observe(el); });
+        } else {
+            document.querySelectorAll('[data-scroll-reveal]').forEach(function (el) {
+                el.classList.add('is-inview');
+            });
+        }
     })();
     </script>
     {% block extra_js %}{% endblock %}
