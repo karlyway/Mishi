@@ -1,74 +1,181 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Mishi - Aplicacion de Control Financiero Universitario{% endblock %}
+{% block title %}Mishi - Tu dinero, bajo control{% endblock %}
 
 {% block content %}
-<section class="hero-editorial reveal">
+<section class="landing-hero reveal">
     <div>
-        <p class="eyebrow">Finanzas personales</p>
-        <h1 class="hero-title">
-            Control de gastos para estudiantes universitarios
-            <span class="heading-muted" style="display: block;">tu mesada, clara cada día</span>
+        <span class="pill-badge">+ Tu aliado financiero</span>
+
+        <h1 class="landing-hero-title">
+            Tu dinero,
+            <span class="text-orange" style="display: block;">bajo control.</span>
         </h1>
-        <p class="hero-copy">
-            Administra tu mesada o ingresos, calcula cuánto puedes gastar por día sin quedarte sin dinero antes de tiempo y lleva al día tus metas de ahorro y préstamos.
+
+        <p class="landing-hero-copy">
+            Control de gastos para estudiantes universitarios. Mishi te ayuda a gestionar tus movimientos, crear presupuestos y alcanzar tus metas financieras de forma fácil y segura.
         </p>
-        <div class="hero-actions">
-            <a href="{% url 'registro_usuario' %}" class="btn btn-primary">Crear una cuenta</a>
-            <a href="{% url 'login' %}" class="btn btn-secondary">Iniciar sesion</a>
+
+        <div class="landing-hero-actions">
+            <div class="landing-hero-buttons">
+                <a href="{% url 'registro_usuario' %}" class="btn btn-primary">
+                    Comenzar ahora
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 12h14M13 6l6 6-6 6"/>
+                    </svg>
+                </a>
+                <a href="#como-funciona" class="btn btn-play-pill">
+                    <span class="play-dot" aria-hidden="true">
+                        <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor">
+                            <path d="M3 2.2v7.6L9.8 6 3 2.2z"/>
+                        </svg>
+                    </span>
+                    Ver cómo funciona
+                </a>
+            </div>
+            <p class="hero-login-hint">
+                ¿Ya tienes cuenta? <a href="{% url 'login' %}">Iniciar sesion</a>
+            </p>
         </div>
     </div>
 
-    <div class="app-preview-card reveal reveal-delay-1" aria-label="Vista previa del panel financiero de Mishi">
-        <span class="wallet-label">Saldo disponible</span>
-        <div class="wallet-balance">$285.000 COP</div>
-        <p class="wallet-meta">15 días hasta el próximo ingreso · Límite $19.000/día</p>
-
-        <div class="preview-row">
-            <span>Almuerzo universitario</span>
-            <span style="color: #fca5a5;">-$12.000</span>
+    <div class="hero-mascot-stage reveal reveal-delay-1">
+        <div class="mascot-note-callout" aria-hidden="true">
+            <span>Pequeños<br>hábitos,<br>grandes<br>metas.</span>
+            <svg width="34" height="28" viewBox="0 0 40 34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3C4 12 6 24 18 29"/>
+                <path d="M13 31l6-1-3-5"/>
+            </svg>
         </div>
-        <div class="preview-row">
-            <span>Transporte campus</span>
-            <span style="color: #fca5a5;">-$3.300</span>
-        </div>
-        <div class="preview-row">
-            <span>Meta computador</span>
-            <span style="color: #86efac;">+$50.000</span>
-        </div>
+        <img src="{% static 'img/mishi-hero.png' %}" alt="Mishi sosteniendo una moneda dorada" class="hero-mascot-img" width="565" height="513">
     </div>
 </section>
 
-<section class="pillars-grid reveal reveal-delay-2">
-    <article class="pillar-item">
-        <div class="pillar-num">01</div>
-        <h3>Cálculo de límite diario</h3>
-        <p>Divide tu saldo disponible entre los días restantes para tu próxima mesada. Sabes cuánto gastar cada jornada.</p>
-    </article>
+<section id="como-funciona" class="landing-section reveal reveal-delay-1">
+    <div class="landing-section-head">
+        <span class="pill-badge">¿Por qué Mishi?</span>
+        <h2>Todo lo que necesitas en un solo lugar.</h2>
+        <p>Herramientas simples y poderosas para que tomes mejores decisiones con tu dinero.</p>
+    </div>
 
-    <article class="pillar-item">
-        <div class="pillar-num">02</div>
-        <h3>Control de gastos menores</h3>
-        <p>Detecta compras impulsivas de $15.000 o menos que agotan tu presupuesto sin que lo notes.</p>
-    </article>
+    <div class="feature-list">
+        <a href="{% url 'login' %}" class="feature-row">
+            <div class="feature-row-left">
+                <span class="feature-icon-circle is-orange" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="5" width="18" height="14" rx="3"/>
+                        <path d="M3 10h18M7 15h3"/>
+                    </svg>
+                </span>
+                <div>
+                    <h3>Controla tus gastos</h3>
+                    <p>Registra tus ingresos y gastos en segundos, sin complicaciones.</p>
+                </div>
+            </div>
+            <svg class="feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
+        </a>
 
-    <article class="pillar-item">
-        <div class="pillar-num">03</div>
-        <h3>Metas y préstamos</h3>
-        <p>Registra cuánto llevas ahorrado para tus objetivos y controla el dinero que prestas o debes entre compañeros.</p>
-    </article>
+        <a href="{% url 'login' %}" class="feature-row">
+            <div class="feature-row-left">
+                <span class="feature-icon-circle is-green" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/>
+                        <circle cx="12" cy="12" r="4.5"/>
+                        <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
+                    </svg>
+                </span>
+                <div>
+                    <h3>Crea presupuestos</h3>
+                    <p>Calcula tu límite diario según tu mesada y evita excesos.</p>
+                </div>
+            </div>
+            <svg class="feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
+        </a>
+
+        <a href="{% url 'login' %}" class="feature-row">
+            <div class="feature-row-left">
+                <span class="feature-icon-circle is-yellow" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.8 1-6.1-4.4-4.3 6.1-.9L12 3z"/>
+                    </svg>
+                </span>
+                <div>
+                    <h3>Ahorra para tus metas</h3>
+                    <p>Establece metas y visualiza tu progreso con abonos reales.</p>
+                </div>
+            </div>
+            <svg class="feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
+        </a>
+
+        <a href="{% url 'login' %}" class="feature-row">
+            <div class="feature-row-left">
+                <span class="feature-icon-circle is-indigo" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 20V10M12 20V4M6 20v-6"/>
+                    </svg>
+                </span>
+                <div>
+                    <h3>Recibe alertas</h3>
+                    <p>Te avisamos cuando te acerques o superes tu límite diario.</p>
+                </div>
+            </div>
+            <svg class="feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
+        </a>
+    </div>
 </section>
 
-<section class="card reveal">
-    <div class="card-header" style="margin-bottom: 8px;">
-        <div>
-            <p class="eyebrow">Empieza hoy</p>
-            <h2>Listo para usar desde navegador o celular</h2>
+<section class="promo-app-banner reveal reveal-delay-2">
+    <div class="promo-app-copy">
+        <span class="pill-badge" style="background-color: rgba(255, 140, 58, 0.14);">En tu celular</span>
+        <h2>Lleva Mishi siempre contigo.</h2>
+        <p>Disponible directo desde el navegador de tu celular o computador, diseñada para sentirse como tu app de gastos diaria.</p>
+        <div class="promo-store-pills">
+            <a href="{% url 'registro_usuario' %}" class="btn btn-dark btn-sm">Crear cuenta gratis</a>
+            <a href="{% url 'login' %}" class="btn btn-dark btn-sm" style="background-color: #FFFFFF; color: var(--carbon); border-color: var(--border-strong);">Probar la aplicacion</a>
         </div>
-        <a href="{% url 'login' %}" class="btn btn-primary">Probar la aplicacion</a>
     </div>
-    <p style="font-size: 14px; color: var(--fg-muted); max-width: 62ch;">
-        Registra movimientos en segundos, consulta gráficas semanales o mensuales y recibe alertas preventivas al alcanzar el 75% de tu límite diario.
-    </p>
+
+    <div class="phone-preview-wrap" aria-hidden="true">
+        <div class="phone-mockup">
+            <div class="phone-top">
+                <span class="phone-brand">
+                    <img src="{% static 'img/mishi-icon.svg' %}" alt="" width="20" height="20" style="border-radius: 6px;">
+                    mishi
+                </span>
+                <span style="font-size: 11px; color: var(--fg-muted);">Hola, Valen</span>
+            </div>
+
+            <div class="phone-wallet">
+                <div class="phone-wallet-label">Saldo disponible</div>
+                <div class="phone-wallet-amount">$ 320.500</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 600;">
+                <span>Gastos de este mes</span>
+                <span>60%</span>
+            </div>
+            <div class="phone-bar-track">
+                <div class="phone-bar-fill"></div>
+            </div>
+
+            <div class="phone-cat-row">
+                <span>Comida</span>
+                <strong>$120.000</strong>
+            </div>
+            <div class="phone-cat-row">
+                <span>Transporte</span>
+                <strong>$45.000</strong>
+            </div>
+        </div>
+    </div>
 </section>
 {% endblock %}

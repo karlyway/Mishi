@@ -1,11 +1,11 @@
 {
-  "name": "Mishi · Gastos Universitarios",
+  "name": "Mishi · Tu plata, bajo control",
   "short_name": "Mishi",
-  "description": "App web de control de gastos personales, límite diario, metas y préstamos para estudiantes universitarios.",
+  "description": "Control de gastos personales, presupuesto diario, metas de ahorro y préstamos para estudiantes universitarios.",
   "start_url": "/app/",
   "display": "standalone",
-  "background_color": "#f5f3ee",
-  "theme_color": "#1c1d20",
+  "background_color": "#F7F4EE",
+  "theme_color": "#FF8C3A",
   "icons": [
     {
       "src": "/static/img/mishi-icon.svg",

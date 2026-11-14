@@ -30,7 +30,7 @@
     {% endif %}
 {% endif %}
 
-<section class="card-dark reveal" aria-label="Resumen de saldo y límite diario">
+<section class="card-orange-wallet reveal" aria-label="Resumen de saldo y límite diario">
     <div class="wallet-top">
         <div>
             <div class="wallet-label">Saldo disponible</div>
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
             datasets: [{
                 label: 'COP',
                 data: [ingresos, gastos],
-                backgroundColor: ['#1f6f54', '#b9382f'],
+                backgroundColor: ['#22A06B', '#FF8C3A'],
                 borderRadius: 10,
                 barThickness: 42
             }]
@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 x: { grid: { display: false } },
                 y: {
                     beginAtZero: true,
-                    grid: { color: 'rgba(28, 29, 32, 0.06)' }
+                    grid: { color: 'rgba(41, 41, 41, 0.06)' }
                 }
             }
         }
@@ -186,8 +186,8 @@ document.addEventListener('DOMContentLoaded', function () {
             datasets: [{
                 data: hasCategoryData ? valores : [1],
                 backgroundColor: hasCategoryData
-                    ? ['#1c1d20', '#1f6f54', '#d4942a', '#b9382f', '#5c6b73', '#8b7355', '#3d7a8a']
-                    : ['#ebe7df'],
+                    ? ['#FF8C3A', '#FFD028', '#22A06B', '#5B60E0', '#D64038', '#292929', '#8B7355']
+                    : ['#EFEBE3'],
                 borderWidth: 0
             }]
         },
