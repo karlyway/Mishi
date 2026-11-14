@@ -57,6 +57,11 @@ def registro_usuario_view(request):
                 'error': 'Completa todos los campos obligatorios.'
             })
 
+        if frecuencia not in ['diario', 'semanal', 'quincenal', 'mensual']:
+            return render(request, 'registro_usuario.html', {
+                'error': 'Selecciona una frecuencia válida.'
+            })
+
         try:
             mesada = Decimal(mesada_texto or '0')
 
@@ -167,13 +172,16 @@ def dashboard_view(request):
         fecha=hoy
     ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
-    porcentaje_gasto_hoy = (
-        round(float(gasto_hoy / limite_diario) * 100, 2)
-        if limite_diario > 0 else 0
-    )
+    if limite_diario > 0:
+        porcentaje_gasto_hoy = round(float(gasto_hoy / limite_diario) * 100, 2)
+    elif gasto_hoy > 0:
+        porcentaje_gasto_hoy = 100
+    else:
+        porcentaje_gasto_hoy = 0
 
     limite_superado = (
-        gasto_hoy >= limite_diario and limite_diario > 0
+        (gasto_hoy >= limite_diario and limite_diario > 0)
+        or (limite_diario <= 0 and gasto_hoy > 0)
     )
 
     alerta_activa = porcentaje_gasto_hoy >= 75 or limite_superado
@@ -411,9 +419,9 @@ def historial_view(request):
         )
 
     if categoria_id:
-        if Categoria.objects.filter(idCategoria=categoria_id).exists():
+        if categoria_id.isdigit() and Categoria.objects.filter(idCategoria=int(categoria_id)).exists():
             movimientos_db = movimientos_db.filter(
-                idCategoria_id=categoria_id
+                idCategoria_id=int(categoria_id)
             )
         else:
             error_filtros = 'La categoría seleccionada no es válida.'
@@ -492,6 +500,7 @@ def editar_movimiento_view(request, movimiento_id):
                 tipo not in ['gasto', 'ingreso']
                 or not monto.is_finite()
                 or monto < 100
+                or monto.as_tuple().exponent < -2
                 or not fecha
             ):
                 raise ValueError
@@ -589,7 +598,12 @@ def metas_view(request):
                 categoria = request.POST.get('categoria', '').strip()
                 objetivo = Decimal(request.POST.get('objetivo', '0'))
 
-                if not nombre or not objetivo.is_finite() or objetivo <= 0:
+                if (
+                    not nombre
+                    or not objetivo.is_finite()
+                    or objetivo <= 0
+                    or objetivo.as_tuple().exponent < -2
+                ):
                     raise ValueError
 
                 MetaAhorro.objects.create(
@@ -608,7 +622,11 @@ def metas_view(request):
                 meta_id = request.POST.get('meta_id')
                 ahorro = Decimal(request.POST.get('ahorro', '0'))
 
-                if not ahorro.is_finite() or ahorro <= 0:
+                if (
+                    not ahorro.is_finite()
+                    or ahorro <= 0
+                    or ahorro.as_tuple().exponent < -2
+                ):
                     raise ValueError
 
                 meta = MetaAhorro.objects.get(
@@ -633,8 +651,10 @@ def metas_view(request):
                 if (
                     not deudor
                     or not concepto
+                    or tipo not in ['Por cobrar', 'Por pagar']
                     or not monto.is_finite()
                     or monto <= 0
+                    or monto.as_tuple().exponent < -2
                 ):
                     raise ValueError
 
