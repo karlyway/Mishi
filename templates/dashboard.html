@@ -4,21 +4,24 @@
 {% block title %}Inicio - Mishi{% endblock %}
 
 {% block content %}
-<div class="page-title">
-    <h1>Panel principal</h1>
-    <p>Estudiante: {{ usuario.nombre }} | {{ usuario.universidad }}</p>
+<div class="page-header reveal">
+    <div class="page-title">
+        <p class="eyebrow">{{ usuario.universidad }}</p>
+        <h1>Panel principal</h1>
+        <p>Hola, {{ usuario.nombre }}. Así va tu presupuesto de hoy.</p>
+    </div>
+    <a href="{% url 'movimiento' %}" class="btn btn-primary">+ Registrar movimiento</a>
 </div>
-
 
 {% if alerta_activa %}
     {% if limite_superado %}
-        <div class="alert alert-danger">
-            <strong>¡Límite diario superado!</strong>
+        <div class="alert alert-danger reveal" role="alert">
+            <strong>Límite diario superado:</strong>
             Has gastado el {{ porcentaje_gasto_hoy }}% de tu límite diario
             (${{ gasto_hoy }} COP de ${{ limite_diario }} COP).
         </div>
     {% else %}
-        <div class="alert alert-warning">
+        <div class="alert alert-warning reveal" role="status">
             <strong>Aviso preventivo:</strong>
             Has consumido el {{ porcentaje_gasto_hoy }}% de tu límite diario
             (${{ gasto_hoy }} COP de ${{ limite_diario }} COP).
@@ -27,106 +30,114 @@
     {% endif %}
 {% endif %}
 
-<div class="grid-3">
-    <div class="metric-box">
-        <div class="metric-title">Saldo disponible</div>
-        <div class="metric-number">${{ saldo }} COP</div>
-        <div class="metric-note">{{ dias_restantes }} dias hasta el proximo ingreso</div>
+<section class="card-dark reveal" aria-label="Resumen de saldo y límite diario">
+    <div class="wallet-top">
+        <div>
+            <div class="wallet-label">Saldo disponible</div>
+            <div class="wallet-balance">${{ saldo }} COP</div>
+            <div class="wallet-meta">
+                Frecuencia {{ usuario.frecuencia }} · {{ dias_restantes }} días de referencia
+            </div>
+        </div>
+        <div class="wallet-actions">
+            <a href="{% url 'movimiento' %}" class="btn btn-light-pill">+ Registrar movimiento</a>
+        </div>
     </div>
 
-    <div class="metric-box">
-        <div class="metric-title">Limite diario recomendado</div>
-        <div class="metric-number">${{ limite_diario }} COP/dia</div>
-        <div class="metric-note">Calculo: Saldo (${{ saldo }}) / {{ dias_restantes }} dias</div>
+    <div class="wallet-stats">
+        <div>
+            <div class="wallet-stat-label">Límite diario recomendado</div>
+            <div class="wallet-stat-value">${{ limite_diario }} COP</div>
+            <div class="wallet-stat-sub">Saldo / {{ dias_restantes }} días</div>
+        </div>
+        <div>
+            <div class="wallet-stat-label">Gastado hoy</div>
+            <div class="wallet-stat-value">${{ gasto_hoy }} COP</div>
+            <div class="wallet-stat-sub">{{ porcentaje_gasto_hoy }}% del límite diario</div>
+        </div>
+        <div>
+            <div class="wallet-stat-label">Gastos menores hoy</div>
+            <div class="wallet-stat-value">${{ total_hormiga }} COP</div>
+            <div class="wallet-stat-sub">Compras de $15.000 o menos</div>
+        </div>
     </div>
 
-    <div class="metric-box">
-        <div class="metric-title">Gastado hoy</div>
-        <div class="metric-number">${{ gasto_hoy }} COP</div>
-        <div class="metric-note">Gastos menores acumulados: ${{ total_hormiga }} COP</div>
+    <div class="budget-progress-wrap">
+        <div class="budget-progress-head">
+            <span>Consumo del límite de hoy</span>
+            <span class="money-num">{{ porcentaje_gasto_hoy }}%</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill {% if limite_superado %}is-danger{% elif porcentaje_gasto_hoy >= 75 %}is-warning{% endif %}"
+                 style="width: {% if porcentaje_gasto_hoy >= 100 %}100{% else %}{{ porcentaje_gasto_hoy|stringformat:'.0f' }}{% endif %}%;">
+            </div>
+        </div>
     </div>
-</div>
+</section>
 
-<div class="card">
-    <h2>Estadísticas financieras</h2>
+<div class="grid-2 reveal reveal-delay-1">
+    <section class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <h2>Últimos movimientos</h2>
+            <a href="{% url 'historial' %}" class="btn btn-secondary btn-sm">Ver historial completo</a>
+        </div>
 
-    <form method="GET" action="{% url 'dashboard' %}" style="margin-bottom: 20px;">
-        <label for="periodo">Consultar periodo:</label>
-        <select name="periodo" id="periodo" class="form-control" onchange="this.form.submit()">
-            <option value="semanal" {% if periodo == 'semanal' %}selected{% endif %}>Esta semana</option>
-            <option value="mensual" {% if periodo == 'mensual' %}selected{% endif %}>Este mes</option>
-        </select>
-    </form>
+        <ul class="feed-list">
+            {% for m in ultimos_movimientos %}
+            <li class="feed-item">
+                <div class="feed-left">
+                    <span class="feed-dot {% if m.tipo == 'ingreso' %}is-income{% endif %}" aria-hidden="true">
+                        {{ m.categoria|slice:":1" }}
+                    </span>
+                    <div class="feed-info">
+                        <div class="feed-title">
+                            <span>{{ m.titulo }}</span>
+                            {% if m.es_hormiga %}<span class="tag tag-warning">Gasto menor</span>{% endif %}
+                            {% if m.es_compartido %}<span class="tag">Compartido</span>{% endif %}
+                        </div>
+                        <div class="feed-sub">{{ m.categoria }} · {{ m.fecha }}</div>
+                    </div>
+                </div>
+                <div class="feed-amount {% if m.tipo == 'gasto' %}text-danger{% else %}text-success{% endif %}">
+                    {% if m.tipo == 'gasto' %}-${{ m.monto }}{% else %}+${{ m.monto }}{% endif %}
+                </div>
+            </li>
+            {% empty %}
+            <li class="feed-item">
+                <span style="font-size: 14px; color: var(--fg-muted);">Todavía no tienes movimientos registrados.</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
 
-    <h3>Ingresos y gastos</h3>
-    <div style="position: relative; height: 280px; margin-bottom: 30px;">
-        <canvas id="graficaIngresosGastos"></canvas>
-    </div>
+    <section class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <h2>Estadísticas financieras</h2>
+            <form method="GET" action="{% url 'dashboard' %}">
+                <label for="periodo" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Periodo</label>
+                <select name="periodo" id="periodo" class="form-control" style="min-height: 36px; padding: 4px 12px; font-size: 13px; border-radius: 9999px;" onchange="this.form.submit()">
+                    <option value="semanal" {% if periodo == 'semanal' %}selected{% endif %}>Esta semana</option>
+                    <option value="mensual" {% if periodo == 'mensual' %}selected{% endif %}>Este mes</option>
+                </select>
+            </form>
+        </div>
 
-    <h3>Gastos por categoría</h3>
-    <div style="position: relative; height: 280px;">
-        <canvas id="graficaCategorias"></canvas>
-    </div>
+        <h3 style="font-size: 13px; color: var(--fg-muted); margin-bottom: 8px;">Ingresos y gastos</h3>
+        <div style="position: relative; height: 190px; margin-bottom: 22px;">
+            <canvas id="graficaIngresosGastos"></canvas>
+        </div>
+
+        <h3 style="font-size: 13px; color: var(--fg-muted); margin-bottom: 8px;">Gastos por categoría</h3>
+        <div style="position: relative; height: 210px;">
+            <canvas id="graficaCategorias"></canvas>
+        </div>
+    </section>
 </div>
 
 {{ ingresos_periodo|json_script:"datos-ingresos" }}
 {{ gastos_periodo|json_script:"datos-gastos" }}
 {{ etiquetas_categorias|json_script:"etiquetas-categorias" }}
 {{ valores_categorias|json_script:"valores-categorias" }}
-
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2>Ultimos movimientos</h2>
-        <a href="{% url 'movimiento' %}" class="btn btn-primary">Registrar movimiento</a>
-    </div>
-
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Fecha</th>
-                <th>Concepto</th>
-                <th>Categoria</th>
-                <th>Tipo</th>
-                <th>Monto</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for m in ultimos_movimientos %}
-            <tr>
-                <td>{{ m.fecha }}</td>
-                <td>
-                    {{ m.titulo }}
-                    {% if m.es_hormiga %}<span class="tag">Gasto menor</span>{% endif %}
-                    {% if m.es_compartido %}<span class="tag">Compartido</span>{% endif %}
-                </td>
-                <td>{{ m.categoria }}</td>
-                <td>
-                    {% if m.tipo == 'gasto' %}
-                        <span class="text-danger">Gasto</span>
-                    {% else %}
-                        <span class="text-success">Ingreso</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if m.tipo == 'gasto' %}
-                        <span class="text-danger">-${{ m.monto }} COP</span>
-                    {% else %}
-                        <span class="text-success">+${{ m.monto }} COP</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5">Todavía no tienes movimientos registrados.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <div style="margin-top: 15px;">
-        <a href="{% url 'historial' %}">Ver historial completo</a>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -134,67 +145,67 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
-    const ingresos = JSON.parse(
-        document.getElementById('datos-ingresos').textContent
-    );
-
-    const gastos = JSON.parse(
-        document.getElementById('datos-gastos').textContent
-    );
-
-    const etiquetas = JSON.parse(
-        document.getElementById('etiquetas-categorias').textContent
-    );
-
-    const valores = JSON.parse(
-        document.getElementById('valores-categorias').textContent
-    );
+    const ingresos = JSON.parse(document.getElementById('datos-ingresos').textContent);
+    const gastos = JSON.parse(document.getElementById('datos-gastos').textContent);
+    const etiquetas = JSON.parse(document.getElementById('etiquetas-categorias').textContent);
+    const valores = JSON.parse(document.getElementById('valores-categorias').textContent);
 
     new Chart(document.getElementById('graficaIngresosGastos'), {
         type: 'bar',
         data: {
             labels: ['Ingresos', 'Gastos'],
             datasets: [{
-                label: 'Monto en COP',
+                label: 'COP',
                 data: [ingresos, gastos],
-                backgroundColor: ['#22C55E', '#EF4444']
+                backgroundColor: ['#1f6f54', '#b9382f'],
+                borderRadius: 10,
+                barThickness: 42
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
             scales: {
+                x: { grid: { display: false } },
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    grid: { color: 'rgba(28, 29, 32, 0.06)' }
                 }
             }
         }
     });
 
+    const hasCategoryData = etiquetas.length > 0;
     new Chart(document.getElementById('graficaCategorias'), {
         type: 'doughnut',
         data: {
-            labels: etiquetas,
+            labels: hasCategoryData ? etiquetas : ['Sin gastos en el periodo'],
             datasets: [{
-                data: valores,
-                backgroundColor: [
-                    '#3B82F6',
-                    '#22C55E',
-                    '#EAB308',
-                    '#EF4444',
-                    '#A855F7',
-                    '#F97316',
-                    '#06B6D4'
-                ]
+                data: hasCategoryData ? valores : [1],
+                backgroundColor: hasCategoryData
+                    ? ['#1c1d20', '#1f6f54', '#d4942a', '#b9382f', '#5c6b73', '#8b7355', '#3d7a8a']
+                    : ['#ebe7df'],
+                borderWidth: 0
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false
+            maintainAspectRatio: false,
+            cutout: '66%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 10,
+                        usePointStyle: true
+                    }
+                }
+            }
         }
     });
-
 });
 </script>
 {% endblock %}

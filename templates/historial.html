@@ -1,15 +1,18 @@
-
 {% extends 'base.html' %}
 
 {% block title %}Historial de Movimientos - Mishi{% endblock %}
 
 {% block content %}
-<div class="page-title">
-    <h1>Historial de transacciones</h1>
-    <p>Registro de ingresos y egresos registrados durante el periodo</p>
+<div class="page-header reveal">
+    <div class="page-title">
+        <p class="eyebrow">Movimientos</p>
+        <h1>Historial de transacciones</h1>
+        <p>Consulta, filtra, edita o elimina tus ingresos y egresos</p>
+    </div>
+    <a href="{% url 'movimiento' %}" class="btn btn-primary">+ Nuevo registro</a>
 </div>
 
-<div class="grid-3">
+<div class="grid-3 reveal">
     <div class="metric-box">
         <div class="metric-title">Total ingresos</div>
         <div class="metric-number text-success">+${{ total_ingresos }} COP</div>
@@ -20,33 +23,33 @@
         <div class="metric-number text-danger">-${{ total_gastos }} COP</div>
     </div>
 
-    <div class="metric-box">
-        <div class="metric-title">Balance neto</div>
-        <div class="metric-number">${{ balance }} COP</div>
+    <div class="metric-box" style="background-color: var(--surface-dark); border-color: transparent;">
+        <div class="metric-title" style="color: rgba(245, 243, 238, 0.6);">Balance neto</div>
+        <div class="metric-number" style="color: var(--bg-bone);">${{ balance }} COP</div>
     </div>
 </div>
 
-<div class="card">
-    <h2>Filtrar movimientos</h2>
+<section class="card reveal reveal-delay-1">
+    <h2 style="margin-bottom: 16px;">Filtrar movimientos</h2>
 
     <form method="GET" action="{% url 'historial' %}">
-        <div class="grid-3">
+        <div class="grid-3" style="margin-bottom: 0;">
             <div class="form-group">
-                <label for="fecha_inicio">Desde:</label>
+                <label for="fecha_inicio">Desde</label>
                 <input type="date" id="fecha_inicio"
                        name="fecha_inicio" class="form-control"
                        value="{{ fecha_inicio }}">
             </div>
 
             <div class="form-group">
-                <label for="fecha_fin">Hasta:</label>
+                <label for="fecha_fin">Hasta</label>
                 <input type="date" id="fecha_fin"
                        name="fecha_fin" class="form-control"
                        value="{{ fecha_fin }}">
             </div>
 
             <div class="form-group">
-                <label for="categoria">Categoría:</label>
+                <label for="categoria">Categoría</label>
                 <select id="categoria" name="categoria" class="form-control">
                     <option value="">Todas las categorías</option>
                     {% for cat in categorias %}
@@ -60,89 +63,81 @@
         </div>
 
         {% if error_filtros %}
-            <p style="color: red;">{{ error_filtros }}</p>
+            <div class="alert alert-danger" role="alert" style="margin-top: 8px;">{{ error_filtros }}</div>
         {% endif %}
 
-        <button type="submit" class="btn btn-primary">
-            Aplicar filtros
-        </button>
-
-        <a href="{% url 'historial' %}" class="btn btn-secondary">
-            Limpiar filtros
-        </a>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+            <button type="submit" class="btn btn-primary btn-sm">Aplicar filtros</button>
+            <a href="{% url 'historial' %}" class="btn btn-secondary btn-sm">Limpiar filtros</a>
+        </div>
     </form>
-</div>
+</section>
 
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+<section class="card reveal reveal-delay-2">
+    <div class="card-header">
         <h2>Listado de movimientos</h2>
-        <a href="{% url 'movimiento' %}" class="btn btn-primary">Nuevo registro</a>
     </div>
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Descripcion</th>
-                <th>Categoria</th>
-                <th>Tipo</th>
-                <th>Monto</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Descripción</th>
+                    <th>Categoría</th>
+                    <th>Tipo</th>
+                    <th>Monto</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
 
-        <tbody>
-            {% for m in movimientos %}
-            <tr>
-                <td>{{ m.id }}</td>
-                <td>{{ m.fecha }}</td>
-                <td>
-                    {{ m.titulo }}
-                    {% if m.es_hormiga %}<span class="tag">Gasto menor</span>{% endif %}
-                    {% if m.es_compartido %}<span class="tag">Deuda: {{ m.amigo }}</span>{% endif %}
-                </td>
-                <td>{{ m.categoria }}</td>
+            <tbody>
+                {% for m in movimientos %}
+                <tr>
+                    <td style="white-space: nowrap; color: var(--fg-muted);">{{ m.fecha }}</td>
+                    <td>
+                        <strong>{{ m.titulo }}</strong>
+                        {% if m.es_hormiga %}<span class="tag tag-warning" style="margin-left: 6px;">Gasto menor</span>{% endif %}
+                        {% if m.es_compartido %}<span class="tag" style="margin-left: 6px;">Deuda: {{ m.amigo }}</span>{% endif %}
+                    </td>
+                    <td><span class="tag">{{ m.categoria }}</span></td>
+                    <td>
+                        {% if m.tipo == 'gasto' %}
+                            <span class="tag tag-danger">Gasto</span>
+                        {% else %}
+                            <span class="tag tag-success">Ingreso</span>
+                        {% endif %}
+                    </td>
+                    <td class="money-num" style="white-space: nowrap;">
+                        {% if m.tipo == 'gasto' %}
+                            <span class="text-danger">-${{ m.monto }} COP</span>
+                        {% else %}
+                            <span class="text-success">+${{ m.monto }} COP</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap;">
+                        <a href="{% url 'editar_movimiento' m.id %}" class="btn btn-secondary btn-sm">
+                            Editar
+                        </a>
 
-                <td>
-                    {% if m.tipo == 'gasto' %}
-                        <span class="text-danger">Gasto</span>
-                    {% else %}
-                        <span class="text-success">Ingreso</span>
-                    {% endif %}
-                </td>
-
-                <td>
-                    {% if m.tipo == 'gasto' %}
-                        <span class="text-danger">-${{ m.monto }} COP</span>
-                    {% else %}
-                        <span class="text-success">+${{ m.monto }} COP</span>
-                    {% endif %}
-                </td>
-
-                <td>
-                    <a href="{% url 'editar_movimiento' m.id %}" class="btn btn-primary">
-                        Editar
-                    </a>
-
-                    <form method="POST"
-                          action="{% url 'eliminar_movimiento' m.id %}"
-                          style="display: inline;"
-                          onsubmit="return confirm('¿Estás seguro de eliminar este movimiento?');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-secondary">
-                            Eliminar
-                        </button>
-                    </form>
-                </td>
-            </tr>
-
-            {% empty %}
-            <tr>
-                <td colspan="7">Todavía no tienes movimientos registrados.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+                        <form method="POST"
+                              action="{% url 'eliminar_movimiento' m.id %}"
+                              style="display: inline;"
+                              onsubmit="return confirm('¿Estás seguro de eliminar este movimiento?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger-outline btn-sm">
+                                Eliminar
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="color: var(--fg-muted); padding: 24px 12px;">Todavía no tienes movimientos registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
 {% endblock %}

@@ -3,62 +3,70 @@
 {% block title %}Registrar Movimiento - Mishi{% endblock %}
 
 {% block content %}
-<div class="page-title">
-    <h1>Registrar movimiento</h1>
-    <p>Ingresa los datos del gasto o ingreso.</p>
-</div>
+<div class="form-shell reveal">
+    <div class="page-title" style="margin-bottom: 18px;">
+        <p class="eyebrow">Nuevo movimiento</p>
+        <h1>Registrar movimiento</h1>
+        <p>Saldo actual: <strong class="money-num">${{ saldo }} COP</strong> · Límite diario: <strong class="money-num">${{ limite_diario }} COP</strong></p>
+    </div>
 
-<div class="card" style="max-width: 600px; margin: 0 auto;">
-    <form action="{% url 'movimiento' %}" method="POST">
-        {% csrf_token %}
+    <div class="card">
+        <form action="{% url 'movimiento' %}" method="POST">
+            {% csrf_token %}
 
-        {% if error %}
-            <p style="color: red;">{{ error }}</p>
-        {% endif %}
+            {% if error %}
+                <div class="alert alert-danger" role="alert">{{ error }}</div>
+            {% endif %}
 
-        <div class="form-group">
-            <label for="tipo">Tipo de transacción</label>
-            <select id="tipo" name="tipo" class="form-control" required>
-                <option value="gasto">Gasto</option>
-                <option value="ingreso">Ingreso</option>
-            </select>
-        </div>
+            <div class="form-group">
+                <label>Tipo de transacción</label>
+                <div class="segmented-control">
+                    <input type="radio" id="tipo-gasto" name="tipo" value="gasto" checked>
+                    <label for="tipo-gasto">Gasto</label>
+                    <input type="radio" id="tipo-ingreso" name="tipo" value="ingreso">
+                    <label for="tipo-ingreso">Ingreso</label>
+                </div>
+            </div>
 
-        <div class="form-group">
-            <label for="monto">Monto (COP)</label>
-            <input type="number" id="monto" name="monto"
-                   class="form-control" min="100" step="0.01" required>
-        </div>
+            <div class="form-group">
+                <label for="monto">Monto (COP)</label>
+                <input type="number" id="monto" name="monto"
+                       class="form-control input-monto-grande"
+                       placeholder="0" min="100" step="0.01" inputmode="decimal" required>
+            </div>
 
-        <div class="form-group">
-            <label for="categoria">Categoría</label>
-            <select id="categoria" name="categoria" class="form-control" required>
-                {% for cat in categorias %}
-                    <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
-                {% endfor %}
-            </select>
-        </div>
+            <div class="grid-2" style="margin-bottom: 0; gap: 14px;">
+                <div class="form-group">
+                    <label for="categoria">Categoría</label>
+                    <select id="categoria" name="categoria" class="form-control" required>
+                        {% for cat in categorias %}
+                            <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-        <div class="form-group">
-            <label for="descripcion">Descripción</label>
-            <input type="text" id="descripcion" name="descripcion"
-                   class="form-control" placeholder="Ej: Almuerzo, transporte">
-        </div>
+                <div class="form-group">
+                    <label for="fecha">Fecha</label>
+                    <input type="date" id="fecha" name="fecha"
+                           class="form-control" value="{% now 'Y-m-d' %}" required>
+                </div>
+            </div>
 
-        <div class="form-group">
-            <label for="fecha">Fecha</label>
-            <input type="date" id="fecha" name="fecha"
-                   class="form-control" value="{% now 'Y-m-d' %}" required>
-        </div>
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <input type="text" id="descripcion" name="descripcion"
+                       class="form-control" placeholder="Ej: Almuerzo, transporte, copias">
+            </div>
 
-        <div style="margin-top: 20px;">
-            <button type="submit" class="btn btn-primary">
-                Guardar movimiento
-            </button>
-            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-                Cancelar
-            </a>
-        </div>
-    </form>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">
+                    Guardar movimiento
+                </button>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

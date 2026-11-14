@@ -3,75 +3,111 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#f5f3ee">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>{% block title %}Mishi - Control de Gastos Estudiantiles{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=2">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/mishi-icon.svg' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=3">
 </head>
 <body>
 
     <header class="navbar">
         <div class="nav-container">
-            <div class="brand">
-                <a href="{% url 'landing' %}" style="color: inherit; text-decoration: none;">
+            <a href="{% if pestana_activa %}{% url 'dashboard' %}{% else %}{% url 'landing' %}{% endif %}" class="brand-link">
+                <img src="{% static 'img/mishi-icon.svg' %}" alt="Mishi" class="brand-mark" width="34" height="34">
+                <span class="brand-text">
                     <strong>Mishi</strong>
-                </a>
-                <span>Control de gastos universitarios</span>
-            </div>
+                    <span>Control de gastos universitarios</span>
+                </span>
+            </a>
 
-            <nav>
-                <ul class="nav-links">
+            <nav aria-label="Navegación principal">
+                <ul class="nav-links {% if pestana_activa %}nav-links-internal{% endif %}">
                     {% if pestana_activa %}
-                        <!-- Menu interno de la aplicacion -->
                         <li><a href="{% url 'dashboard' %}" class="{% if pestana_activa == 'dashboard' %}active{% endif %}">Inicio</a></li>
                         <li><a href="{% url 'movimiento' %}" class="{% if pestana_activa == 'movimiento' %}active{% endif %}">Registrar gasto</a></li>
                         <li><a href="{% url 'historial' %}" class="{% if pestana_activa == 'historial' %}active{% endif %}">Historial</a></li>
                         <li><a href="{% url 'metas' %}" class="{% if pestana_activa == 'metas' %}active{% endif %}">Metas y prestamos</a></li>
-                        <li>
-                            <form method="POST" action="{% url 'logout' %}" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn-nav-logout">
-                                    Cerrar sesión
-                                </button>
-                            </form>
-                        </li>
                     {% else %}
-                        <!-- Menu publico -->
                         <li><a href="{% url 'landing' %}">Inicio</a></li>
                         <li><a href="{% url 'login' %}">Iniciar sesion</a></li>
-                        <li><a href="{% url 'registro_usuario' %}">Crear cuenta</a></li>
+                        <li><a href="{% url 'registro_usuario' %}" class="nav-cta">Crear cuenta</a></li>
                     {% endif %}
                 </ul>
             </nav>
 
             {% if pestana_activa %}
-            <div class="user-info">
-             <span>{{ usuario.nombre }}</span>
+            <div class="nav-user-area">
+                {% if usuario %}
+                <div class="user-pill">
+                    <span class="user-avatar" aria-hidden="true">{{ usuario.nombre|slice:":1" }}</span>
+                    <span>{{ usuario.nombre }}</span>
+                </div>
+                {% endif %}
+                <form method="POST" action="{% url 'logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-nav-logout">
+                        Cerrar sesión
+                    </button>
+                </form>
             </div>
             {% endif %}
         </div>
     </header>
 
-    <main class="container">
+    <main class="container {% if pestana_activa %}container-with-bottom-nav{% endif %}">
+        {% if messages %}
+            {% for message in messages %}
+                {% if 'error' in message.tags %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ message }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-success" role="status">
+                        {{ message }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
 
-    {% if messages %}
-        {% for message in messages %}
-            {% if 'error' in message.tags %}
-                <div class="alert alert-danger" style="background-color: #fdecea; color: #b71c1c; border: 2px solid #ef5350; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px;">
-                    {{ message }}
-                </div>
-            {% else %}
-                <div class="alert alert-success" style="background-color: #e8f5e9; color: #2e7d32; border: 2px solid #2e7d32; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px;">
-                    {{ message }}
-                </div>
-            {% endif %}
-        {% endfor %}
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    {% if pestana_activa %}
+    <nav class="bottom-nav" aria-label="Menú inferior de la aplicación">
+        <a href="{% url 'dashboard' %}" class="bottom-nav-item {% if pestana_activa == 'dashboard' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/>
+            </svg>
+            <span>Inicio</span>
+        </a>
+        <a href="{% url 'movimiento' %}" class="bottom-nav-item is-action {% if pestana_activa == 'movimiento' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>Registrar</span>
+        </a>
+        <a href="{% url 'historial' %}" class="bottom-nav-item {% if pestana_activa == 'historial' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+            </svg>
+            <span>Historial</span>
+        </a>
+        <a href="{% url 'metas' %}" class="bottom-nav-item {% if pestana_activa == 'metas' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 8v8M8.5 11.5L12 8l3.5 3.5"/>
+            </svg>
+            <span>Metas</span>
+        </a>
+    </nav>
     {% endif %}
 
-    {% block content %}
-    {% endblock %}
-</main>
-
-    <footer class="footer">
+    <footer class="footer {% if pestana_activa %}footer-with-bottom-nav{% endif %}">
         <p>Mishi &copy; 2026</p>
     </footer>
 

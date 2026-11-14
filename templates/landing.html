@@ -3,48 +3,72 @@
 {% block title %}Mishi - Aplicacion de Control Financiero Universitario{% endblock %}
 
 {% block content %}
-<div class="card" style="text-align: center; padding: 40px 20px;">
-    <h1 style="font-size: 28px; margin-bottom: 12px; color: #111;">Control de gastos para estudiantes universitarios</h1>
-    <p style="font-size: 16px; color: #555; max-width: 650px; margin: 0 auto 25px auto;">
-        Mishi te ayuda a administrar tu mesada o ingresos, calcular cuanto puedes gastar por dia sin quedarte sin dinero antes de tiempo y organizar tus metas de ahorro.
-    </p>
-    <div style="display: flex; justify-content: center; gap: 15px;">
-        <a href="{% url 'registro_usuario' %}" class="btn btn-primary" style="padding: 10px 20px;">Crear una cuenta</a>
-        <a href="{% url 'login' %}" class="btn btn-secondary" style="padding: 10px 20px;">Iniciar sesion</a>
-    </div>
-</div>
-
-<div class="grid-3" style="margin-top: 30px;">
-    <div class="card">
-        <h3>Calculo de limite diario</h3>
-        <p style="font-size: 14px; color: #555; margin-top: 8px;">
-            Divide tu saldo disponible entre los dias restantes para tu proxima mesada. Asi sabes con exactitud cuanto puedes gastar cada jornada.
+<section class="hero-editorial reveal">
+    <div>
+        <p class="eyebrow">Finanzas personales</p>
+        <h1 class="hero-title">
+            Control de gastos para estudiantes universitarios
+            <span class="heading-muted" style="display: block;">tu mesada, clara cada día</span>
+        </h1>
+        <p class="hero-copy">
+            Administra tu mesada o ingresos, calcula cuánto puedes gastar por día sin quedarte sin dinero antes de tiempo y lleva al día tus metas de ahorro y préstamos.
         </p>
+        <div class="hero-actions">
+            <a href="{% url 'registro_usuario' %}" class="btn btn-primary">Crear una cuenta</a>
+            <a href="{% url 'login' %}" class="btn btn-secondary">Iniciar sesion</a>
+        </div>
     </div>
 
-    <div class="card">
+    <div class="app-preview-card reveal reveal-delay-1" aria-label="Vista previa del panel financiero de Mishi">
+        <span class="wallet-label">Saldo disponible</span>
+        <div class="wallet-balance">$285.000 COP</div>
+        <p class="wallet-meta">15 días hasta el próximo ingreso · Límite $19.000/día</p>
+
+        <div class="preview-row">
+            <span>Almuerzo universitario</span>
+            <span style="color: #fca5a5;">-$12.000</span>
+        </div>
+        <div class="preview-row">
+            <span>Transporte campus</span>
+            <span style="color: #fca5a5;">-$3.300</span>
+        </div>
+        <div class="preview-row">
+            <span>Meta computador</span>
+            <span style="color: #86efac;">+$50.000</span>
+        </div>
+    </div>
+</section>
+
+<section class="pillars-grid reveal reveal-delay-2">
+    <article class="pillar-item">
+        <div class="pillar-num">01</div>
+        <h3>Cálculo de límite diario</h3>
+        <p>Divide tu saldo disponible entre los días restantes para tu próxima mesada. Sabes cuánto gastar cada jornada.</p>
+    </article>
+
+    <article class="pillar-item">
+        <div class="pillar-num">02</div>
         <h3>Control de gastos menores</h3>
-        <p style="font-size: 14px; color: #555; margin-top: 8px;">
-            Identifica compras impulsivas, comidas rapidas y transportes extras que agotan tu presupuesto sin que te des cuenta.
-        </p>
-    </div>
+        <p>Detecta compras impulsivas de $15.000 o menos que agotan tu presupuesto sin que lo notes.</p>
+    </article>
 
-    <div class="card">
-        <h3>Cuentas compartidas</h3>
-        <p style="font-size: 14px; color: #555; margin-top: 8px;">
-            Lleva el registro de dinero prestado y gastos en grupo entre companeros de estudio para no perder dinero.
-        </p>
-    </div>
-</div>
+    <article class="pillar-item">
+        <div class="pillar-num">03</div>
+        <h3>Metas y préstamos</h3>
+        <p>Registra cuánto llevas ahorrado para tus objetivos y controla el dinero que prestas o debes entre compañeros.</p>
+    </article>
+</section>
 
-<div class="card" style="margin-top: 20px;">
-    <h2>Por que usar Mishi</h2>
-    <p style="font-size: 14px; color: #555; margin-top: 8px; line-height: 1.7;">
-        Herramienta pensada para responder a las dificultades financieras comunes de los estudiantes: falta de registro de gastos diarios, compras impulsivas y ausencia de un colchon de ahorro.
-    </p>
-    <div style="margin-top: 15px;">
+<section class="card reveal">
+    <div class="card-header" style="margin-bottom: 8px;">
+        <div>
+            <p class="eyebrow">Empieza hoy</p>
+            <h2>Listo para usar desde navegador o celular</h2>
+        </div>
         <a href="{% url 'login' %}" class="btn btn-primary">Probar la aplicacion</a>
     </div>
-</div>
+    <p style="font-size: 14px; color: var(--fg-muted); max-width: 62ch;">
+        Registra movimientos en segundos, consulta gráficas semanales o mensuales y recibe alertas preventivas al alcanzar el 75% de tu límite diario.
+    </p>
+</section>
 {% endblock %}
-

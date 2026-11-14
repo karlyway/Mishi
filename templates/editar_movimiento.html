@@ -1,71 +1,77 @@
-
 {% extends 'base.html' %}
 
 {% block title %}Editar Movimiento - Mishi{% endblock %}
 
 {% block content %}
-<div class="page-title">
-    <h1>Editar movimiento</h1>
-    <p>Modifica los datos de tu ingreso o gasto.</p>
-</div>
+<div class="form-shell reveal">
+    <div class="page-title" style="margin-bottom: 18px;">
+        <p class="eyebrow">Actualizar registro</p>
+        <h1>Editar movimiento</h1>
+        <p>Modifica los datos de tu ingreso o gasto.</p>
+    </div>
 
-<div class="card" style="max-width: 600px; margin: 0 auto;">
-    <form method="POST">
-        {% csrf_token %}
+    <div class="card">
+        <form method="POST">
+            {% csrf_token %}
 
-        {% if error %}
-            <p style="color: red;">{{ error }}</p>
-        {% endif %}
+            {% if error %}
+                <div class="alert alert-danger" role="alert">{{ error }}</div>
+            {% endif %}
 
-        <div class="form-group">
-            <label for="tipo">Tipo de transacción</label>
-            <select id="tipo" name="tipo" class="form-control" required>
-                <option value="gasto" {% if movimiento.tipo == 'gasto' %}selected{% endif %}>Gasto</option>
-                <option value="ingreso" {% if movimiento.tipo == 'ingreso' %}selected{% endif %}>Ingreso</option>
-            </select>
-        </div>
+            <div class="form-group">
+                <label>Tipo de transacción</label>
+                <div class="segmented-control">
+                    <input type="radio" id="tipo-gasto" name="tipo" value="gasto" {% if movimiento.tipo == 'gasto' %}checked{% endif %}>
+                    <label for="tipo-gasto">Gasto</label>
+                    <input type="radio" id="tipo-ingreso" name="tipo" value="ingreso" {% if movimiento.tipo == 'ingreso' %}checked{% endif %}>
+                    <label for="tipo-ingreso">Ingreso</label>
+                </div>
+            </div>
 
-        <div class="form-group">
-            <label for="monto">Monto (COP)</label>
-            <input type="number" id="monto" name="monto"
-                   class="form-control" min="100" step="0.01"
-                   value="{{ movimiento.monto|stringformat:'.2f' }}" required>
-        </div>
+            <div class="form-group">
+                <label for="monto">Monto (COP)</label>
+                <input type="number" id="monto" name="monto"
+                       class="form-control input-monto-grande" min="100" step="0.01" inputmode="decimal"
+                       value="{{ movimiento.monto|stringformat:'.2f' }}" required>
+            </div>
 
-        <div class="form-group">
-            <label for="categoria">Categoría</label>
-            <select id="categoria" name="categoria" class="form-control" required>
-                {% for cat in categorias %}
-                    <option value="{{ cat.idCategoria }}"
-                    {% if cat.idCategoria == movimiento.idCategoria.idCategoria %}selected{% endif %}>
-                        {{ cat.nombre }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+            <div class="grid-2" style="margin-bottom: 0; gap: 14px;">
+                <div class="form-group">
+                    <label for="categoria">Categoría</label>
+                    <select id="categoria" name="categoria" class="form-control" required>
+                        {% for cat in categorias %}
+                            <option value="{{ cat.idCategoria }}"
+                            {% if cat.idCategoria == movimiento.idCategoria.idCategoria %}selected{% endif %}>
+                                {{ cat.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-        <div class="form-group">
-            <label for="descripcion">Descripción</label>
-            <input type="text" id="descripcion" name="descripcion"
-                   class="form-control"
-                   value="{{ movimiento.descripcion }}">
-        </div>
+                <div class="form-group">
+                    <label for="fecha">Fecha</label>
+                    <input type="date" id="fecha" name="fecha"
+                           class="form-control"
+                           value="{{ movimiento.fecha|date:'Y-m-d' }}" required>
+                </div>
+            </div>
 
-        <div class="form-group">
-            <label for="fecha">Fecha</label>
-            <input type="date" id="fecha" name="fecha"
-                   class="form-control"
-                   value="{{ movimiento.fecha|date:'Y-m-d' }}" required>
-        </div>
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <input type="text" id="descripcion" name="descripcion"
+                       class="form-control"
+                       value="{{ movimiento.descripcion }}">
+            </div>
 
-        <div style="margin-top: 20px;">
-            <button type="submit" class="btn btn-primary">
-                Guardar cambios
-            </button>
-            <a href="{% url 'historial' %}" class="btn btn-secondary">
-                Cancelar
-            </a>
-        </div>
-    </form>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">
+                    Guardar cambios
+                </button>
+                <a href="{% url 'historial' %}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}
