@@ -142,33 +142,43 @@ def dashboard_view(request):
 
     hoy = timezone.localdate()
 
-    fecha_inicio_periodo = hoy - timedelta(days=dias - 1)
-
     gasto_hoy = movimientos.filter(
-    tipo__iexact='gasto',
-    fecha__gte=fecha_inicio_periodo,
-    fecha__lte=hoy
-).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+        tipo__iexact='gasto',
+        fecha=hoy
+    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+
     porcentaje_gasto_hoy = (
         round(float(gasto_hoy / limite_diario) * 100, 2)
         if limite_diario > 0 else 0
-        )
+    )
 
     limite_superado = (
-    gasto_hoy >= limite_diario and limite_diario > 0
-)
+        gasto_hoy >= limite_diario and limite_diario > 0
+    )
+
+    alerta_activa = porcentaje_gasto_hoy >= 75 or limite_superado
+
+    total_hormiga = movimientos.filter(
+        tipo__iexact='gasto',
+        fecha=hoy,
+        monto__lte=Decimal('15000.00')
+    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
     # Últimos movimientos
     ultimos_movimientos = []
 
     for movimiento in movimientos[:4]:
+        es_hormiga = (
+            movimiento.tipo.lower() == 'gasto'
+            and movimiento.monto <= Decimal('15000.00')
+        )
         ultimos_movimientos.append({
             'fecha': movimiento.fecha,
-            'titulo': movimiento.idCategoria.nombre,
+            'titulo': movimiento.descripcion or movimiento.idCategoria.nombre,
             'categoria': movimiento.idCategoria.nombre,
             'tipo': movimiento.tipo.lower(),
             'monto': movimiento.monto,
-            'es_hormiga': False,
+            'es_hormiga': es_hormiga,
             'es_compartido': False,
         })
 
@@ -222,9 +232,9 @@ def dashboard_view(request):
         'limite_diario': limite_diario,
         'gasto_hoy': gasto_hoy,
         'porcentaje_gasto_hoy': porcentaje_gasto_hoy,
-        'alerta_activa': True,
+        'alerta_activa': alerta_activa,
         'limite_superado': limite_superado,
-        'total_hormiga': 0,
+        'total_hormiga': total_hormiga,
         'ultimos_movimientos': ultimos_movimientos,
         'periodo': periodo,
         'ingresos_periodo': float(ingresos_periodo),
