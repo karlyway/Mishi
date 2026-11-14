@@ -112,6 +112,26 @@ def calcular_dias_frecuencia(frecuencia):
     return dias_por_frecuencia.get(frecuencia, 15)
 
 
+# Asegurar categorías base en la base de datos
+CATEGORIAS_POR_DEFECTO = [
+    'Alimentación',
+    'Transporte',
+    'Universidad',
+    'Ocio',
+    'Hogar',
+    'Salud',
+    'Mesada / Ingreso',
+    'Otros',
+]
+
+
+def obtener_categorias():
+    if not Categoria.objects.exists():
+        for nombre in CATEGORIAS_POR_DEFECTO:
+            Categoria.objects.get_or_create(nombre=nombre)
+    return Categoria.objects.all().order_by('nombre')
+
+
 # Panel principal
 @login_required
 def dashboard_view(request):
@@ -271,7 +291,7 @@ def movimiento_view(request):
     dias = calcular_dias_frecuencia(perfil.frecuencia)
     limite_diario = round(saldo / dias) if saldo > 0 else 0
 
-    categorias = Categoria.objects.all()
+    categorias = obtener_categorias()
 
     if request.method == 'POST':
         tipo = request.POST.get('tipo', '').strip()
@@ -329,6 +349,7 @@ def movimiento_view(request):
             )
 
             return render(request, 'registro.html', {
+                'usuario': perfil,
                 'saldo': saldo,
                 'dias_restantes': dias,
                 'limite_diario': limite_diario,
@@ -337,6 +358,7 @@ def movimiento_view(request):
             })
 
     return render(request, 'registro.html', {
+        'usuario': perfil,
         'saldo': saldo,
         'dias_restantes': dias,
         'limite_diario': limite_diario,
@@ -407,6 +429,10 @@ def historial_view(request):
     movimientos = []
 
     for m in movimientos_db:
+        es_hormiga = (
+            m.tipo.lower() == 'gasto'
+            and m.monto <= Decimal('15000.00')
+        )
         movimientos.append({
             'id': m.idTransaccion,
             'titulo': m.descripcion or m.idCategoria.nombre,
@@ -414,16 +440,17 @@ def historial_view(request):
             'tipo': m.tipo.lower(),
             'monto': m.monto,
             'fecha': m.fecha,
-            'es_hormiga': False,
+            'es_hormiga': es_hormiga,
             'es_compartido': False,
         })
 
     context = {
+        'usuario': perfil,
         'movimientos': movimientos,
         'total_ingresos': total_ingresos,
         'total_gastos': total_gastos,
         'balance': total_ingresos - total_gastos,
-        'categorias': Categoria.objects.all().order_by('nombre'),
+        'categorias': obtener_categorias(),
         'fecha_inicio': fecha_inicio,
         'fecha_fin': fecha_fin,
         'categoria_seleccionada': categoria_id,
@@ -451,7 +478,7 @@ def editar_movimiento_view(request, movimiento_id):
     if movimiento is None:
         return redirect('historial')
 
-    categorias = Categoria.objects.all()
+    categorias = obtener_categorias()
 
     if request.method == 'POST':
         try:
@@ -499,6 +526,7 @@ def editar_movimiento_view(request, movimiento_id):
             Categoria.DoesNotExist
         ):
             return render(request, 'editar_movimiento.html', {
+                'usuario': perfil,
                 'movimiento': movimiento,
                 'categorias': categorias,
                 'error': 'Verifica los datos ingresados.',
@@ -506,6 +534,7 @@ def editar_movimiento_view(request, movimiento_id):
             })
 
     return render(request, 'editar_movimiento.html', {
+        'usuario': perfil,
         'movimiento': movimiento,
         'categorias': categorias,
         'pestana_activa': 'historial'
@@ -659,6 +688,7 @@ def metas_view(request):
     prestamos = Prestamo.objects.filter(idUsuario=perfil)
 
     context = {
+        'usuario': perfil,
         'metas': metas,
         'prestamos': prestamos,
         'pestana_activa': 'metas'
