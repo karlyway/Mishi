@@ -4,12 +4,16 @@
 {% block title %}Inicio - Mishi{% endblock %}
 
 {% block content %}
-<div class="app-screen reveal">
+<div class="app-screen reveal" role="region" aria-label="Panel principal">
     <div class="app-greeting-bar">
-        <div>
-            <p class="eyebrow-muted">Panel principal · {{ usuario.universidad }}</p>
-            <h1 class="app-greeting-title">Hola, {{ usuario.nombre }} 👋</h1>
-            <p class="app-greeting-sub">Hoy es un gran día para avanzar.</p>
+        <div class="app-greeting-user">
+            <a href="{% url 'perfil' %}" class="app-greeting-avatar" aria-label="Mi perfil">
+                {{ usuario.nombre|slice:":1"|upper }}
+            </a>
+            <div>
+                <p class="eyebrow-muted">Hola de nuevo 👋 · {{ usuario.universidad }}</p>
+                <h1 class="app-greeting-title">{{ usuario.nombre }}</h1>
+            </div>
         </div>
         <a href="{% url 'insights' %}" class="app-bell-btn" aria-label="Mis insights y alertas">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -36,20 +40,41 @@
     <div class="app-home-grid">
         <div class="app-home-primary">
             <section class="wallet-combo-card" aria-label="Resumen de saldo y gastos del mes">
+                <div class="wallet-card-peek" aria-hidden="true">
+                    <span class="wallet-card-peek-back"></span>
+                    <span class="wallet-card-peek-front">mishi</span>
+                </div>
+
                 <div class="wallet-combo-top">
                     <div class="wallet-combo-copy">
                         <div class="wallet-combo-label-row">
-                            <span>Saldo disponible</span>
-                            <button type="button" class="wallet-eye-btn" id="toggle-saldo-btn" aria-label="Ocultar o mostrar saldo">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <span class="wallet-label-chip">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <rect x="2" y="5" width="20" height="14" rx="3"/><path d="M16 12h.01"/>
+                                </svg>
+                                Saldo disponible
+                            </span>
+                            <a href="{% url 'presupuestos' %}" class="wallet-corner-arrow" aria-label="Configurar presupuestos">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M7 17 17 7M9 7h8v8"/>
+                                </svg>
+                            </a>
+                        </div>
+
+                        <div class="wallet-balance-row">
+                            <div class="wallet-combo-balance money-num" id="saldo-valor" data-real="$ {{ saldo_fmt }}">$ {{ saldo_fmt }}</div>
+                            <button type="button" class="wallet-eye-btn" id="toggle-saldo-btn" aria-label="Ocultar o mostrar saldo" aria-pressed="false">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
                                 </svg>
                             </button>
                         </div>
-                        <div class="wallet-combo-balance money-num" id="saldo-valor" data-real="$ {{ saldo_fmt }}">$ {{ saldo_fmt }}</div>
-                        <div class="wallet-combo-hint">
-                            Límite diario: <strong>${{ limite_diario_fmt }}</strong> · Hoy: <strong>${{ gasto_hoy_fmt }}</strong>
-                        </div>
+
+                        <a href="{% url 'insights' %}" class="wallet-combo-hint-pill">
+                            <span class="wallet-hint-dot" aria-hidden="true"></span>
+                            <span class="wallet-hint-text"><span class="wallet-hint-seg">Límite diario: <strong>${{ limite_diario_fmt }}</strong></span> <span class="wallet-hint-seg">· Hoy: <strong>${{ gasto_hoy_fmt }}</strong></span></span>
+                            <span class="wallet-hint-chevron" aria-hidden="true">&rsaquo;</span>
+                        </a>
                     </div>
                     <img src="{% static 'img/mishi-hero.png' %}" alt="" class="wallet-combo-cat" aria-hidden="true">
                 </div>
@@ -203,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let oculto = false;
         toggleBtn.addEventListener('click', function () {
             oculto = !oculto;
+            toggleBtn.setAttribute('aria-pressed', oculto ? 'true' : 'false');
             saldoEl.classList.add('is-blur-swap');
             setTimeout(function () {
                 saldoEl.textContent = oculto ? '$ ••••••' : saldoEl.getAttribute('data-real');

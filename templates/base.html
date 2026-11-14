@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="manifest" href="{% static 'manifest.json' %}">
     <link rel="icon" type="image/svg+xml" href="{% static 'img/mishi-icon.svg' %}">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=7">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=9">
 </head>
 <body class="{% if ocultar_chrome %}is-fullbleed-body{% elif pestana_activa %}is-app-body{% endif %}">
 
@@ -107,6 +107,11 @@
                 <rect x="2" y="5" width="20" height="14" rx="3"/><path d="M16 12h.01M2 10h20"/>
             </svg>
             <span>Gastos</span>
+        </a>
+        <a href="{% url 'movimiento' %}" class="bottom-nav-fab {% if pestana_activa == 'movimiento' %}is-active{% endif %}" aria-label="Nuevo gasto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
         </a>
         <a href="{% url 'metas' %}" class="bottom-nav-item {% if pestana_activa == 'metas' %}active{% endif %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

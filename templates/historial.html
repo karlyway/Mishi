@@ -38,13 +38,18 @@
         <div class="app-card weekly-bars-card" aria-label="Gastos de esta semana de lunes a domingo">
             <div class="weekly-bars-grid">
                 {% for b in barras_semana %}
-                <div class="weekly-bar-col">
+                <div class="weekly-bar-col {% if b.destacada and not b.vacia %}is-peak-col{% endif %}">
                     <div class="weekly-bar-track">
-                        <div class="weekly-bar-fill {% if b.destacada %}is-peak{% endif %} {% if b.vacia %}is-empty{% endif %}"
+                        {% if b.destacada and not b.vacia %}
+                        <span class="weekly-bar-callout" aria-hidden="true">↗ ${{ b.total_fmt }}</span>
+                        {% endif %}
+                        <div class="weekly-bar-fill {% if b.destacada and not b.vacia %}is-peak{% endif %} {% if b.vacia %}is-empty{% endif %}"
                              style="height: {{ b.altura }}%;"
-                             title="{{ b.fecha|date:'d M' }}: ${{ b.total_fmt }}"></div>
+                             title="{{ b.fecha|date:'d M' }}: ${{ b.total_fmt }}">
+                            {% if not b.vacia %}<span class="weekly-bar-pct">{{ b.pct_semana }}%</span>{% endif %}
+                        </div>
                     </div>
-                    <span class="weekly-bar-day">{{ b.letra }}</span>
+                    <span class="weekly-bar-day {% if b.destacada and not b.vacia %}is-peak-day{% endif %}">{{ b.letra }}</span>
                 </div>
                 {% endfor %}
             </div>

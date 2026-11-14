@@ -231,17 +231,20 @@ def serie_semanal_gastos(movimientos_qs, hoy):
         totales_por_dia.append((offset, dia, total))
 
     maximo = max((t for _, _, t in totales_por_dia), default=Decimal('0.00'))
+    total_semana = sum((t for _, _, t in totales_por_dia), Decimal('0.00'))
     barras = []
     for offset, dia, total in totales_por_dia:
         altura = round(float(total / maximo) * 100) if maximo > 0 else 12
+        pct_semana = round(float(total / total_semana) * 100) if total_semana > 0 else 0
         barras.append({
             'letra': DIAS_SEMANA_INICIAL[offset],
             'fecha': dia,
             'total': total,
             'total_fmt': formatear_cop(total),
-            'altura': max(14, altura) if total > 0 else 10,
+            'pct_semana': pct_semana,
+            'altura': max(34, altura) if total > 0 else 22,
             'vacia': total == 0,
-            'destacada': dia == hoy or (maximo > 0 and total == maximo),
+            'destacada': maximo > 0 and total == maximo,
         })
     return barras
 
