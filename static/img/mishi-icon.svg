@@ -1,10 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
-  <rect width="128" height="128" rx="34" fill="#FF8C3A"/>
-  <path d="M31 48L36 25L53 38C59.8 36 68.2 36 75 38L92 25L97 48C101 55 103 63 103 71C103 91.5 85.5 104 64 104C42.5 104 25 91.5 25 71C25 63 27 55 31 48Z" fill="#FFFFFF"/>
-  <circle cx="49" cy="64" r="5" fill="#292929"/>
-  <circle cx="79" cy="64" r="5" fill="#292929"/>
-  <ellipse cx="42" cy="73" rx="6" ry="3.5" fill="#FF8C3A" fill-opacity="0.3"/>
-  <ellipse cx="86" cy="73" rx="6" ry="3.5" fill="#FF8C3A" fill-opacity="0.3"/>
-  <path d="M58 75C60.5 78.5 67.5 78.5 70 75" stroke="#292929" stroke-width="4" stroke-linecap="round"/>
-  <polygon points="64,68 60,73 68,73" fill="#FF8C3A"/>
+  <path d="M22 44L18 14L46 28C51.6 26.2 57.7 25.2 64 25.2C70.3 25.2 76.4 26.2 82 28L110 14L106 44C112.5 52.8 116 63.3 116 74.5C116 99.5 92.7 116 64 116C35.3 116 12 99.5 12 74.5C12 63.3 15.5 52.8 22 44Z" fill="#F97A22"/>
+  <path d="M32 54L30 33L49 43C53.8 41.5 58.8 40.8 64 40.8C69.2 40.8 74.2 41.5 79 43L98 33L96 54C101 60.5 103.5 68 103.5 75.5C103.5 93 85.8 105 64 105C42.2 105 24.5 93 24.5 75.5C24.5 68 27 60.5 32 54Z" fill="#FFFDF9"/>
+  <circle cx="49" cy="69" r="5" fill="#1F242D"/>
+  <circle cx="79" cy="69" r="5" fill="#1F242D"/>
+  <ellipse cx="40" cy="78" rx="6" ry="3.5" fill="#F97A22" fill-opacity="0.28"/>
+  <ellipse cx="88" cy="78" rx="6" ry="3.5" fill="#F97A22" fill-opacity="0.28"/>
+  <polygon points="64,73 59.5,78 68.5,78" fill="#F97A22"/>
+  <path d="M57 81C59.8 85 68.2 85 71 81" stroke="#1F242D" stroke-width="4" stroke-linecap="round"/>
+  <path d="M22 71H33M23 79H34M95 71H106M94 79H105" stroke="#1F242D" stroke-width="3.2" stroke-linecap="round"/>
 </svg>

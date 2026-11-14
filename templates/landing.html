@@ -4,176 +4,206 @@
 {% block title %}Mishi - Tu dinero, bajo control{% endblock %}
 
 {% block content %}
-<section class="landing-hero reveal">
-    <div>
-        <span class="pill-badge">+ Tu aliado financiero</span>
+<section class="m-hero reveal">
+    <div class="m-hero-badge-area">
+        <span class="pill-badge">✦ Tu aliado financiero</span>
+    </div>
 
-        <h1 class="landing-hero-title">
+    <div class="m-hero-title-area">
+        <h1 class="m-hero-title">
             Tu dinero,
-            <span class="text-orange" style="display: block;">bajo control.</span>
+            <span class="text-orange">bajo control.</span>
         </h1>
+    </div>
 
-        <p class="landing-hero-copy">
-            Control de gastos para estudiantes universitarios. Mishi te ayuda a gestionar tus movimientos, crear presupuestos y alcanzar tus metas financieras de forma fácil y segura.
-        </p>
-
-        <div class="landing-hero-actions">
-            <div class="landing-hero-buttons">
-                <a href="{% url 'registro_usuario' %}" class="btn btn-primary">
-                    Comenzar ahora
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M5 12h14M13 6l6 6-6 6"/>
-                    </svg>
-                </a>
-                <a href="#como-funciona" class="btn btn-play-pill">
-                    <span class="play-dot" aria-hidden="true">
-                        <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor">
-                            <path d="M3 2.2v7.6L9.8 6 3 2.2z"/>
-                        </svg>
-                    </span>
-                    Ver cómo funciona
-                </a>
-            </div>
-            <p class="hero-login-hint">
-                ¿Ya tienes cuenta? <a href="{% url 'login' %}">Iniciar sesion</a>
-            </p>
+    <div class="m-hero-note-area" aria-hidden="true">
+        <div class="m-handnote">
+            <span>Pequeños<br>hábitos,<br>grandes<br>metas. <i class="note-heart">♥</i></span>
+            <svg class="m-note-arrow" width="38" height="34" viewBox="0 0 42 36" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 3C5 13 6 26 22 31"/>
+                <path d="M16 33l7-2-4-5"/>
+            </svg>
         </div>
     </div>
 
-    <div class="hero-mascot-stage reveal reveal-delay-1">
-        <div class="mascot-note-callout" aria-hidden="true">
-            <span>Pequeños<br>hábitos,<br>grandes<br>metas.</span>
-            <svg width="34" height="28" viewBox="0 0 40 34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 3C4 12 6 24 18 29"/>
-                <path d="M13 31l6-1-3-5"/>
-            </svg>
+    <div class="m-hero-copy-area">
+        <p class="m-hero-copy">
+            Control de gastos para estudiantes universitarios. Mishi te ayuda a gestionar tus gastos, crear presupuestos y alcanzar tus metas financieras, de forma fácil y segura.
+        </p>
+
+        <div class="m-hero-buttons">
+            <a href="{% url 'registro_usuario' %}" class="btn btn-primary m-hero-btn">
+                Comenzar ahora
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6"/>
+                </svg>
+            </a>
+            <a href="#como-funciona" class="btn btn-play-pill m-hero-btn">
+                <span class="play-dot" aria-hidden="true">
+                    <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor">
+                        <path d="M3 2.2v7.6L9.8 6 3 2.2z"/>
+                    </svg>
+                </span>
+                Ver cómo funciona
+            </a>
         </div>
-        <img src="{% static 'img/mishi-hero.png' %}" alt="Mishi sosteniendo una moneda dorada" class="hero-mascot-img" width="565" height="513">
+    </div>
+
+    <div class="m-hero-cat-area">
+        <div class="m-cat-halo">
+            <img src="{% static 'img/mishi-hero.png' %}" alt="Mishi sosteniendo una moneda dorada" class="m-cat-img" width="565" height="513">
+        </div>
     </div>
 </section>
 
-<section id="como-funciona" class="landing-section reveal reveal-delay-1">
-    <div class="landing-section-head">
+<section id="como-funciona" class="m-why reveal reveal-delay-1">
+    <div class="m-why-head">
         <span class="pill-badge">¿Por qué Mishi?</span>
         <h2>Todo lo que necesitas en un solo lugar.</h2>
         <p>Herramientas simples y poderosas para que tomes mejores decisiones con tu dinero.</p>
     </div>
 
-    <div class="feature-list">
-        <a href="{% url 'login' %}" class="feature-row">
-            <div class="feature-row-left">
-                <span class="feature-icon-circle is-orange" aria-hidden="true">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="5" width="18" height="14" rx="3"/>
-                        <path d="M3 10h18M7 15h3"/>
-                    </svg>
-                </span>
-                <div>
-                    <h3>Controla tus gastos</h3>
-                    <p>Registra tus ingresos y gastos en segundos, sin complicaciones.</p>
-                </div>
+    <div class="m-feature-stack">
+        <a href="{% url 'login' %}" class="m-feature-item">
+            <span class="m-feature-icon is-orange" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <rect x="4" y="5" width="16" height="14" rx="4" fill="#F97A22"/>
+                    <rect x="7" y="8" width="10" height="8" rx="2" fill="#FFD3B0"/>
+                    <circle cx="12" cy="12" r="2" fill="#F97A22"/>
+                </svg>
+            </span>
+            <div class="m-feature-text">
+                <h3>Controla tus gastos</h3>
+                <p>Registra tus ingresos y gastos en segundos, sin complicaciones.</p>
             </div>
-            <svg class="feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="m-feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6"/>
             </svg>
         </a>
 
-        <a href="{% url 'login' %}" class="feature-row">
-            <div class="feature-row-left">
-                <span class="feature-icon-circle is-green" aria-hidden="true">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="9"/>
-                        <circle cx="12" cy="12" r="4.5"/>
-                        <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
-                    </svg>
-                </span>
-                <div>
-                    <h3>Crea presupuestos</h3>
-                    <p>Calcula tu límite diario según tu mesada y evita excesos.</p>
-                </div>
+        <a href="{% url 'login' %}" class="m-feature-item">
+            <span class="m-feature-icon is-green" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9" fill="#22A06B"/>
+                    <circle cx="12" cy="12" r="5" fill="#D8F3E0"/>
+                    <circle cx="12" cy="12" r="2.2" fill="#22A06B"/>
+                </svg>
+            </span>
+            <div class="m-feature-text">
+                <h3>Crea presupuestos</h3>
+                <p>Define límites por categoría y evita excesos.</p>
             </div>
-            <svg class="feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="m-feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6"/>
             </svg>
         </a>
 
-        <a href="{% url 'login' %}" class="feature-row">
-            <div class="feature-row-left">
-                <span class="feature-icon-circle is-yellow" aria-hidden="true">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.8 1-6.1-4.4-4.3 6.1-.9L12 3z"/>
-                    </svg>
-                </span>
-                <div>
-                    <h3>Ahorra para tus metas</h3>
-                    <p>Establece metas y visualiza tu progreso con abonos reales.</p>
-                </div>
+        <a href="{% url 'login' %}" class="m-feature-item">
+            <span class="m-feature-icon is-yellow" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 3.2l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.2z" fill="#F5B400" stroke="#F5B400" stroke-width="1.4" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="2.2" fill="#FFF7D6"/>
+                </svg>
+            </span>
+            <div class="m-feature-text">
+                <h3>Ahorra para tus metas</h3>
+                <p>Establece metas y visualiza tu progreso.</p>
             </div>
-            <svg class="feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="m-feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6"/>
             </svg>
         </a>
 
-        <a href="{% url 'login' %}" class="feature-row">
-            <div class="feature-row-left">
-                <span class="feature-icon-circle is-indigo" aria-hidden="true">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 20V10M12 20V4M6 20v-6"/>
-                    </svg>
-                </span>
-                <div>
-                    <h3>Recibe alertas</h3>
-                    <p>Te avisamos cuando te acerques o superes tu límite diario.</p>
-                </div>
+        <a href="{% url 'login' %}" class="m-feature-item">
+            <span class="m-feature-icon is-indigo" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <rect x="4" y="13" width="3.5" height="6" rx="1.75" fill="#5B60E0"/>
+                    <rect x="10.25" y="9" width="3.5" height="10" rx="1.75" fill="#5B60E0"/>
+                    <rect x="16.5" y="5" width="3.5" height="14" rx="1.75" fill="#5B60E0"/>
+                </svg>
+            </span>
+            <div class="m-feature-text">
+                <h3>Recibe alertas</h3>
+                <p>Te avisamos cuando te acerques o superes tu límite.</p>
             </div>
-            <svg class="feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="m-feature-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6"/>
             </svg>
         </a>
     </div>
 </section>
 
-<section class="promo-app-banner reveal reveal-delay-2">
-    <div class="promo-app-copy">
-        <span class="pill-badge" style="background-color: rgba(255, 140, 58, 0.14);">En tu celular</span>
+<section class="m-promo-banner reveal reveal-delay-2">
+    <div class="m-promo-leaf" aria-hidden="true"></div>
+
+    <div class="m-promo-copy">
+        <span class="pill-badge">En tu celular</span>
         <h2>Lleva Mishi siempre contigo.</h2>
-        <p>Disponible directo desde el navegador de tu celular o computador, diseñada para sentirse como tu app de gastos diaria.</p>
-        <div class="promo-store-pills">
-            <a href="{% url 'registro_usuario' %}" class="btn btn-dark btn-sm">Crear cuenta gratis</a>
-            <a href="{% url 'login' %}" class="btn btn-dark btn-sm" style="background-color: #FFFFFF; color: var(--carbon); border-color: var(--border-strong);">Probar la aplicacion</a>
+        <p>Disponible en web móvil y computador.</p>
+
+        <div class="m-promo-actions">
+            <a href="{% url 'registro_usuario' %}" class="btn btn-dark m-promo-pill">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Crear cuenta
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-dark m-promo-pill">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+                </svg>
+                Iniciar sesion
+            </a>
         </div>
     </div>
 
-    <div class="phone-preview-wrap" aria-hidden="true">
-        <div class="phone-mockup">
-            <div class="phone-top">
-                <span class="phone-brand">
-                    <img src="{% static 'img/mishi-icon.svg' %}" alt="" width="20" height="20" style="border-radius: 6px;">
-                    mishi
+    <div class="m-promo-phone-col" aria-hidden="true">
+        <div class="m-phone-shell">
+            <div class="m-phone-island"></div>
+            <div class="m-phone-statusbar">
+                <span>9:41</span>
+                <span class="m-phone-signal">•••</span>
+            </div>
+
+            <div class="m-phone-app-header">
+                <span class="m-phone-brand">
+                    <img src="{% static 'img/mishi-icon.svg' %}" alt="" width="18" height="18">
+                    <strong>mishi</strong>
                 </span>
-                <span style="font-size: 11px; color: var(--fg-muted);">Hola, Valen</span>
+                <span class="m-phone-icons">○ &nbsp;☺</span>
             </div>
 
-            <div class="phone-wallet">
-                <div class="phone-wallet-label">Saldo disponible</div>
-                <div class="phone-wallet-amount">$ 320.500</div>
+            <div class="m-phone-greeting">Hola, Valen 👋</div>
+
+            <div class="m-phone-wallet">
+                <div>
+                    <div class="m-phone-wallet-lbl">Saldo disponible</div>
+                    <div class="m-phone-wallet-val">$ 320.500</div>
+                </div>
+                <img src="{% static 'img/mishi-hero.png' %}" alt="" class="m-phone-peek-cat">
             </div>
 
-            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 600;">
-                <span>Gastos de este mes</span>
-                <span>60%</span>
-            </div>
-            <div class="phone-bar-track">
-                <div class="phone-bar-fill"></div>
+            <div class="m-phone-month-box">
+                <div class="m-phone-month-top">
+                    <div>
+                        <div class="m-phone-month-lbl">Gastos de este mes</div>
+                        <div class="m-phone-month-val">$ 620.000</div>
+                    </div>
+                    <span class="m-phone-pct">60%</span>
+                </div>
+                <div class="m-phone-bar">
+                    <div class="m-phone-bar-fill"></div>
+                </div>
             </div>
 
-            <div class="phone-cat-row">
-                <span>Comida</span>
-                <strong>$120.000</strong>
+            <div class="m-phone-cats-title">Tus categorías</div>
+            <div class="m-phone-cat-item">
+                <span class="m-phone-cat-name"><i class="m-dot is-green"></i> Comida</span>
+                <span class="m-phone-cat-amt">$120.000</span>
             </div>
-            <div class="phone-cat-row">
-                <span>Transporte</span>
-                <strong>$45.000</strong>
+            <div class="m-phone-cat-item">
+                <span class="m-phone-cat-name"><i class="m-dot is-yellow"></i> Transporte</span>
+                <span class="m-phone-cat-amt">$45.000</span>
             </div>
         </div>
     </div>

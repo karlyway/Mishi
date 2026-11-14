@@ -10,17 +10,17 @@
     <title>{% block title %}Mishi - Tu plata, bajo control{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="manifest" href="{% static 'manifest.json' %}">
     <link rel="icon" type="image/svg+xml" href="{% static 'img/mishi-icon.svg' %}">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=5">
 </head>
 <body>
 
-    <header class="navbar">
+    <header class="navbar {% if not pestana_activa %}navbar--public{% endif %}">
         <div class="nav-container">
             <a href="{% if pestana_activa %}{% url 'dashboard' %}{% else %}{% url 'landing' %}{% endif %}" class="brand-link">
-                <img src="{% static 'img/mishi-icon.svg' %}" alt="Mishi" class="brand-mark" width="34" height="34">
+                <img src="{% static 'img/mishi-icon.svg' %}" alt="Mishi" class="brand-mark" width="36" height="36">
                 <span class="brand-wordmark">mishi</span>
             </a>
 
@@ -34,7 +34,7 @@
                     {% else %}
                         <li><a href="{% url 'landing' %}#como-funciona">¿Cómo funciona?</a></li>
                         <li><a href="{% url 'login' %}">Iniciar sesion</a></li>
-                        <li><a href="{% url 'registro_usuario' %}" class="nav-cta">Crear cuenta</a></li>
+                        <li><a href="{% url 'registro_usuario' %}" class="nav-cta">Comenzar ahora</a></li>
                     {% endif %}
                 </ul>
             </nav>
