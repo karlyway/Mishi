@@ -4,134 +4,187 @@
 {% block title %}Inicio - Mishi{% endblock %}
 
 {% block content %}
-<div class="page-header reveal">
-    <div class="page-title">
-        <p class="eyebrow">{{ usuario.universidad }}</p>
-        <h1>Panel principal</h1>
-        <p>Hola, {{ usuario.nombre }}. Así va tu presupuesto de hoy.</p>
+<div class="app-screen reveal">
+    <div class="app-greeting-bar">
+        <div>
+            <p class="eyebrow-muted">Panel principal · {{ usuario.universidad }}</p>
+            <h1 class="app-greeting-title">Hola, {{ usuario.nombre }} 👋</h1>
+            <p class="app-greeting-sub">Hoy es un gran día para avanzar.</p>
+        </div>
+        <a href="{% url 'insights' %}" class="app-bell-btn" aria-label="Mis insights y alertas">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+            </svg>
+            {% if alerta_activa %}<span class="app-bell-dot" aria-hidden="true"></span>{% endif %}
+        </a>
     </div>
-    <a href="{% url 'movimiento' %}" class="btn btn-primary">+ Registrar movimiento</a>
-</div>
 
-{% if alerta_activa %}
-    {% if limite_superado %}
-        <div class="alert alert-danger reveal" role="alert">
-            <strong>Límite diario superado:</strong>
-            Has gastado el {{ porcentaje_gasto_hoy }}% de tu límite diario
-            (${{ gasto_hoy }} COP de ${{ limite_diario }} COP).
-        </div>
-    {% else %}
-        <div class="alert alert-warning reveal" role="status">
-            <strong>Aviso preventivo:</strong>
-            Has consumido el {{ porcentaje_gasto_hoy }}% de tu límite diario
-            (${{ gasto_hoy }} COP de ${{ limite_diario }} COP).
-            Restan {{ dias_restantes }} días para tu próximo ingreso.
-        </div>
+    {% if alerta_activa %}
+        {% if limite_superado %}
+            <a href="{% url 'insights' %}" class="app-alert-strip is-danger" role="alert">
+                <strong>Límite diario superado:</strong>
+                Llevas ${{ gasto_hoy_fmt }} de ${{ limite_diario_fmt }} hoy ({{ porcentaje_gasto_hoy }}%). Ver insights →
+            </a>
+        {% else %}
+            <a href="{% url 'insights' %}" class="app-alert-strip is-warning" role="status">
+                <strong>Aviso preventivo:</strong>
+                Has consumido el {{ porcentaje_gasto_hoy }}% de tu límite diario (${{ gasto_hoy_fmt }} de ${{ limite_diario_fmt }}).
+            </a>
+        {% endif %}
     {% endif %}
-{% endif %}
 
-<section class="card-orange-wallet reveal" aria-label="Resumen de saldo y límite diario">
-    <div class="wallet-top">
-        <div>
-            <div class="wallet-label">Saldo disponible</div>
-            <div class="wallet-balance">${{ saldo }} COP</div>
-            <div class="wallet-meta">
-                Frecuencia {{ usuario.frecuencia }} · {{ dias_restantes }} días de referencia
-            </div>
-        </div>
-        <div class="wallet-actions">
-            <a href="{% url 'movimiento' %}" class="btn btn-light-pill">+ Registrar movimiento</a>
-        </div>
-    </div>
-
-    <div class="wallet-stats">
-        <div>
-            <div class="wallet-stat-label">Límite diario recomendado</div>
-            <div class="wallet-stat-value">${{ limite_diario }} COP</div>
-            <div class="wallet-stat-sub">Saldo / {{ dias_restantes }} días</div>
-        </div>
-        <div>
-            <div class="wallet-stat-label">Gastado hoy</div>
-            <div class="wallet-stat-value">${{ gasto_hoy }} COP</div>
-            <div class="wallet-stat-sub">{{ porcentaje_gasto_hoy }}% del límite diario</div>
-        </div>
-        <div>
-            <div class="wallet-stat-label">Gastos menores hoy</div>
-            <div class="wallet-stat-value">${{ total_hormiga }} COP</div>
-            <div class="wallet-stat-sub">Compras de $15.000 o menos</div>
-        </div>
-    </div>
-
-    <div class="budget-progress-wrap">
-        <div class="budget-progress-head">
-            <span>Consumo del límite de hoy</span>
-            <span class="money-num">{{ porcentaje_gasto_hoy }}%</span>
-        </div>
-        <div class="progress-track">
-            <div class="progress-fill {% if limite_superado %}is-danger{% elif porcentaje_gasto_hoy >= 75 %}is-warning{% endif %}"
-                 style="width: {% if porcentaje_gasto_hoy >= 100 %}100{% else %}{{ porcentaje_gasto_hoy|stringformat:'.0f' }}{% endif %}%;">
-            </div>
-        </div>
-    </div>
-</section>
-
-<div class="grid-2 reveal reveal-delay-1">
-    <section class="card" style="margin-bottom: 0;">
-        <div class="card-header">
-            <h2>Últimos movimientos</h2>
-            <a href="{% url 'historial' %}" class="btn btn-secondary btn-sm">Ver historial completo</a>
-        </div>
-
-        <ul class="feed-list">
-            {% for m in ultimos_movimientos %}
-            <li class="feed-item">
-                <div class="feed-left">
-                    <span class="feed-dot {% if m.tipo == 'ingreso' %}is-income{% endif %}" aria-hidden="true">
-                        {{ m.categoria|slice:":1" }}
-                    </span>
-                    <div class="feed-info">
-                        <div class="feed-title">
-                            <span>{{ m.titulo }}</span>
-                            {% if m.es_hormiga %}<span class="tag tag-warning">Gasto menor</span>{% endif %}
-                            {% if m.es_compartido %}<span class="tag">Compartido</span>{% endif %}
+    <div class="app-home-grid">
+        <div class="app-home-primary">
+            <section class="wallet-combo-card" aria-label="Resumen de saldo y gastos del mes">
+                <div class="wallet-combo-top">
+                    <div class="wallet-combo-copy">
+                        <div class="wallet-combo-label-row">
+                            <span>Saldo disponible</span>
+                            <button type="button" class="wallet-eye-btn" id="toggle-saldo-btn" aria-label="Ocultar o mostrar saldo">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
                         </div>
-                        <div class="feed-sub">{{ m.categoria }} · {{ m.fecha }}</div>
+                        <div class="wallet-combo-balance money-num" id="saldo-valor" data-real="$ {{ saldo_fmt }}">$ {{ saldo_fmt }}</div>
+                        <div class="wallet-combo-hint">
+                            Límite diario: <strong>${{ limite_diario_fmt }}</strong> · Hoy: <strong>${{ gasto_hoy_fmt }}</strong>
+                        </div>
+                    </div>
+                    <img src="{% static 'img/mishi-hero.png' %}" alt="" class="wallet-combo-cat" aria-hidden="true">
+                </div>
+
+                <div class="wallet-combo-bottom">
+                    <div class="wallet-month-head">
+                        <div>
+                            <div class="wallet-month-lbl">Gastos de este mes</div>
+                            <div class="wallet-month-val money-num">$ {{ gastos_mes_fmt }}</div>
+                        </div>
+                        <div class="wallet-month-right">
+                            <div class="wallet-month-track">
+                                <div class="wallet-month-fill {% if limite_superado %}is-danger{% endif %}"
+                                     style="width: {{ porcentaje_mes }}%;"></div>
+                            </div>
+                            <span class="wallet-month-pct money-num">{{ porcentaje_mes }}%</span>
+                        </div>
                     </div>
                 </div>
-                <div class="feed-amount {% if m.tipo == 'gasto' %}text-danger{% else %}text-success{% endif %}">
-                    {% if m.tipo == 'gasto' %}-${{ m.monto }}{% else %}+${{ m.monto }}{% endif %}
+            </section>
+
+            <nav class="quick-actions-row" aria-label="Accesos rápidos">
+                <a href="{% url 'movimiento' %}" class="quick-action-tile">
+                    <span class="quick-action-circle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>
+                        </svg>
+                    </span>
+                    <span>Agregar gasto</span>
+                </a>
+                <a href="{% url 'historial' %}" class="quick-action-tile">
+                    <span class="quick-action-circle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M7 16V4m0 0L3 8m4-4 4 4M17 8v12m0 0 4-4m-4 4-4-4"/>
+                        </svg>
+                    </span>
+                    <span>Gastos</span>
+                </a>
+                <a href="{% url 'metas' %}" class="quick-action-tile">
+                    <span class="quick-action-circle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M16 8l3-3"/>
+                        </svg>
+                    </span>
+                    <span>Metas</span>
+                </a>
+                <a href="{% url 'presupuestos' %}" class="quick-action-tile">
+                    <span class="quick-action-circle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                            <circle cx="6" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="18" cy="12" r="1.5" fill="currentColor"/>
+                        </svg>
+                    </span>
+                    <span>Presupuestos</span>
+                </a>
+            </nav>
+
+            <section class="app-section-block">
+                <div class="app-section-head">
+                    <h2>Tus categorías</h2>
+                    <a href="{% url 'categorias' %}" class="app-link-more">Ver todas &gt;</a>
                 </div>
-            </li>
-            {% empty %}
-            <li class="feed-item">
-                <span style="font-size: 14px; color: var(--fg-muted);">Todavía no tienes movimientos registrados.</span>
-            </li>
-            {% endfor %}
-        </ul>
-    </section>
 
-    <section class="card" style="margin-bottom: 0;">
-        <div class="card-header">
-            <h2>Estadísticas financieras</h2>
-            <form method="GET" action="{% url 'dashboard' %}">
-                <label for="periodo" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Periodo</label>
-                <select name="periodo" id="periodo" class="form-control" style="min-height: 36px; padding: 4px 12px; font-size: 13px; border-radius: 9999px;" onchange="this.form.submit()">
-                    <option value="semanal" {% if periodo == 'semanal' %}selected{% endif %}>Esta semana</option>
-                    <option value="mensual" {% if periodo == 'mensual' %}selected{% endif %}>Este mes</option>
-                </select>
-            </form>
+                {% if categorias_resumen %}
+                <div class="cat-list-card">
+                    {% for c in categorias_resumen %}
+                    <a href="{% url 'historial' %}?categoria={{ c.id }}" class="cat-row-item">
+                        <span class="app-cat-badge tone-{{ c.ui.tone }}">
+                            {% include 'includes/cat_icon.html' with icon=c.ui.icon %}
+                        </span>
+                        <span class="cat-row-name">{{ c.nombre }}</span>
+                        <span class="cat-row-val money-num">$ {{ c.total_fmt }}</span>
+                        <span class="cat-row-pct money-num">{{ c.porcentaje }}%</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-soft-card">
+                    <p>Aún no tienes gastos este mes. Registra tu primer movimiento para ver tus categorías.</p>
+                    <a href="{% url 'movimiento' %}" class="btn btn-primary btn-sm">+ Registrar gasto</a>
+                </div>
+                {% endif %}
+            </section>
         </div>
 
-        <h3 style="font-size: 13px; color: var(--fg-muted); margin-bottom: 8px;">Ingresos y gastos</h3>
-        <div style="position: relative; height: 190px; margin-bottom: 22px;">
-            <canvas id="graficaIngresosGastos"></canvas>
-        </div>
+        <div class="app-home-secondary">
+            <section class="app-card">
+                <div class="app-section-head">
+                    <h2>Últimos movimientos</h2>
+                    <a href="{% url 'historial' %}" class="app-link-more">Ver todos &gt;</a>
+                </div>
 
-        <h3 style="font-size: 13px; color: var(--fg-muted); margin-bottom: 8px;">Gastos por categoría</h3>
-        <div style="position: relative; height: 210px;">
-            <canvas id="graficaCategorias"></canvas>
+                <div class="mov-list">
+                    {% for m in ultimos_movimientos %}
+                    <a href="{% url 'detalle_movimiento' m.id %}" class="mov-list-item">
+                        <span class="app-cat-badge tone-{{ m.ui.tone }}">
+                            {% include 'includes/cat_icon.html' with icon=m.ui.icon %}
+                        </span>
+                        <div class="mov-list-info">
+                            <div class="mov-list-title">
+                                <span>{{ m.titulo }}</span>
+                                {% if m.es_hormiga %}<span class="mini-pill is-warn">Hormiga</span>{% endif %}
+                            </div>
+                            <div class="mov-list-sub">{{ m.categoria }} · {{ m.fecha|date:"d M" }}</div>
+                        </div>
+                        <div class="mov-list-amount money-num {% if m.tipo == 'ingreso' %}is-income{% endif %}">
+                            {% if m.tipo == 'gasto' %}$ {{ m.monto_fmt }}{% else %}+$ {{ m.monto_fmt }}{% endif %}
+                        </div>
+                    </a>
+                    {% empty %}
+                    <p class="empty-note">Todavía no tienes movimientos registrados.</p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="app-card">
+                <div class="app-section-head">
+                    <h2>Resumen visual</h2>
+                    <form method="GET" action="{% url 'dashboard' %}">
+                        <label for="periodo" class="sr-only">Periodo</label>
+                        <select name="periodo" id="periodo" class="mini-select" onchange="this.form.submit()">
+                            <option value="semanal" {% if periodo == 'semanal' %}selected{% endif %}>Esta semana</option>
+                            <option value="mensual" {% if periodo == 'mensual' %}selected{% endif %}>Este mes</option>
+                        </select>
+                    </form>
+                </div>
+
+                <div class="chart-box-sm">
+                    <canvas id="graficaIngresosGastos"></canvas>
+                </div>
+                <div class="chart-box-sm" style="margin-top: 14px;">
+                    <canvas id="graficaCategorias"></canvas>
+                </div>
+            </section>
         </div>
-    </section>
+    </div>
 </div>
 
 {{ ingresos_periodo|json_script:"datos-ingresos" }}
@@ -142,9 +195,18 @@
 
 {% block extra_js %}
 <script src="{% static 'js/chart.umd.min.js' %}"></script>
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const saldoEl = document.getElementById('saldo-valor');
+    const toggleBtn = document.getElementById('toggle-saldo-btn');
+    if (saldoEl && toggleBtn) {
+        let oculto = false;
+        toggleBtn.addEventListener('click', function () {
+            oculto = !oculto;
+            saldoEl.textContent = oculto ? '$ ••••••' : saldoEl.getAttribute('data-real');
+        });
+    }
+
     const ingresos = JSON.parse(document.getElementById('datos-ingresos').textContent);
     const gastos = JSON.parse(document.getElementById('datos-gastos').textContent);
     const etiquetas = JSON.parse(document.getElementById('etiquetas-categorias').textContent);
@@ -157,37 +219,28 @@ document.addEventListener('DOMContentLoaded', function () {
             datasets: [{
                 label: 'COP',
                 data: [ingresos, gastos],
-                backgroundColor: ['#22A06B', '#FF8C3A'],
-                borderRadius: 10,
-                barThickness: 42
+                backgroundColor: ['#36A65B', '#F97A22'],
+                borderRadius: 12,
+                barPercentage: 0.45
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                x: { grid: { display: false } },
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(41, 41, 41, 0.06)' }
-                }
-            }
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { color: 'rgba(31,36,45,0.05)' } }, x: { grid: { display: false } } }
         }
     });
 
-    const hasCategoryData = etiquetas.length > 0;
     new Chart(document.getElementById('graficaCategorias'), {
         type: 'doughnut',
         data: {
-            labels: hasCategoryData ? etiquetas : ['Sin gastos en el periodo'],
+            labels: etiquetas.length ? etiquetas : ['Sin gastos en el periodo'],
             datasets: [{
-                data: hasCategoryData ? valores : [1],
-                backgroundColor: hasCategoryData
-                    ? ['#FF8C3A', '#FFD028', '#22A06B', '#5B60E0', '#D64038', '#292929', '#8B7355']
-                    : ['#EFEBE3'],
+                data: valores.length ? valores : [1],
+                backgroundColor: valores.length
+                    ? ['#F97A22', '#F5B82E', '#6466E9', '#36A65B', '#525866', '#E25563']
+                    : ['#EFECE2'],
                 borderWidth: 0
             }]
         },
@@ -195,15 +248,7 @@ document.addEventListener('DOMContentLoaded', function () {
             responsive: true,
             maintainAspectRatio: false,
             cutout: '66%',
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        boxWidth: 10,
-                        usePointStyle: true
-                    }
-                }
-            }
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12 } } }
         }
     });
 });

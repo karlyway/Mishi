@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Presupuestos - Mishi{% endblock %}
+
+{% block content %}
+<div class="app-screen app-screen--narrow reveal">
+    <div class="app-sub-topbar">
+        <a href="{% url 'perfil' %}" class="icon-circle-btn" aria-label="Volver al perfil">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </a>
+        <h1>Presupuestos</h1>
+        <span style="width: 38px;"></span>
+    </div>
+
+    <p class="app-sub-lead">Establece tu límite diario y mensual para controlar tus gastos fácilmente.</p>
+
+    <div class="app-budget-summary-grid">
+        <div class="app-card" style="margin-bottom: 0; padding: 14px 16px;">
+            <div class="perfil-balance-lbl">Límite diario</div>
+            <div class="budget-mini-num money-num">$ {{ limite_diario_fmt }}</div>
+        </div>
+        <div class="app-card" style="margin-bottom: 0; padding: 14px 16px;">
+            <div class="perfil-balance-lbl">Límite mensual</div>
+            <div class="budget-mini-num money-num">$ {{ limite_mensual_fmt }}</div>
+        </div>
+    </div>
+
+    <div class="goals-stack">
+        {% for b in barras_presupuesto %}
+        <article class="app-card budget-cat-card">
+            <div class="budget-cat-top">
+                <span class="app-cat-badge tone-{{ b.ui.tone }}">
+                    {% include 'includes/cat_icon.html' with icon=b.ui.icon %}
+                </span>
+                <div class="budget-cat-info">
+                    <div class="budget-cat-row">
+                        <strong>{{ b.nombre }}</strong>
+                        <span class="budget-cat-pct money-num">{{ b.porcentaje }}%</span>
+                    </div>
+                    <div class="budget-cat-sub money-num">$ {{ b.gastado_fmt }} / $ {{ b.tope_fmt }} · mes</div>
+                    <div class="progress-track" style="margin-top: 8px;">
+                        <div class="progress-fill {% if b.excedido %}is-danger{% endif %}" style="width: {{ b.porcentaje }}%;"></div>
+                    </div>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <button type="button" class="btn-soft-pill is-wide" id="toggle-budget-form" style="width: 100%; margin-top: 14px;">
+        Editar presupuestos
+    </button>
+
+    <section class="app-card filter-drawer" id="budget-form-panel" style="margin-top: 12px;">
+        <form method="POST" action="{% url 'presupuestos' %}">
+            {% csrf_token %}
+            <div class="grid-2" style="margin-bottom: 0; gap: 12px;">
+                <div class="form-group">
+                    <label for="limite_diario">Límite diario (COP)</label>
+                    <input type="number" id="limite_diario" name="limite_diario" class="form-control app-field"
+                           min="100" step="100" value="{{ limite_diario_val }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="limite_mensual">Límite mensual (COP)</label>
+                    <input type="number" id="limite_mensual" name="limite_mensual" class="form-control app-field"
+                           min="1000" step="1000" value="{{ limite_mensual_val }}" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block-pill" style="margin-top: 8px;">Guardar límites</button>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('toggle-budget-form');
+    const panel = document.getElementById('budget-form-panel');
+    if (btn && panel) {
+        btn.addEventListener('click', function () {
+            panel.classList.toggle('is-open');
+        });
+    }
+});
+</script>
+{% endblock %}

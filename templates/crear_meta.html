@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Crear Meta - Mishi{% endblock %}
+
+{% block content %}
+<div class="app-screen app-screen--narrow reveal">
+    <div class="app-sub-topbar">
+        <a href="{% url 'metas' %}" class="icon-circle-btn" aria-label="Volver a metas">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </a>
+        <h1>Crear meta</h1>
+        <span style="width: 38px;"></span>
+    </div>
+
+    <form method="POST" action="{% url 'crear_meta' %}">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="meta-nombre" class="field-lbl-strong">Nombre de la meta</label>
+            <input type="text" id="meta-nombre" name="nombre" class="form-control app-field"
+                   placeholder="Ej: MacBook, Viaje a Cartagena, etc." required>
+        </div>
+
+        <div class="form-group">
+            <label for="meta-objetivo" class="field-lbl-strong">Monto objetivo</label>
+            <div class="amount-hero-box amount-hero-box--compact">
+                <span class="amount-currency-prefix">$</span>
+                <input type="number" id="meta-objetivo" name="objetivo"
+                       class="amount-hero-input money-num"
+                       placeholder="0" min="1" step="0.01" inputmode="decimal" required>
+                <span class="amount-currency-code">COP</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="meta-categoria" class="field-lbl-strong">Categoría</label>
+            <select id="meta-categoria" name="categoria" class="form-control app-field">
+                <option value="Estudios">Estudios / Tecnología</option>
+                <option value="Viaje">Viaje</option>
+                <option value="Ocio">Ocio</option>
+                <option value="Hogar">Hogar</option>
+                <option value="Salud">Salud</option>
+                <option value="General">General</option>
+            </select>
+        </div>
+
+        <div class="mishi-tip-card">
+            <img src="{% static 'img/mishi-hero.png' %}" alt="" class="mishi-tip-cat" aria-hidden="true">
+            <div>
+                <strong>¡Tú puedes!</strong>
+                <p>Cada peso cuenta para cumplir tu próximo sueño.</p>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block-pill" style="margin-top: 16px;">Crear meta</button>
+    </form>
+</div>
+{% endblock %}

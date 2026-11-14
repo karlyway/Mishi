@@ -1,143 +1,147 @@
 {% extends 'base.html' %}
 
-{% block title %}Historial de Movimientos - Mishi{% endblock %}
+{% block title %}Gastos y Movimientos - Mishi{% endblock %}
 
 {% block content %}
-<div class="page-header reveal">
-    <div class="page-title">
-        <p class="eyebrow">Movimientos</p>
-        <h1>Historial de transacciones</h1>
-        <p>Consulta, filtra, edita o elimina tus ingresos y egresos</p>
+<div class="app-screen reveal">
+    <div class="app-page-topbar">
+        <div>
+            <p class="eyebrow-muted">Historial de transacciones</p>
+            <h1>Gastos</h1>
+        </div>
+        <div class="app-topbar-actions">
+            <button type="button" class="icon-circle-btn" id="toggle-filtros-btn" aria-label="Filtrar movimientos" aria-expanded="{% if filtros_activos %}true{% else %}false{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <path d="M3 6h18M7 12h10M10 18h4"/>
+                </svg>
+            </button>
+            <a href="{% url 'movimiento' %}" class="icon-circle-btn is-primary" aria-label="Agregar gasto">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+            </a>
+        </div>
     </div>
-    <a href="{% url 'movimiento' %}" class="btn btn-primary">+ Nuevo registro</a>
-</div>
 
-<div class="grid-3 reveal">
-    <div class="metric-box">
-        <div class="metric-title">Total ingresos</div>
-        <div class="metric-number text-success">+${{ total_ingresos }} COP</div>
+    <div class="pill-tabs-row">
+        <a href="{% url 'historial' %}?rango=mes" class="pill-tab {% if rango == 'mes' %}is-active{% endif %}">Este mes</a>
+        <a href="{% url 'historial' %}?rango=3m" class="pill-tab {% if rango == '3m' %}is-active{% endif %}">Últimos 3 meses</a>
     </div>
 
-    <div class="metric-box">
-        <div class="metric-title">Total gastos</div>
-        <div class="metric-number text-danger">-${{ total_gastos }} COP</div>
-    </div>
+    <div class="gastos-hero-wrap">
+        <div class="gastos-hero-summary">
+            <div class="gastos-hero-total money-num">$ {{ total_gastos_fmt }}</div>
+            <div class="gastos-hero-label">Total gastado · Ingresos: <span class="text-success">+$ {{ total_ingresos_fmt }}</span></div>
 
-    <div class="metric-box" style="background-color: var(--carbon); border-color: transparent;">
-        <div class="metric-title" style="color: rgba(255, 255, 255, 0.72);">Balance neto</div>
-        <div class="metric-number" style="color: #FFFFFF;">${{ balance }} COP</div>
-    </div>
-</div>
-
-<section class="card reveal reveal-delay-1">
-    <h2 style="margin-bottom: 16px;">Filtrar movimientos</h2>
-
-    <form method="GET" action="{% url 'historial' %}">
-        <div class="grid-3" style="margin-bottom: 0;">
-            <div class="form-group">
-                <label for="fecha_inicio">Desde</label>
-                <input type="date" id="fecha_inicio"
-                       name="fecha_inicio" class="form-control"
-                       value="{{ fecha_inicio }}">
-            </div>
-
-            <div class="form-group">
-                <label for="fecha_fin">Hasta</label>
-                <input type="date" id="fecha_fin"
-                       name="fecha_fin" class="form-control"
-                       value="{{ fecha_fin }}">
-            </div>
-
-            <div class="form-group">
-                <label for="categoria">Categoría</label>
-                <select id="categoria" name="categoria" class="form-control">
-                    <option value="">Todas las categorías</option>
-                    {% for cat in categorias %}
-                        <option value="{{ cat.idCategoria }}"
-                            {% if categoria_seleccionada == cat.idCategoria|stringformat:"s" %}selected{% endif %}>
-                            {{ cat.nombre }}
-                        </option>
+            <div class="weekly-bars-card" aria-label="Gastos de esta semana de lunes a domingo">
+                <div class="weekly-bars-grid">
+                    {% for b in barras_semana %}
+                    <div class="weekly-bar-col">
+                        <div class="weekly-bar-track">
+                            <div class="weekly-bar-fill {% if b.destacada %}is-peak{% endif %} {% if b.vacia %}is-empty{% endif %}"
+                                 style="height: {{ b.altura }}%;"
+                                 title="{{ b.fecha|date:'d M' }}: ${{ b.total_fmt }}"></div>
+                        </div>
+                        <span class="weekly-bar-day">{{ b.letra }}</span>
+                    </div>
                     {% endfor %}
-                </select>
+                </div>
             </div>
         </div>
+    </div>
 
-        {% if error_filtros %}
-            <div class="alert alert-danger" role="alert" style="margin-top: 8px;">{{ error_filtros }}</div>
-        {% endif %}
+    <section class="app-card filter-drawer {% if filtros_activos %}is-open{% endif %}" id="filtros-panel">
+        <form method="GET" action="{% url 'historial' %}">
+            <div class="grid-3" style="margin-bottom: 0;">
+                <div class="form-group">
+                    <label for="fecha_inicio">Desde</label>
+                    <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control app-field" value="{{ fecha_inicio }}">
+                </div>
+                <div class="form-group">
+                    <label for="fecha_fin">Hasta</label>
+                    <input type="date" id="fecha_fin" name="fecha_fin" class="form-control app-field" value="{{ fecha_fin }}">
+                </div>
+                <div class="form-group">
+                    <label for="categoria">Categoría</label>
+                    <select id="categoria" name="categoria" class="form-control app-field">
+                        <option value="">Todas las categorías</option>
+                        {% for cat in categorias %}
+                            <option value="{{ cat.idCategoria }}"
+                                {% if categoria_seleccionada == cat.idCategoria|stringformat:"s" %}selected{% endif %}>
+                                {{ cat.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
 
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-            <button type="submit" class="btn btn-primary btn-sm">Aplicar filtros</button>
-            <a href="{% url 'historial' %}" class="btn btn-secondary btn-sm">Limpiar filtros</a>
+            {% if error_filtros %}
+                <div class="alert alert-danger" role="alert" style="margin-top: 8px;">{{ error_filtros }}</div>
+            {% endif %}
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                <button type="submit" class="btn btn-primary btn-sm">Aplicar filtros</button>
+                <a href="{% url 'historial' %}?rango=todos" class="btn btn-secondary btn-sm">Ver todos</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="app-section-block" style="margin-top: 18px;">
+        <div class="app-section-head">
+            <h2>Últimos movimientos</h2>
+            <a href="{% url 'categorias' %}" class="app-link-more">Por categoría &gt;</a>
         </div>
-    </form>
-</section>
 
-<section class="card reveal reveal-delay-2">
-    <div class="card-header">
-        <h2>Listado de movimientos</h2>
-    </div>
-
-    <div class="table-wrap">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Descripción</th>
-                    <th>Categoría</th>
-                    <th>Tipo</th>
-                    <th>Monto</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-
-            <tbody>
+        <div class="app-card" style="padding: 8px 16px;">
+            <div class="mov-list">
                 {% for m in movimientos %}
-                <tr>
-                    <td style="white-space: nowrap; color: var(--fg-muted);">{{ m.fecha }}</td>
-                    <td>
-                        <strong>{{ m.titulo }}</strong>
-                        {% if m.es_hormiga %}<span class="tag tag-warning" style="margin-left: 6px;">Gasto menor</span>{% endif %}
-                        {% if m.es_compartido %}<span class="tag" style="margin-left: 6px;">Deuda: {{ m.amigo }}</span>{% endif %}
-                    </td>
-                    <td><span class="tag">{{ m.categoria }}</span></td>
-                    <td>
-                        {% if m.tipo == 'gasto' %}
-                            <span class="tag tag-danger">Gasto</span>
-                        {% else %}
-                            <span class="tag tag-success">Ingreso</span>
-                        {% endif %}
-                    </td>
-                    <td class="money-num" style="white-space: nowrap;">
-                        {% if m.tipo == 'gasto' %}
-                            <span class="text-danger">-${{ m.monto }} COP</span>
-                        {% else %}
-                            <span class="text-success">+${{ m.monto }} COP</span>
-                        {% endif %}
-                    </td>
-                    <td style="white-space: nowrap;">
-                        <a href="{% url 'editar_movimiento' m.id %}" class="btn btn-secondary btn-sm">
-                            Editar
-                        </a>
-
-                        <form method="POST"
-                              action="{% url 'eliminar_movimiento' m.id %}"
-                              style="display: inline;"
-                              onsubmit="return confirm('¿Estás seguro de eliminar este movimiento?');">
+                <div class="mov-list-row-wrap">
+                    <a href="{% url 'detalle_movimiento' m.id %}" class="mov-list-item">
+                        <span class="app-cat-badge tone-{{ m.ui.tone }}">
+                            {% include 'includes/cat_icon.html' with icon=m.ui.icon %}
+                        </span>
+                        <div class="mov-list-info">
+                            <div class="mov-list-title">
+                                <span>{{ m.titulo }}</span>
+                                {% if m.es_hormiga %}<span class="mini-pill is-warn">Hormiga</span>{% endif %}
+                            </div>
+                            <div class="mov-list-sub">{{ m.categoria }} · {{ m.fecha|date:"d M Y" }}</div>
+                        </div>
+                        <div class="mov-list-amount money-num {% if m.tipo == 'ingreso' %}is-income{% endif %}">
+                            {% if m.tipo == 'gasto' %}$ {{ m.monto_fmt }}{% else %}+$ {{ m.monto_fmt }}{% endif %}
+                        </div>
+                    </a>
+                    <div class="mov-row-actions">
+                        <a href="{% url 'editar_movimiento' m.id %}" class="mini-action-link">Editar</a>
+                        <form method="POST" action="{% url 'eliminar_movimiento' m.id %}" style="display:inline;" onsubmit="return confirm('¿Eliminar este movimiento?');">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-danger-outline btn-sm">
-                                Eliminar
-                            </button>
+                            <button type="submit" class="mini-action-link is-danger">Eliminar</button>
                         </form>
-                    </td>
-                </tr>
+                    </div>
+                </div>
                 {% empty %}
-                <tr>
-                    <td colspan="6" style="color: var(--fg-muted); padding: 24px 12px;">Todavía no tienes movimientos registrados.</td>
-                </tr>
+                <div style="padding: 20px 4px; text-align: center;">
+                    <p class="empty-note">Todavía no tienes movimientos en este filtro.</p>
+                    <a href="{% url 'movimiento' %}" class="btn btn-primary btn-sm" style="margin-top: 10px;">+ Registrar gasto</a>
+                </div>
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('toggle-filtros-btn');
+    const panel = document.getElementById('filtros-panel');
+    if (btn && panel) {
+        btn.addEventListener('click', function () {
+            const abierto = panel.classList.toggle('is-open');
+            btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+        });
+    }
+});
+</script>
 {% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalle de Movimiento - Mishi{% endblock %}
+
+{% block content %}
+<div class="app-screen app-screen--narrow reveal">
+    <div class="app-sub-topbar">
+        <a href="{% url 'historial' %}" class="icon-circle-btn" aria-label="Volver al historial">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </a>
+        <h1>Detalle de {{ movimiento.tipo|lower }}</h1>
+        <span style="width: 38px;"></span>
+    </div>
+
+    <section class="app-card detalle-hero-card">
+        <div class="detalle-top">
+            <span class="app-cat-badge app-cat-badge--lg tone-{{ ui.tone }}">
+                {% include 'includes/cat_icon.html' with icon=ui.icon %}
+            </span>
+            <div>
+                <h2 class="detalle-title">{{ movimiento.descripcion|default:movimiento.idCategoria.nombre }}</h2>
+                <p class="detalle-cat">{{ movimiento.idCategoria.nombre }}</p>
+            </div>
+        </div>
+
+        <div class="detalle-amount money-num {% if movimiento.tipo|lower == 'ingreso' %}is-income{% endif %}">
+            {% if movimiento.tipo|lower == 'ingreso' %}+{% endif %}$ {{ monto_fmt }}
+        </div>
+        <div class="detalle-date">{{ movimiento.fecha|date:"d M Y" }}</div>
+    </section>
+
+    <section class="app-card">
+        <div class="detalle-meta-row">
+            <span class="detalle-meta-lbl">Tipo de movimiento</span>
+            <strong class="detalle-meta-val" style="text-transform: capitalize;">{{ movimiento.tipo }}</strong>
+        </div>
+        <div class="detalle-meta-row">
+            <span class="detalle-meta-lbl">Categoría</span>
+            <strong class="detalle-meta-val">{{ movimiento.idCategoria.nombre }}</strong>
+        </div>
+        {% if es_hormiga %}
+        <div class="detalle-meta-row">
+            <span class="detalle-meta-lbl">Clasificación</span>
+            <span class="mini-pill is-warn">Gasto hormiga (&le; $15.000)</span>
+        </div>
+        {% endif %}
+
+        <div class="detalle-actions">
+            <a href="{% url 'editar_movimiento' movimiento.idTransaccion %}" class="btn-soft-pill is-wide">
+                Editar movimiento
+            </a>
+            <form method="POST" action="{% url 'eliminar_movimiento' movimiento.idTransaccion %}" style="flex: 1;"
+                  onsubmit="return confirm('¿Estás seguro de eliminar este movimiento?');">
+                {% csrf_token %}
+                <button type="submit" class="btn-soft-pill is-danger is-wide" style="width: 100%;">
+                    Eliminar
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <div class="mishi-tip-card">
+        <img src="{% static 'img/mishi-hero.png' %}" alt="" class="mishi-tip-cat" aria-hidden="true">
+        <div>
+            <strong>Pequeños gastos</strong>
+            <p>también cuentan para tus metas.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mis Insights - Mishi{% endblock %}
+
+{% block content %}
+<div class="app-screen app-screen--narrow reveal">
+    <div class="app-sub-topbar">
+        <a href="{% url 'dashboard' %}" class="icon-circle-btn" aria-label="Volver al inicio">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </a>
+        <h1>Mis insights</h1>
+        <span style="width: 38px;"></span>
+    </div>
+
+    <section class="app-card insight-hero-card">
+        <img src="{% static 'img/mishi-hero.png' %}" alt="" class="insight-hero-cat" aria-hidden="true">
+        <div>
+            {% if resumen.limite_superado %}
+                <h2>¡Ojo con el límite de hoy!</h2>
+                <p>Llevas <strong>${{ resumen.gasto_hoy_fmt }}</strong> gastados hoy sobre tu límite diario de ${{ resumen.limite_diario_fmt }}.</p>
+            {% elif variacion < 0 %}
+                <h2>Vas muy bien con tus gastos este mes</h2>
+                <p>Has gastado <strong>{{ variacion_abs }}% menos</strong> que el mes pasado. ¡Sigue así!</p>
+            {% elif variacion > 0 %}
+                <h2>Tus gastos subieron {{ variacion_abs }}%</h2>
+                <p>Este mes llevas <strong>${{ resumen.gastos_mes_fmt }}</strong> acumulados. Revisa tus categorías principales.</p>
+            {% else %}
+                <h2>Tu resumen inteligente</h2>
+                <p>Llevas <strong>${{ resumen.gastos_mes_fmt }}</strong> este mes y <strong>${{ resumen.gasto_hoy_fmt }}</strong> hoy ({{ resumen.porcentaje_gasto_hoy }}% del límite diario).</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="insights-stack">
+        <article class="app-card insight-item-card">
+            <div class="insight-item-head">
+                <span class="app-cat-badge tone-amber">
+                    {% include 'includes/cat_icon.html' with icon='tag' %}
+                </span>
+                <div class="insight-item-meta">
+                    <span class="insight-item-title">Gastos hormiga</span>
+                    <strong class="insight-item-val money-num">$ {{ hormiga_mes_fmt }}</strong>
+                </div>
+            </div>
+            <p class="insight-item-desc">Compras pequeñas de $15.000 o menos acumuladas este mes. Controlarlas libera ahorro rápido para tus metas.</p>
+            <a href="{% url 'historial' %}" class="btn-soft-pill">Ver movimientos</a>
+        </article>
+
+        {% for cat in categorias_top %}
+        <article class="app-card insight-item-card">
+            <div class="insight-item-head">
+                <span class="app-cat-badge tone-{{ cat.ui.tone }}">
+                    {% include 'includes/cat_icon.html' with icon=cat.ui.icon %}
+                </span>
+                <div class="insight-item-meta">
+                    <span class="insight-item-title">{{ cat.nombre }}</span>
+                    <strong class="insight-item-val money-num">$ {{ cat.total_fmt }}</strong>
+                </div>
+                <span class="mini-pill">{{ cat.porcentaje }}%</span>
+            </div>
+            <p class="insight-item-desc">Es una de tus categorías con mayor gasto este mes. Puedes definir un tope para cuidar tu presupuesto.</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a href="{% url 'presupuestos' %}" class="btn-soft-pill">Configurar límite</a>
+                <a href="{% url 'historial' %}?categoria={{ cat.id }}" class="btn-soft-pill is-neutral">Ver gastos</a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

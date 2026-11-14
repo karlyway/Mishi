@@ -8,6 +8,7 @@ from django.urls import reverse
 from finanzas.models import (
     Categoria,
     MetaAhorro,
+    Presupuesto,
     Prestamo,
     Transaccion,
     Usuario,
@@ -442,3 +443,99 @@ def test_flujo_critico_metas_ahorro_y_prestamos(client, crear_estudiante):
     })
     prestamo.refresh_from_db()
     assert prestamo.estado == 'Pagado'
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    'url_name',
+    ['crear_meta', 'categorias', 'insights', 'perfil', 'presupuestos', 'animo'],
+)
+def test_permisos_nuevas_vistas_app_redirigen_a_login(client, url_name):
+    resp = client.get(reverse(url_name))
+    assert resp.status_code == 302
+    assert reverse('login') in resp.url
+
+
+@pytest.mark.django_db
+def test_detalle_movimiento_aisla_usuarios_y_muestra_propio(client, crear_estudiante, categoria_base):
+    cuenta_duena, perfil_dueno = crear_estudiante('duena_det@unal.edu.co')
+    cuenta_otra, _ = crear_estudiante('otra_det@unal.edu.co')
+
+    mov = Transaccion.objects.create(
+        idUsuario=perfil_dueno,
+        idCategoria=categoria_base,
+        tipo='Gasto',
+        monto=Decimal('22000.00'),
+        fecha=date.today(),
+        descripcion='Almuerzo facultad',
+    )
+    url = reverse('detalle_movimiento', args=[mov.idTransaccion])
+
+    # Usuario distinto no puede ver el detalle del movimiento ajeno
+    client.force_login(cuenta_otra)
+    resp_otra = client.get(url)
+    assert resp_otra.status_code == 302
+    assert resp_otra.url == reverse('historial')
+
+    # Propietaria accede con 200 y ve la descripción
+    client.force_login(cuenta_duena)
+    resp_duena = client.get(url)
+    assert resp_duena.status_code == 200
+    assert 'Almuerzo facultad' in resp_duena.content.decode('utf-8')
+
+
+@pytest.mark.django_db
+def test_flujo_crear_meta_perfil_presupuestos_y_vistas_secundarias(client, crear_estudiante, categoria_base):
+    cuenta, perfil = crear_estudiante('app_full@unal.edu.co', nombre='Valen', mesada='500000.00')
+    client.force_login(cuenta)
+
+    Transaccion.objects.create(
+        idUsuario=perfil,
+        idCategoria=categoria_base,
+        tipo='Gasto',
+        monto=Decimal('12000.00'),
+        fecha=date.today(),
+        descripcion='Café campus',
+    )
+
+    # Crear meta desde la pantalla dedicada
+    resp_meta = client.post(
+        reverse('crear_meta'),
+        {'nombre': 'Portátil', 'objetivo': '1500000', 'categoria': 'Educación'},
+    )
+    assert resp_meta.status_code == 302
+    assert resp_meta.url == reverse('metas')
+    assert MetaAhorro.objects.filter(idUsuario=perfil, nombre='Portátil', objetivo=Decimal('1500000.00')).exists()
+
+    # Guardar límites personalizados en Presupuestos
+    resp_pres = client.post(
+        reverse('presupuestos'),
+        {'limite_diario': '50000', 'limite_mensual': '600000'},
+    )
+    assert resp_pres.status_code == 302
+    assert resp_pres.url == reverse('presupuestos')
+    presupuesto = Presupuesto.objects.get(idUsuario=perfil)
+    assert presupuesto.limiteDiario == Decimal('50000.00')
+    assert presupuesto.limiteMensual == Decimal('600000.00')
+
+    # Actualizar información en Perfil
+    resp_perfil = client.post(
+        reverse('perfil'),
+        {
+            'nombre': 'Valentina García',
+            'universidad': 'Universidad Nacional',
+            'frecuencia': 'mensual',
+            'mesada': '800000',
+        },
+    )
+    assert resp_perfil.status_code == 302
+    assert resp_perfil.url == reverse('perfil')
+    perfil.refresh_from_db()
+    assert perfil.nombre == 'Valentina García'
+    assert perfil.frecuencia == 'mensual'
+    assert perfil.mesada == Decimal('800000.00')
+
+    # Vistas analíticas y de descanso responden 200 sin errores
+    assert client.get(reverse('categorias') + '?rango=3m').status_code == 200
+    assert client.get(reverse('insights')).status_code == 200
+    assert client.get(reverse('animo')).status_code == 200

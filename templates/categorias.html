@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Categorías - Mishi{% endblock %}
+
+{% block content %}
+<div class="app-screen app-screen--narrow reveal">
+    <div class="app-sub-topbar">
+        <a href="{% url 'dashboard' %}" class="icon-circle-btn" aria-label="Volver al inicio">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </a>
+        <h1>Categorías</h1>
+        <span style="width: 38px;"></span>
+    </div>
+
+    <div class="pill-tabs-row">
+        <a href="{% url 'categorias' %}?rango=mes" class="pill-tab {% if rango == 'mes' %}is-active{% endif %}">Este mes</a>
+        <a href="{% url 'categorias' %}?rango=3m" class="pill-tab {% if rango == '3m' %}is-active{% endif %}">Últimos 3 meses</a>
+    </div>
+
+    <section class="app-card donut-center-card">
+        <div class="donut-stage">
+            <canvas id="donutCategorias"></canvas>
+            <div class="donut-center-overlay">
+                <div class="donut-total money-num">$ {{ total_gastado_fmt }}</div>
+                <div class="donut-sub">Total gastado</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="app-card" style="padding: 8px 16px;">
+        {% for c in categorias_gasto %}
+        <a href="{% url 'historial' %}?categoria={{ c.id }}" class="cat-dot-row">
+            <span class="cat-dot-left">
+                <span class="cat-color-dot" style="background-color: {{ c.ui.color }};"></span>
+                <span class="cat-dot-name">{{ c.nombre }}</span>
+            </span>
+            <span class="cat-dot-pct money-num">{{ c.porcentaje }}%</span>
+            <span class="cat-dot-amt money-num">$ {{ c.total_fmt }}</span>
+        </a>
+        {% empty %}
+        <p class="empty-note" style="padding: 18px 4px; text-align: center;">No hay gastos registrados en este periodo.</p>
+        {% endfor %}
+    </section>
+</div>
+
+{{ etiquetas_json|json_script:"cat-labels" }}
+{{ valores_json|json_script:"cat-values" }}
+{{ colores_json|json_script:"cat-colors" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const labels = JSON.parse(document.getElementById('cat-labels').textContent);
+    const values = JSON.parse(document.getElementById('cat-values').textContent);
+    const colors = JSON.parse(document.getElementById('cat-colors').textContent);
+
+    new Chart(document.getElementById('donutCategorias'), {
+        type: 'doughnut',
+        data: {
+            labels: labels.length ? labels : ['Sin datos'],
+            datasets: [{
+                data: values.length ? values : [1],
+                backgroundColor: values.length ? colors : ['#EFECE2'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: { legend: { display: false } }
+        }
+    });
+});
+</script>
+{% endblock %}

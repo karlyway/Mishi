@@ -3,70 +3,98 @@
 {% block title %}Registrar Movimiento - Mishi{% endblock %}
 
 {% block content %}
-<div class="form-shell reveal">
-    <div class="page-title" style="margin-bottom: 18px;">
-        <p class="eyebrow">Nuevo movimiento</p>
-        <h1>Registrar movimiento</h1>
-        <p>Saldo actual: <strong class="money-num">${{ saldo }} COP</strong> · Límite diario: <strong class="money-num">${{ limite_diario }} COP</strong></p>
+<div class="app-screen app-screen--narrow reveal">
+    <div class="app-sub-topbar">
+        <a href="{% url 'dashboard' %}" class="icon-circle-btn" aria-label="Cerrar y volver">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+        </a>
+        <h1>Nuevo gasto</h1>
+        <span class="sr-only">Registrar movimiento</span>
+        <span style="width: 38px;"></span>
     </div>
 
-    <div class="card">
-        <form action="{% url 'movimiento' %}" method="POST">
-            {% csrf_token %}
+    <form action="{% url 'movimiento' %}" method="POST" id="nuevo-movimiento-form">
+        {% csrf_token %}
 
-            {% if error %}
-                <div class="alert alert-danger" role="alert">{{ error }}</div>
-            {% endif %}
+        {% if error %}
+            <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
 
-            <div class="form-group">
-                <label>Tipo de transacción</label>
-                <div class="segmented-control">
-                    <input type="radio" id="tipo-gasto" name="tipo" value="gasto" checked>
-                    <label for="tipo-gasto">Gasto</label>
-                    <input type="radio" id="tipo-ingreso" name="tipo" value="ingreso">
-                    <label for="tipo-ingreso">Ingreso</label>
-                </div>
-            </div>
+        <div class="segmented-control app-segmented">
+            <input type="radio" id="tipo-gasto" name="tipo" value="gasto" checked>
+            <label for="tipo-gasto">Gasto</label>
+            <input type="radio" id="tipo-ingreso" name="tipo" value="ingreso">
+            <label for="tipo-ingreso">Ingreso</label>
+        </div>
 
-            <div class="form-group">
-                <label for="monto">Monto (COP)</label>
-                <input type="number" id="monto" name="monto"
-                       class="form-control input-monto-grande"
-                       placeholder="0" min="100" step="0.01" inputmode="decimal" required>
-            </div>
+        <div class="cat-picker-grid" role="radiogroup" aria-label="Selecciona categoría">
+            {% for cat in categorias_ui %}
+            <button type="button"
+                    class="cat-picker-tile {% if forloop.first %}is-selected{% endif %}"
+                    data-cat-id="{{ cat.idCategoria }}">
+                <span class="cat-picker-box tone-{{ cat.ui.tone }}">
+                    {% include 'includes/cat_icon.html' with icon=cat.ui.icon %}
+                </span>
+                <span class="cat-picker-label">{{ cat.nombre }}</span>
+            </button>
+            {% endfor %}
+        </div>
 
-            <div class="grid-2" style="margin-bottom: 0; gap: 14px;">
-                <div class="form-group">
-                    <label for="categoria">Categoría</label>
-                    <select id="categoria" name="categoria" class="form-control" required>
-                        {% for cat in categorias %}
-                            <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+        <div class="sr-only">
+            <label for="categoria">Categoría</label>
+            <select id="categoria" name="categoria" required>
+                {% for cat in categorias %}
+                    <option value="{{ cat.idCategoria }}" {% if forloop.first %}selected{% endif %}>{{ cat.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-                <div class="form-group">
-                    <label for="fecha">Fecha</label>
-                    <input type="date" id="fecha" name="fecha"
-                           class="form-control" value="{% now 'Y-m-d' %}" required>
-                </div>
-            </div>
+        <div class="amount-hero-box">
+            <span class="amount-currency-prefix">$</span>
+            <label for="monto" class="sr-only">Monto COP</label>
+            <input type="number" id="monto" name="monto"
+                   class="amount-hero-input money-num"
+                   placeholder="0" min="100" step="0.01" inputmode="decimal" required>
+            <span class="amount-currency-code">COP</span>
+        </div>
 
-            <div class="form-group">
-                <label for="descripcion">Descripción</label>
-                <input type="text" id="descripcion" name="descripcion"
-                       class="form-control" placeholder="Ej: Almuerzo, transporte, copias">
-            </div>
+        <div class="form-group">
+            <label for="descripcion" class="sr-only">Nota</label>
+            <input type="text" id="descripcion" name="descripcion"
+                   class="form-control app-field" placeholder="¿En qué gastaste? (Ej: Almuerzo, Uber)">
+        </div>
 
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px;">
-                <button type="submit" class="btn btn-primary" style="flex: 1;">
-                    Guardar movimiento
-                </button>
-                <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-                    Cancelar
-                </a>
-            </div>
-        </form>
-    </div>
+        <div class="form-group">
+            <label for="fecha" class="sr-only">Fecha</label>
+            <input type="date" id="fecha" name="fecha"
+                   class="form-control app-field" value="{% now 'Y-m-d' %}" required>
+        </div>
+
+        <p class="field-hint-center">
+            Disponible hoy: <strong>${{ saldo_fmt }}</strong> · Límite diario recomendado: <strong>${{ limite_diario_fmt }}</strong>
+        </p>
+
+        <button type="submit" class="btn btn-primary btn-block-pill">Guardar</button>
+    </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tiles = document.querySelectorAll('.cat-picker-tile');
+    const select = document.getElementById('categoria');
+    tiles.forEach(function (tile) {
+        tile.addEventListener('click', function () {
+            tiles.forEach(function (t) { t.classList.remove('is-selected'); });
+            tile.classList.add('is-selected');
+            if (select) {
+                select.value = tile.getAttribute('data-cat-id');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

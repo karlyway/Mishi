@@ -1,71 +1,81 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Crear Cuenta - Mishi{% endblock %}
 
 {% block content %}
-<div class="card form-shell reveal">
-    <p class="eyebrow">Registro</p>
-    <h1 style="font-size: 26px; font-weight: 500; letter-spacing: -0.03em; margin-bottom: 6px;">Crear cuenta de estudiante</h1>
-    <p style="font-size: 14px; color: var(--fg-muted); margin-bottom: 22px;">Configura tu mesada inicial para calcular tu límite diario desde hoy</p>
+<div class="auth-app-shell auth-app-shell--wide reveal">
+    <div class="auth-mascot-hero auth-mascot-hero--compact">
+        <img src="{% static 'img/mishi-hero.png' %}" alt="Mishi" class="auth-mascot-img" width="565" height="513">
+        <div>
+            <div class="auth-brand-title" style="font-size: 28px;">mishi</div>
+            <p class="auth-brand-sub" style="margin: 0;">Tu plata, bajo control.</p>
+        </div>
+    </div>
 
-    <form action="{% url 'registro_usuario' %}" method="POST">
-        {% csrf_token %}
+    <div class="card auth-card">
+        <h1 style="font-size: 23px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 4px;">Crear cuenta de estudiante</h1>
+        <p style="font-size: 13.5px; color: var(--fg-muted); margin-bottom: 20px;">Configura tu mesada inicial para calcular tu límite diario desde hoy</p>
 
-        {% if error %}
-            <div class="alert alert-danger" role="alert">{{ error }}</div>
-        {% endif %}
+        <form action="{% url 'registro_usuario' %}" method="POST">
+            {% csrf_token %}
 
-        <div class="grid-2" style="margin-bottom: 0; gap: 14px;">
-            <div class="form-group">
-                <label for="nombre">Nombre completo</label>
-                <input type="text" id="nombre" name="nombre" class="form-control"
-                       placeholder="Ej: Camila Pérez" autocomplete="name" required>
+            {% if error %}
+                <div class="alert alert-danger" role="alert">{{ error }}</div>
+            {% endif %}
+
+            <div class="grid-2" style="margin-bottom: 0; gap: 14px;">
+                <div class="form-group">
+                    <label for="nombre">Nombre completo</label>
+                    <input type="text" id="nombre" name="nombre" class="form-control app-field"
+                           placeholder="Ej: Valentina García" autocomplete="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="universidad">Institución universitaria</label>
+                    <input type="text" id="universidad" name="universidad" class="form-control app-field"
+                           placeholder="Ej: Corporación Universitaria Rafael Núñez" required>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-bottom: 0; gap: 14px;">
+                <div class="form-group">
+                    <label for="frecuencia">Frecuencia de ingresos</label>
+                    <select id="frecuencia" name="frecuencia" class="form-control app-field">
+                        <option value="diario">Diariamente</option>
+                        <option value="semanal">Semanalmente</option>
+                        <option value="quincenal" selected>Quincenalmente</option>
+                        <option value="mensual">Mensualmente</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="mesada">Mesada o saldo inicial (COP)</label>
+                    <input type="number" id="mesada" name="mesada" class="form-control app-field"
+                           placeholder="Ej: 350000" min="0" step="0.01" inputmode="decimal">
+                </div>
             </div>
 
             <div class="form-group">
-                <label for="universidad">Institución universitaria</label>
-                <input type="text" id="universidad" name="universidad" class="form-control"
-                       placeholder="Ej: Corporación Universitaria Rafael Núñez" required>
-            </div>
-        </div>
-
-        <div class="grid-2" style="margin-bottom: 0; gap: 14px;">
-            <div class="form-group">
-                <label for="frecuencia">Frecuencia de ingresos</label>
-                <select id="frecuencia" name="frecuencia" class="form-control">
-                    <option value="diario">Diariamente</option>
-                    <option value="semanal">Semanalmente</option>
-                    <option value="quincenal" selected>Quincenalmente</option>
-                    <option value="mensual">Mensualmente</option>
-                </select>
+                <label for="correo">Correo electrónico</label>
+                <input type="email" id="correo" name="correo" class="form-control app-field"
+                       placeholder="ejemplo@curnvirtual.edu.co" autocomplete="email" required>
             </div>
 
             <div class="form-group">
-                <label for="mesada">Mesada o saldo inicial (COP)</label>
-                <input type="number" id="mesada" name="mesada" class="form-control"
-                       placeholder="Ej: 350000" min="0" step="0.01" inputmode="decimal">
+                <label for="pass">Contraseña</label>
+                <input type="password" id="pass" name="pass" class="form-control app-field"
+                       placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
             </div>
-        </div>
 
-        <div class="form-group">
-            <label for="correo">Correo electrónico</label>
-            <input type="email" id="correo" name="correo" class="form-control"
-                   placeholder="ejemplo@curnvirtual.edu.co" autocomplete="email" required>
-        </div>
+            <div style="margin-top: 20px;">
+                <button type="submit" class="btn btn-primary btn-block-pill">Registrarme e ingresar</button>
+            </div>
+        </form>
 
-        <div class="form-group">
-            <label for="pass">Contraseña</label>
-            <input type="password" id="pass" name="pass" class="form-control"
-                   placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+        <div style="margin-top: 18px; text-align: center; font-size: 13px; color: var(--fg-muted);">
+            ¿Ya tienes una cuenta? <a href="{% url 'login' %}" style="color: var(--orange-text); font-weight: 700;">Iniciar sesion</a>
         </div>
-
-        <div style="margin-top: 22px;">
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Registrarme e ingresar</button>
-        </div>
-    </form>
-
-    <div style="margin-top: 20px; text-align: center; font-size: 13px; color: var(--fg-muted);">
-        ¿Ya tienes una cuenta? <a href="{% url 'login' %}" style="font-weight: 600; text-decoration: underline;">Iniciar sesion</a>
     </div>
 </div>
 {% endblock %}

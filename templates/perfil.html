@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Perfil - Mishi{% endblock %}
+
+{% block content %}
+<div class="app-screen app-screen--narrow reveal">
+    <div class="app-page-topbar">
+        <h1>Perfil</h1>
+        <button type="button" class="icon-circle-btn" id="toggle-perfil-form" aria-label="Editar mi información">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="perfil-avatar-block">
+        <div class="perfil-avatar-circle">{{ usuario.nombre|slice:":1"|upper }}</div>
+        <h2>{{ usuario.nombre }}</h2>
+        <p>{{ correo }}</p>
+        <span class="mini-pill">{{ usuario.universidad }}</span>
+    </div>
+
+    <a href="{% url 'dashboard' %}" class="app-card perfil-balance-card">
+        <div>
+            <div class="perfil-balance-lbl">Mi balance</div>
+            <div class="perfil-balance-val money-num">$ {{ saldo_fmt }}</div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m9 18 6-6-6-6"/>
+        </svg>
+    </a>
+
+    <section class="app-card filter-drawer" id="perfil-edit-panel">
+        <h3 style="font-size: 16px; margin-bottom: 12px;">Editar mi información</h3>
+        <form method="POST" action="{% url 'perfil' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="perfil-nombre">Nombre</label>
+                <input type="text" id="perfil-nombre" name="nombre" class="form-control app-field" value="{{ usuario.nombre }}" required>
+            </div>
+            <div class="form-group">
+                <label for="perfil-uni">Universidad</label>
+                <input type="text" id="perfil-uni" name="universidad" class="form-control app-field" value="{{ usuario.universidad }}" required>
+            </div>
+            <div class="grid-2" style="margin-bottom: 0; gap: 10px;">
+                <div class="form-group">
+                    <label for="perfil-frec">Frecuencia</label>
+                    <select id="perfil-frec" name="frecuencia" class="form-control app-field">
+                        <option value="diario" {% if usuario.frecuencia == 'diario' %}selected{% endif %}>Diario</option>
+                        <option value="semanal" {% if usuario.frecuencia == 'semanal' %}selected{% endif %}>Semanal</option>
+                        <option value="quincenal" {% if usuario.frecuencia == 'quincenal' %}selected{% endif %}>Quincenal</option>
+                        <option value="mensual" {% if usuario.frecuencia == 'mensual' %}selected{% endif %}>Mensual</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="perfil-mesada">Mesada (COP)</label>
+                    <input type="number" id="perfil-mesada" name="mesada" class="form-control app-field" min="0" step="0.01" value="{{ usuario.mesada|stringformat:'.2f' }}">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block-pill btn-sm" style="margin-top: 6px;">Guardar cambios</button>
+        </form>
+    </section>
+
+    <div class="app-card perfil-menu-card">
+        <button type="button" class="perfil-menu-row" id="row-mi-info">
+            <span class="perfil-menu-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.8 3.6-6 8-6s8 2.2 8 6"/></svg>
+                <span>Mi información</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+
+        <a href="{% url 'presupuestos' %}" class="perfil-menu-row">
+            <span class="perfil-menu-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 10h8M8 14h5"/></svg>
+                <span>Presupuestos</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <a href="{% url 'categorias' %}" class="perfil-menu-row">
+            <span class="perfil-menu-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M21.2 9A9 9 0 0 0 15 2.8V9z"/></svg>
+                <span>Categorías</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <a href="{% url 'insights' %}" class="perfil-menu-row">
+            <span class="perfil-menu-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+                <span>Mis insights</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <a href="{% url 'animo' %}" class="perfil-menu-row">
+            <span class="perfil-menu-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <span>Descanso Mishi</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+
+        <form method="POST" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="perfil-menu-row is-logout">
+                <span class="perfil-menu-left">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>
+                    <span>Cerrar sesión</span>
+                </span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const panel = document.getElementById('perfil-edit-panel');
+    const toggle1 = document.getElementById('toggle-perfil-form');
+    const toggle2 = document.getElementById('row-mi-info');
+    function toggle() { if (panel) panel.classList.toggle('is-open'); }
+    if (toggle1) toggle1.addEventListener('click', toggle);
+    if (toggle2) toggle2.addEventListener('click', toggle);
+});
+</script>
+{% endblock %}

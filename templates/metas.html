@@ -1,190 +1,179 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Metas y Préstamos - Mishi{% endblock %}
 
 {% block content %}
-<div class="page-header reveal">
-    <div class="page-title">
-        <p class="eyebrow">Ahorro y deudas</p>
-        <h1>Metas de ahorro y préstamos</h1>
-        <p>Seguimiento de tus objetivos financieros y cuentas entre compañeros.</p>
+<div class="app-screen reveal">
+    <div class="app-page-topbar">
+        <div>
+            <p class="eyebrow-muted">Metas de ahorro</p>
+            <h1>Metas</h1>
+        </div>
+        <a href="{% url 'crear_meta' %}" class="icon-circle-btn" aria-label="Crear nueva meta">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+        </a>
     </div>
-</div>
 
-<div class="grid-2 reveal">
-    <section class="card" style="margin-bottom: 0;">
-        <h2 style="margin-bottom: 16px;">Crear meta de ahorro</h2>
-
-        <form method="POST">
-            {% csrf_token %}
-            <input type="hidden" name="accion" value="crear_meta">
-
-            <div class="form-group">
-                <label for="meta-nombre">Nombre de la meta</label>
-                <input type="text" id="meta-nombre" name="nombre" class="form-control"
-                       placeholder="Ej: Comprar computador" required>
-            </div>
-
-            <div class="grid-2" style="margin-bottom: 0; gap: 12px;">
-                <div class="form-group">
-                    <label for="meta-categoria">Categoría</label>
-                    <input type="text" id="meta-categoria" name="categoria" class="form-control"
-                           placeholder="Ej: Estudios">
-                </div>
-
-                <div class="form-group">
-                    <label for="meta-objetivo">Monto objetivo (COP)</label>
-                    <input type="number" id="meta-objetivo" name="objetivo" class="form-control"
-                           min="1" step="0.01" inputmode="decimal" required>
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 6px;">Guardar meta</button>
-        </form>
+    <section class="mishi-banner-card">
+        <div class="mishi-banner-copy">
+            <h2>Ahorra hoy, disfruta mañana.</h2>
+            <p>Tus metas, más cerca con cada pequeño esfuerzo.</p>
+        </div>
+        <img src="{% static 'img/mishi-hero.png' %}" alt="" class="mishi-banner-cat" aria-hidden="true">
     </section>
 
-    <section class="card" style="margin-bottom: 0;">
-        <h2 style="margin-bottom: 16px;">Registrar préstamo</h2>
-
-        <form method="POST">
-            {% csrf_token %}
-            <input type="hidden" name="accion" value="crear_prestamo">
-
-            <div class="grid-2" style="margin-bottom: 0; gap: 12px;">
-                <div class="form-group">
-                    <label for="prestamo-deudor">Nombre del compañero</label>
-                    <input type="text" id="prestamo-deudor" name="deudor" class="form-control" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="prestamo-tipo">Tipo</label>
-                    <select id="prestamo-tipo" name="tipo" class="form-control">
-                        <option value="Por cobrar">Me deben</option>
-                        <option value="Por pagar">Debo</option>
-                    </select>
-                </div>
+    <div class="app-two-col-split">
+        <section class="app-section-block">
+            <div class="app-section-head">
+                <h2>Mis metas</h2>
+                <a href="{% url 'crear_meta' %}" class="app-link-more">+ Nueva meta</a>
             </div>
 
-            <div class="grid-2" style="margin-bottom: 0; gap: 12px;">
-                <div class="form-group">
-                    <label for="prestamo-concepto">Concepto</label>
-                    <input type="text" id="prestamo-concepto" name="concepto" class="form-control"
-                           placeholder="Ej: Almuerzo o copias" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="prestamo-monto">Monto (COP)</label>
-                    <input type="number" id="prestamo-monto" name="monto" class="form-control"
-                           min="1" step="0.01" inputmode="decimal" required>
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 6px;">Guardar préstamo</button>
-        </form>
-    </section>
-</div>
-
-<section class="card reveal reveal-delay-1">
-    <div class="card-header">
-        <h2>Mis metas de ahorro</h2>
-    </div>
-
-    {% if metas %}
-    <div class="grid-2" style="margin-bottom: 0;">
-        {% for meta in metas %}
-        <article class="goal-card">
-            <div class="goal-head">
-                <div>
-                    <h3 style="margin-bottom: 4px;">{{ meta.nombre }}</h3>
-                    <span class="tag">{{ meta.categoria }}</span>
-                </div>
-                <span class="goal-percent">{% widthratio meta.acumulado meta.objetivo 100 %}%</span>
-            </div>
-
-            <div class="progress-track">
-                <div class="progress-fill"
-                     style="width: {% widthratio meta.acumulado meta.objetivo 100 %}%; max-width: 100%;"></div>
-            </div>
-
-            <div class="goal-amounts money-num">
-                <span>Ahorrado: <strong>${{ meta.acumulado }} COP</strong></span>
-                <span>Meta: ${{ meta.objetivo }} COP</span>
-            </div>
-
-            <form method="POST" style="display: flex; gap: 8px; align-items: center;">
-                {% csrf_token %}
-                <input type="hidden" name="accion" value="actualizar_meta">
-                <input type="hidden" name="meta_id" value="{{ meta.idMeta }}">
-
-                <input type="number" name="ahorro" class="form-control" min="1" step="0.01" inputmode="decimal"
-                       placeholder="Abonar COP" style="min-height: 38px;" required>
-
-                <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">Agregar ahorro</button>
-            </form>
-        </article>
-        {% endfor %}
-    </div>
-    {% else %}
-    <p style="font-size: 14px; color: var(--fg-muted);">Todavía no tienes metas registradas.</p>
-    {% endif %}
-</section>
-
-<section class="card reveal reveal-delay-2">
-    <div class="card-header">
-        <h2>Mis préstamos</h2>
-    </div>
-
-    <div class="table-wrap">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Compañero</th>
-                    <th>Concepto</th>
-                    <th>Fecha</th>
-                    <th>Tipo</th>
-                    <th>Monto</th>
-                    <th>Estado</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in prestamos %}
-                <tr>
-                    <td><strong>{{ p.deudor }}</strong></td>
-                    <td>{{ p.concepto }}</td>
-                    <td style="white-space: nowrap; color: var(--fg-muted);">{{ p.fecha }}</td>
-                    <td>
-                        {% if p.tipo == 'Por cobrar' %}
-                            <span class="tag tag-success">Me deben</span>
-                        {% else %}
-                            <span class="tag tag-warning">Debo</span>
-                        {% endif %}
-                    </td>
-                    <td class="money-num" style="white-space: nowrap;"><strong>${{ p.monto }} COP</strong></td>
-                    <td>
-                        {% if p.estado == 'Pagado' %}
-                            <span class="tag tag-success">Pagado</span>
-                        {% else %}
-                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <span class="tag tag-warning">{{ p.estado }}</span>
-                                <form method="POST" style="display: inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="accion" value="pagar_prestamo">
-                                    <input type="hidden" name="prestamo_id" value="{{ p.idPrestamo }}">
-                                    <button type="submit" class="btn btn-primary btn-sm">
-                                        Marcar como pagado
-                                    </button>
-                                </form>
+            {% if metas_ui %}
+            <div class="goals-stack">
+                {% for meta in metas_ui %}
+                <article class="goal-app-card">
+                    <div class="goal-app-top">
+                        <span class="app-cat-badge tone-{{ meta.ui.tone }}">
+                            {% include 'includes/cat_icon.html' with icon=meta.ui.icon %}
+                        </span>
+                        <div class="goal-app-body">
+                            <div class="goal-app-title-row">
+                                <h3>{{ meta.nombre }}</h3>
+                                {% if meta.completada %}
+                                    <a href="{% url 'animo' %}" class="mini-pill is-done">¡Lograda!</a>
+                                {% else %}
+                                    <span class="goal-app-cat">{{ meta.categoria }}</span>
+                                {% endif %}
                             </div>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" style="color: var(--fg-muted); padding: 20px 12px;">Todavía no tienes préstamos registrados.</td>
-                </tr>
+                            <div class="goal-app-target money-num">$ {{ meta.objetivo_fmt }}</div>
+                            <div class="goal-app-progress-row">
+                                <div class="progress-track">
+                                    <div class="progress-fill" style="width: {{ meta.porcentaje }}%;"></div>
+                                </div>
+                                <span class="goal-app-pct money-num">{{ meta.porcentaje }}%</span>
+                            </div>
+                            <div class="goal-app-sub money-num">
+                                <span>Faltan $ {{ meta.faltante_fmt }}</span>
+                                <span>Ahorrado: $ {{ meta.acumulado_fmt }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{% url 'metas' %}" class="goal-abonar-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="actualizar_meta">
+                        <input type="hidden" name="meta_id" value="{{ meta.idMeta }}">
+                        <label for="abono-{{ meta.idMeta }}" class="sr-only">Abonar a {{ meta.nombre }}</label>
+                        <input type="number" id="abono-{{ meta.idMeta }}" name="ahorro"
+                               class="form-control app-field app-field-sm" min="1" step="0.01" inputmode="decimal"
+                               placeholder="Abonar COP" required>
+                        <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">Agregar ahorro</button>
+                    </form>
+                </article>
                 {% endfor %}
-            </tbody>
-        </table>
+            </div>
+            {% else %}
+            <div class="empty-soft-card">
+                <p>Todavía no tienes metas de ahorro. Crea tu primera meta para empezar.</p>
+                <a href="{% url 'crear_meta' %}" class="btn btn-primary btn-sm">+ Crear primera meta</a>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="app-section-block">
+            <div class="app-section-head">
+                <h2>Préstamos entre compañeros</h2>
+                <button type="button" class="app-link-more btn-link-reset" id="toggle-prestamo-btn">+ Registrar</button>
+            </div>
+
+            <div class="app-card filter-drawer" id="prestamo-form-panel" style="margin-bottom: 14px;">
+                <form method="POST" action="{% url 'metas' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="crear_prestamo">
+
+                    <div class="grid-2" style="margin-bottom: 0; gap: 10px;">
+                        <div class="form-group">
+                            <label for="prestamo-deudor">Nombre del compañero</label>
+                            <input type="text" id="prestamo-deudor" name="deudor" class="form-control app-field" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prestamo-tipo">Tipo</label>
+                            <select id="prestamo-tipo" name="tipo" class="form-control app-field">
+                                <option value="Por cobrar">Me deben</option>
+                                <option value="Por pagar">Debo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid-2" style="margin-bottom: 0; gap: 10px;">
+                        <div class="form-group">
+                            <label for="prestamo-concepto">Concepto</label>
+                            <input type="text" id="prestamo-concepto" name="concepto" class="form-control app-field" placeholder="Ej: Almuerzo, copias" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prestamo-monto">Monto (COP)</label>
+                            <input type="number" id="prestamo-monto" name="monto" class="form-control app-field" min="1" step="0.01" inputmode="decimal" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block-pill btn-sm">Guardar préstamo</button>
+                </form>
+            </div>
+
+            <div class="app-card" style="padding: 8px 16px;">
+                <div class="mov-list">
+                    {% for p in prestamos %}
+                    <div class="mov-list-item">
+                        <span class="app-cat-badge {% if p.tipo == 'Por cobrar' %}tone-green{% else %}tone-amber{% endif %}">
+                            {% include 'includes/cat_icon.html' with icon='wallet' %}
+                        </span>
+                        <div class="mov-list-info">
+                            <div class="mov-list-title">
+                                <span>{{ p.deudor }}</span>
+                                <span class="mini-pill {% if p.tipo == 'Por cobrar' %}is-ok{% else %}is-warn{% endif %}">
+                                    {% if p.tipo == 'Por cobrar' %}Me deben{% else %}Debo{% endif %}
+                                </span>
+                            </div>
+                            <div class="mov-list-sub">{{ p.concepto }} · {{ p.fecha|date:"d M" }}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="mov-list-amount money-num">$ {{ p.monto }}</div>
+                            {% if p.estado == 'Pendiente' %}
+                            <form method="POST" action="{% url 'metas' %}" style="margin-top: 4px;">
+                                {% csrf_token %}
+                                <input type="hidden" name="accion" value="pagar_prestamo">
+                                <input type="hidden" name="prestamo_id" value="{{ p.idPrestamo }}">
+                                <button type="submit" class="mini-action-link is-primary">Marcar pagado</button>
+                            </form>
+                            {% else %}
+                            <span class="mini-pill is-done">Pagado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="empty-note" style="padding: 14px 4px;">No tienes préstamos registrados.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
     </div>
-</section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('toggle-prestamo-btn');
+    const panel = document.getElementById('prestamo-form-panel');
+    if (btn && panel) {
+        btn.addEventListener('click', function () {
+            panel.classList.toggle('is-open');
+        });
+    }
+});
+</script>
 {% endblock %}

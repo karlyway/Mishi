@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Descanso Mishi - Mishi{% endblock %}
+
+{% block content %}
+<div class="animo-screen">
+    <div class="animo-inner reveal">
+        <img src="{% static 'img/mishi-sleep.png' %}" alt="Mishi descansando sobre un cojín blanco" class="animo-cat-img">
+        <h1 class="animo-quote">Un gran futuro también se construye con pequeños hábitos.</h1>
+        <a href="{% url 'dashboard' %}" class="animo-btn">Volver al inicio</a>
+    </div>
+</div>
+{% endblock %}
