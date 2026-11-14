@@ -241,15 +241,6 @@ select {
     z-index: 4;
 }
 
-@keyframes mishiCardSheen {
-    0% {
-        transform: translateX(-140%) skewX(-18deg);
-    }
-    45%, 100% {
-        transform: translateX(220%) skewX(-18deg);
-    }
-}
-
 .reveal {
     animation: mishiFadeUp 380ms var(--ease-out) both;
 }
@@ -303,6 +294,7 @@ select {
 }
 
 .app-card::before,
+.wallet-combo-card::before,
 .kpi-glass-tile::before,
 .goal-app-card::before,
 .auth-card::before,
@@ -335,7 +327,6 @@ select {
     .reveal-delay-2,
     .app-home-primary > *,
     .app-home-secondary > *,
-    .wallet-card-peek-front::after,
     .app-screen > *,
     .weekly-bar-fill,
     .wallet-month-fill,
@@ -2869,131 +2860,33 @@ table.table tbody tr:hover {
     min-width: 0;
 }
 
-/* Tarjeta combinada Saldo + Gastos (Payno + onebank Glass Fusion, colores Mishi) */
+/* Tarjeta combinada Saldo + Gastos (Apple Liquid Glass limpio, aura Mishi) */
 .wallet-combo-card {
     position: relative;
     border-radius: 28px;
     overflow: hidden;
-    background: linear-gradient(155deg, rgba(255, 255, 255, 0.64) 0%, rgba(247, 249, 254, 0.48) 100%);
-    backdrop-filter: blur(28px) saturate(230%);
-    -webkit-backdrop-filter: blur(28px) saturate(230%);
+    background:
+        radial-gradient(290px circle at 92% 62%, rgba(249, 122, 34, 0.22) 0%, rgba(245, 184, 46, 0.14) 44%, rgba(255, 255, 255, 0) 74%),
+        linear-gradient(155deg, rgba(255, 255, 255, 0.72) 0%, rgba(246, 249, 255, 0.54) 100%);
+    backdrop-filter: blur(30px) saturate(230%);
+    -webkit-backdrop-filter: blur(30px) saturate(230%);
     border: 1.5px solid rgba(255, 255, 255, 0.98);
     box-shadow:
         inset 0 2px 1px rgba(255, 255, 255, 0.98),
-        0 22px 46px -8px rgba(17, 24, 39, 0.12),
+        inset 0 -1px 4px rgba(249, 122, 34, 0.08),
+        0 20px 44px -8px rgba(17, 24, 39, 0.10),
         0 0 0 1px rgba(24, 28, 36, 0.045);
     transition: transform 260ms var(--ease-out), box-shadow 260ms var(--ease-out);
-}
-
-.wallet-card-peek {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    overflow: hidden;
-    z-index: 1;
-    -webkit-mask-image: linear-gradient(180deg, #000000 0%, #000000 54%, rgba(0, 0, 0, 0.55) 82%, rgba(0, 0, 0, 0) 100%);
-    mask-image: linear-gradient(180deg, #000000 0%, #000000 54%, rgba(0, 0, 0, 0.55) 82%, rgba(0, 0, 0, 0) 100%);
-}
-
-.wallet-card-peek-back {
-    position: absolute;
-    top: 8px;
-    left: 20px;
-    right: 82px;
-    height: 118px;
-    border-radius: 20px;
-    background: linear-gradient(135deg, #1A1E26 0%, #2C3341 58%, #3B4454 100%);
-    transform: rotate(-3.5deg);
-    opacity: 0.95;
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 12px 26px rgba(20, 24, 32, 0.28);
-    padding: 16px 20px;
-}
-
-.wallet-chip-gold {
-    display: block;
-    width: 28px;
-    height: 20px;
-    border-radius: 5px;
-    background: linear-gradient(135deg, #FFE18C 0%, #F5B82E 60%, #D9920B 100%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 2px 6px rgba(0, 0, 0, 0.25);
-    opacity: 0.92;
-}
-
-.wallet-card-peek-front {
-    position: absolute;
-    top: 15px;
-    left: 56px;
-    right: 18px;
-    height: 124px;
-    border-radius: 20px;
-    background: linear-gradient(130deg, #FFB054 0%, #F97A22 52%, #F5B82E 100%);
-    transform: rotate(2.4deg);
-    opacity: 0.98;
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow:
-        inset 0 1.5px 0 rgba(255, 255, 255, 0.62),
-        0 14px 28px rgba(249, 122, 34, 0.30);
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 12px 58px 12px 18px;
-    color: rgba(255, 255, 255, 0.98);
-    overflow: hidden;
-}
-
-.wallet-card-peek-front::after {
-    content: "";
-    position: absolute;
-    top: -10%;
-    left: 0;
-    width: 44%;
-    height: 130%;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.32) 50%, transparent 100%);
-    animation: mishiCardSheen 7s var(--ease-out) infinite;
-    pointer-events: none;
-}
-
-.wallet-card-brand {
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    text-shadow: 0 1px 2px rgba(170, 68, 6, 0.25);
-}
-
-.wallet-card-digits {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    font-variant-numeric: tabular-nums;
-    opacity: 0.92;
 }
 
 .wallet-combo-top {
     position: relative;
     z-index: 2;
     color: var(--carbon);
-    padding: 14px 20px 18px 20px;
-    min-height: 170px;
+    padding: 20px 22px 18px 22px;
+    min-height: 150px;
     display: flex;
     align-items: stretch;
-}
-
-.wallet-combo-top::before {
-    content: "";
-    position: absolute;
-    top: 56px;
-    inset-inline: 0;
-    bottom: 0;
-    background: linear-gradient(172deg, rgba(255, 255, 255, 0.50) 0%, rgba(255, 255, 255, 0.72) 54%, rgba(255, 255, 255, 0.84) 100%);
-    backdrop-filter: blur(22px) saturate(235%);
-    -webkit-backdrop-filter: blur(22px) saturate(235%);
-    border-top: 2px solid rgba(255, 255, 255, 0.98);
-    box-shadow:
-        inset 0 2px 2px rgba(255, 255, 255, 0.98),
-        0 -8px 20px rgba(31, 36, 45, 0.08);
-    pointer-events: none;
-    z-index: 0;
 }
 
 .wallet-combo-copy {
@@ -3011,23 +2904,16 @@ table.table tbody tr:hover {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 18px;
+    margin-bottom: 10px;
 }
 
 .wallet-label-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 11px;
-    border-radius: var(--radius-pill);
-    background-color: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.98);
-    box-shadow: 0 3px 10px rgba(17, 24, 39, 0.08);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--carbon);
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-muted);
 }
 
 .wallet-label-chip svg {
@@ -5039,29 +4925,8 @@ table.table tbody tr:hover {
     }
 
     .wallet-combo-top {
-        padding: 14px 16px 16px 16px;
-        min-height: 152px;
-    }
-
-    .wallet-combo-top::before {
-        top: 52px;
-    }
-
-    .wallet-card-peek-back {
-        top: 8px;
-        left: 14px;
-        right: 64px;
-        height: 98px;
-        border-radius: 16px;
-    }
-
-    .wallet-card-peek-front {
-        top: 14px;
-        left: 42px;
-        right: 12px;
-        height: 102px;
-        border-radius: 16px;
-        padding: 10px 52px 10px 14px;
+        padding: 18px 18px 16px 18px;
+        min-height: 142px;
     }
 
     .kpi-glass-strip {
