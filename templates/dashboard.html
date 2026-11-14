@@ -115,6 +115,10 @@
                     {% endif %}
                 </td>
             </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">Todavía no tienes movimientos registrados.</td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
@@ -194,4 +198,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 {% endblock %}
-```

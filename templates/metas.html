@@ -63,21 +63,21 @@
                     {% widthratio meta.acumulado meta.objetivo 100 %}%
                 </td>
                 <td>
-    <form method="POST">
-        {% csrf_token %}
-        <input type="hidden" name="accion" value="actualizar_meta">
-        <input type="hidden" name="meta_id" value="{{ meta.idMeta }}">
+                    <form method="POST" style="display: flex; gap: 8px; align-items: center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="actualizar_meta">
+                        <input type="hidden" name="meta_id" value="{{ meta.idMeta }}">
 
-        <input type="number" name="ahorro" min="1"
-               placeholder="Cantidad" required>
+                        <input type="number" name="ahorro" class="form-control" min="1" step="0.01"
+                               placeholder="Cantidad" style="max-width: 140px;" required>
 
-        <button type="submit">Agregar ahorro</button>
-    </form>
-</td>
+                        <button type="submit" class="btn btn-primary">Agregar ahorro</button>
+                    </form>
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5">Todavía no tienes metas registradas.</td>
+                <td colspan="6">Todavía no tienes metas registradas.</td>
             </tr>
             {% endfor %}
         </tbody>

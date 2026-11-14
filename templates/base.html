@@ -55,9 +55,15 @@
 
     {% if messages %}
         {% for message in messages %}
-            <div style="background-color: #e8f5e9 !important; color: #2e7d32 !important; border: 2px solid #2e7d32 !important; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px;">
-                {{ message }}
-            </div>
+            {% if 'error' in message.tags %}
+                <div class="alert alert-danger" style="background-color: #fdecea; color: #b71c1c; border: 2px solid #ef5350; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px;">
+                    {{ message }}
+                </div>
+            {% else %}
+                <div class="alert alert-success" style="background-color: #e8f5e9; color: #2e7d32; border: 2px solid #2e7d32; padding: 12px 16px; margin-bottom: 20px; border-radius: 8px;">
+                    {{ message }}
+                </div>
+            {% endif %}
         {% endfor %}
     {% endif %}
 
