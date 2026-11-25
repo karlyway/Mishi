@@ -22,6 +22,10 @@ urlpatterns = [
     path('app/categorias/', views.categorias_view, name='categorias'),
     path('app/insights/', views.insights_view, name='insights'),
     path('app/perfil/', views.perfil_view, name='perfil'),
+    path('app/perfil/preferencias/', views.perfil_preferencias_view, name='perfil_preferencias'),
+    path('app/notificaciones/', views.notificaciones_view, name='notificaciones'),
+    path('app/notificaciones/leer/', views.notificaciones_leer_view, name='notificaciones_leer'),
+    path('app/notificaciones/eliminar/<int:notificacion_id>/', views.notificacion_eliminar_view, name='notificacion_eliminar'),
     path('app/presupuestos/', views.presupuestos_view, name='presupuestos'),
     path('app/animo/', views.animo_view, name='animo'),
 ]

@@ -6,10 +6,20 @@ from django.contrib.auth import authenticate, get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q, Sum
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from .models import Categoria, MetaAhorro, Presupuesto, Prestamo, Transaccion, Usuario
+from .models import Categoria, MetaAhorro, Notificacion, Presupuesto, Prestamo, Transaccion, Usuario
+from .services.avatares import (
+    AVATAR_DEFECTO,
+    AVATARES_MISHI,
+    TEMAS_VALIDOS,
+    es_avatar_valido,
+    obtener_avatar_info,
+)
+from .services.finanzas_service import FRECUENCIAS_VALIDAS
+from .services.notificaciones_service import sincronizar_notificaciones_usuario
 from .ui_helpers import (
     FRECUENCIA_ETIQUETAS,
     agrupar_categorias_gasto,
@@ -39,6 +49,14 @@ CATEGORIAS_POR_DEFECTO = [
 
 def _obtener_perfil_autenticado(request):
     return Usuario.objects.filter(cuenta=request.user).first()
+
+
+def _obtener_resumen(request, perfil):
+    resumen = getattr(request, '_mishi_resumen', None)
+    if resumen is None:
+        resumen = calcular_resumen_usuario(perfil)
+        request._mishi_resumen = resumen
+    return resumen
 
 
 def _validar_monto_positivo(texto, minimo=Decimal('100')):
@@ -78,6 +96,11 @@ def login_view(request):
 
 # Registro de usuarios
 def registro_usuario_view(request):
+    context_base = {
+        'avatares_mishi': AVATARES_MISHI,
+        'avatar_seleccionado': obtener_avatar_info(AVATAR_DEFECTO),
+    }
+
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
         universidad = request.POST.get('universidad', '').strip()
@@ -85,16 +108,22 @@ def registro_usuario_view(request):
         correo = request.POST.get('correo', '').strip().lower()
         password = request.POST.get('pass', '')
         mesada_texto = request.POST.get('mesada', '0').strip()
+        avatar_id = request.POST.get('avatar', AVATAR_DEFECTO).strip() or AVATAR_DEFECTO
+        if not es_avatar_valido(avatar_id):
+            avatar_id = AVATAR_DEFECTO
+        context_base['avatar_seleccionado'] = obtener_avatar_info(avatar_id)
 
         User = get_user_model()
 
         if not nombre or not universidad or not correo or not password:
             return render(request, 'registro_usuario.html', {
+                **context_base,
                 'error': 'Completa todos los campos obligatorios.'
             })
 
-        if frecuencia not in ['diario', 'semanal', 'quincenal', 'mensual']:
+        if frecuencia not in FRECUENCIAS_VALIDAS:
             return render(request, 'registro_usuario.html', {
+                **context_base,
                 'error': 'Selecciona una frecuencia válida.'
             })
 
@@ -104,11 +133,13 @@ def registro_usuario_view(request):
                 raise InvalidOperation
         except InvalidOperation:
             return render(request, 'registro_usuario.html', {
+                **context_base,
                 'error': 'Ingresa una mesada válida.'
             })
 
         if User.objects.filter(username=correo).exists():
             return render(request, 'registro_usuario.html', {
+                **context_base,
                 'error': 'Este correo ya está registrado.'
             })
 
@@ -125,7 +156,9 @@ def registro_usuario_view(request):
                     nombre=nombre,
                     universidad=universidad,
                     frecuencia=frecuencia,
-                    mesada=mesada
+                    mesada=mesada,
+                    saldo_inicial=mesada,
+                    avatar=avatar_id,
                 )
 
             login(request, cuenta)
@@ -133,10 +166,11 @@ def registro_usuario_view(request):
 
         except Exception:
             return render(request, 'registro_usuario.html', {
+                **context_base,
                 'error': 'No se pudo crear la cuenta. Inténtalo nuevamente.'
             })
 
-    return render(request, 'registro_usuario.html')
+    return render(request, 'registro_usuario.html', context_base)
 
 
 def obtener_categorias():
@@ -164,7 +198,7 @@ def dashboard_view(request):
     if perfil is None:
         return redirect('login')
 
-    resumen = calcular_resumen_usuario(perfil)
+    resumen = _obtener_resumen(request, perfil)
     movimientos = resumen['movimientos']
     hoy = resumen['hoy']
 
@@ -221,13 +255,23 @@ def dashboard_view(request):
         'usuario': perfil,
         'saldo': resumen['saldo'],
         'saldo_fmt': resumen['saldo_fmt'],
+        'saldo_total_fmt': resumen['saldo_total_fmt'],
+        'dinero_reservado_metas_fmt': resumen['dinero_reservado_metas_fmt'],
         'dias_restantes': resumen['dias_restantes'],
+        'ciclo': resumen['ciclo'],
         'limite_diario': resumen['limite_diario'],
         'limite_diario_fmt': resumen['limite_diario_fmt'],
+        'limite_diario_recomendado_fmt': resumen['limite_diario_recomendado_fmt'],
+        'usa_limite_personalizado': resumen['usa_limite_personalizado'],
         'gasto_hoy': resumen['gasto_hoy'],
         'gasto_hoy_fmt': resumen['gasto_hoy_fmt'],
+        'dinero_restante_hoy_fmt': resumen['dinero_restante_hoy_fmt'],
         'porcentaje_gasto_hoy': resumen['porcentaje_gasto_hoy'],
+        'estado_alerta_diaria': resumen['estado_alerta_diaria'],
+        'alerta_preventiva': resumen['alerta_preventiva'],
+        'alerta_saldo_insuficiente': resumen['alerta_saldo_insuficiente'],
         'alerta_activa': resumen['alerta_activa'],
+        'alerta_principal': resumen['alerta_principal'],
         'limite_superado': resumen['limite_superado'],
         'total_hormiga': resumen['total_hormiga'],
         'total_hormiga_fmt': resumen['total_hormiga_fmt'],
@@ -253,7 +297,7 @@ def movimiento_view(request):
     if perfil is None:
         return redirect('login')
 
-    resumen = calcular_resumen_usuario(perfil)
+    resumen = _obtener_resumen(request, perfil)
     categorias = obtener_categorias()
     categorias_ui = _categorias_con_ui(categorias)
 
@@ -727,7 +771,7 @@ def insights_view(request):
     if perfil is None:
         return redirect('login')
 
-    resumen = calcular_resumen_usuario(perfil)
+    resumen = _obtener_resumen(request, perfil)
     hoy = resumen['hoy']
     inicio_mes = hoy.replace(day=1)
     fin_mes_pasado = inicio_mes - timedelta(days=1)
@@ -786,20 +830,11 @@ def insights_view(request):
     categorias_periodo, _ = agrupar_categorias_gasto(gastos_periodo_qs)
     barras_evolucion = serie_evolucion_periodo(resumen['movimientos'], hoy, periodo)
 
-    if resumen['limite_superado']:
+    alerta_principal = resumen['alerta_principal']
+    if alerta_principal is not None:
         mishi_mood = 'alert'
-        mishi_titulo = 'Ojo con el límite de hoy'
-        mishi_mensaje = (
-            f"Llevas ${resumen['gasto_hoy_fmt']} hoy sobre tu límite diario de ${resumen['limite_diario_fmt']}. "
-            'Pausa los gastos pequeños el resto del día.'
-        )
-    elif resumen['alerta_activa']:
-        mishi_mood = 'alert'
-        mishi_titulo = 'Cerca de tu límite diario'
-        mishi_mensaje = (
-            f"Has usado el {resumen['porcentaje_gasto_hoy']}% de tu límite diario. "
-            'Revisa tus gastos hormiga antes de comprar.'
-        )
+        mishi_titulo = alerta_principal['titulo']
+        mishi_mensaje = alerta_principal['detalle']
     elif variacion < 0:
         mishi_mood = 'celebrate'
         mishi_titulo = 'Ritmo de ahorro saludable'
@@ -865,23 +900,37 @@ def perfil_view(request):
         universidad = request.POST.get('universidad', '').strip()
         frecuencia = request.POST.get('frecuencia', perfil.frecuencia)
         mesada_texto = request.POST.get('mesada', str(perfil.mesada)).strip()
+        fecha_proximo_texto = request.POST.get('fecha_proximo_ingreso', '').strip()
 
         try:
             mesada = Decimal(mesada_texto or '0')
             if (
                 not nombre
                 or not universidad
-                or frecuencia not in ['diario', 'semanal', 'quincenal', 'mensual']
+                or frecuencia not in FRECUENCIAS_VALIDAS
                 or not mesada.is_finite()
                 or mesada < 0
                 or mesada.as_tuple().exponent < -2
             ):
                 raise ValueError
 
+            fecha_proximo = None
+            if fecha_proximo_texto:
+                fecha_proximo = date.fromisoformat(fecha_proximo_texto)
+
             perfil.nombre = nombre
             perfil.universidad = universidad
             perfil.frecuencia = frecuencia
             perfil.mesada = mesada
+            if 'fecha_proximo_ingreso' in request.POST:
+                perfil.fecha_proximo_ingreso = fecha_proximo
+                perfil.dia_pago_mensual = (
+                    fecha_proximo.day
+                    if (fecha_proximo and frecuencia == 'mensual')
+                    else None
+                )
+            elif frecuencia != 'mensual':
+                perfil.dia_pago_mensual = None
             perfil.save()
             messages.success(request, 'Tu perfil fue actualizado correctamente.')
             return redirect('perfil')
@@ -889,19 +938,89 @@ def perfil_view(request):
         except (ValueError, InvalidOperation):
             messages.error(request, 'Verifica los datos de tu perfil antes de guardar.')
 
-    resumen = calcular_resumen_usuario(perfil)
+    resumen = _obtener_resumen(request, perfil)
     return render(request, 'perfil.html', {
         'usuario': perfil,
         'correo': request.user.email or request.user.username,
         'saldo_fmt': resumen['saldo_fmt'],
+        'saldo_inicial_fmt': resumen['saldo_inicial_fmt'],
+        'dinero_reservado_metas_fmt': resumen['dinero_reservado_metas_fmt'],
         'limite_diario_fmt': resumen['limite_diario_fmt'],
         'mesada_fmt': formatear_cop(perfil.mesada),
         'dias_restantes': resumen['dias_restantes'],
+        'ciclo': resumen['ciclo'],
+        'fecha_proximo_ingreso_iso': (
+            perfil.fecha_proximo_ingreso.isoformat()
+            if perfil.fecha_proximo_ingreso
+            else ''
+        ),
         'frecuencia_label': FRECUENCIA_ETIQUETAS.get(perfil.frecuencia, perfil.frecuencia),
         'alerta_activa': resumen['alerta_activa'],
         'presupuesto_configurado': Presupuesto.objects.filter(idUsuario=perfil).exists(),
         'pestana_activa': 'perfil',
     })
+
+
+# Guardar avatar personalizado y preferencias persistentes en BD (POST + CSRF)
+@login_required
+def perfil_preferencias_view(request):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+
+    if request.method != 'POST':
+        return redirect('perfil')
+
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    campos_actualizados = []
+
+    if 'avatar' in request.POST:
+        avatar_id = request.POST.get('avatar', '').strip()
+        if not es_avatar_valido(avatar_id):
+            if es_ajax:
+                return JsonResponse({'ok': False, 'error': 'Avatar no válido.'}, status=400)
+            messages.error(request, 'El avatar seleccionado no es válido.')
+            return redirect('perfil')
+        perfil.avatar = avatar_id
+        campos_actualizados.append('avatar')
+
+    if 'ocultar_saldo' in request.POST:
+        perfil.ocultar_saldo = request.POST.get('ocultar_saldo') in ('1', 'true', 'True', 'on')
+        campos_actualizados.append('ocultar_saldo')
+
+    if 'alertas_activas' in request.POST:
+        perfil.alertas_activas = request.POST.get('alertas_activas') in ('1', 'true', 'True', 'on')
+        campos_actualizados.append('alertas_activas')
+
+    if 'tema_visual' in request.POST:
+        tema = request.POST.get('tema_visual', '').strip()
+        if tema not in TEMAS_VALIDOS:
+            if es_ajax:
+                return JsonResponse({'ok': False, 'error': 'Tema no válido.'}, status=400)
+            messages.error(request, 'Tema visual no válido.')
+            return redirect('perfil')
+        perfil.tema_visual = tema
+        campos_actualizados.append('tema_visual')
+
+    if campos_actualizados:
+        perfil.save(update_fields=campos_actualizados)
+
+    avatar_info = obtener_avatar_info(perfil.avatar)
+    if es_ajax:
+        return JsonResponse({
+            'ok': True,
+            'avatar': avatar_info['id'],
+            'avatar_nombre': avatar_info['nombre'],
+            'ocultar_saldo': perfil.ocultar_saldo,
+            'alertas_activas': perfil.alertas_activas,
+            'tema_visual': perfil.tema_visual,
+        })
+
+    if 'avatar' in campos_actualizados:
+        messages.success(request, f'Avatar actualizado a {avatar_info["nombre"]}.')
+    else:
+        messages.success(request, 'Preferencias guardadas correctamente.')
+    return redirect('perfil')
 
 
 # Pantalla Presupuestos (conectada al modelo Presupuesto)
@@ -911,7 +1030,6 @@ def presupuestos_view(request):
     if perfil is None:
         return redirect('login')
 
-    resumen = calcular_resumen_usuario(perfil)
     presupuesto = Presupuesto.objects.filter(idUsuario=perfil).first()
 
     if request.method == 'POST':
@@ -932,8 +1050,10 @@ def presupuestos_view(request):
         except (ValueError, InvalidOperation):
             messages.error(request, 'Ingresa límites válidos (mínimo diario $100 y mensual $1.000).')
 
-    limite_diario_activo = (
-        presupuesto.limiteDiario if presupuesto else Decimal(resumen['limite_diario'] or 0)
+    resumen = _obtener_resumen(request, perfil)
+    limite_diario_activo = resumen['limite_diario_activo']
+    limite_diario_form_val = (
+        presupuesto.limiteDiario if presupuesto else resumen['limite_diario_recomendado']
     )
     limite_mensual_activo = (
         presupuesto.limiteMensual
@@ -960,12 +1080,12 @@ def presupuestos_view(request):
     porcentaje_mensual = min(100, porcentaje_mensual_real)
     if gastos_mes > limite_mensual_activo:
         estado_mensual = 'excedido'
-    elif porcentaje_mensual_real >= 75:
+    elif porcentaje_mensual_real >= 80:
         estado_mensual = 'preventivo'
     else:
         estado_mensual = 'ok'
 
-    # Distribución orientativa sobre el presupuesto mensual para mostrar avance por categoría
+    # Distribución orientativa sobre el presupuesto mensual (será reemplazada por PresupuestoCategoria en Fase 3)
     if not categorias_gasto:
         categorias_gasto = [
             {'nombre': c.nombre, 'total': Decimal('0.00'), 'total_fmt': '0', 'ui': estilo_categoria(c.nombre)}
@@ -979,7 +1099,7 @@ def presupuestos_view(request):
         pct_real = round(float(item['total'] / tope_categoria) * 100) if tope_categoria > 0 else 0
         pct = min(100, pct_real)
         excedido = item['total'] > tope_categoria
-        cerca = (not excedido) and pct_real >= 75
+        cerca = (not excedido) and pct_real >= 80
         barras_presupuesto.append({
             'nombre': item['nombre'],
             'gastado_fmt': item['total_fmt'],
@@ -995,9 +1115,10 @@ def presupuestos_view(request):
     return render(request, 'presupuestos.html', {
         'usuario': perfil,
         'presupuesto': presupuesto,
-        'limite_diario_val': int(limite_diario_activo),
+        'limite_diario_val': int(limite_diario_form_val),
         'limite_mensual_val': int(limite_mensual_activo),
         'limite_diario_fmt': formatear_cop(limite_diario_activo),
+        'limite_diario_recomendado_fmt': resumen['limite_diario_recomendado_fmt'],
         'limite_mensual_fmt': formatear_cop(limite_mensual_activo),
         'gastos_mes_fmt': resumen['gastos_mes_fmt'],
         'disponible_mensual_fmt': formatear_cop(disponible_mensual),
@@ -1006,9 +1127,12 @@ def presupuestos_view(request):
         'porcentaje_mensual_real': porcentaje_mensual_real,
         'estado_mensual': estado_mensual,
         'gasto_hoy_fmt': resumen['gasto_hoy_fmt'],
+        'dinero_restante_hoy_fmt': resumen['dinero_restante_hoy_fmt'],
         'porcentaje_gasto_hoy': resumen['porcentaje_gasto_hoy'],
         'limite_superado_hoy': resumen['limite_superado'],
         'alerta_hoy': resumen['alerta_activa'],
+        'alerta_principal': resumen['alerta_principal'],
+        'alerta_saldo_insuficiente': resumen['alerta_saldo_insuficiente'],
         'barras_presupuesto': barras_presupuesto,
         'pestana_activa': 'presupuestos',
     })
@@ -1025,3 +1149,92 @@ def animo_view(request):
         'usuario': perfil,
         'ocultar_chrome': True,
     })
+
+
+# Centro de Notificaciones reales in-app
+@login_required
+def notificaciones_view(request):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+
+    resumen = _obtener_resumen(request, perfil)
+    no_leidas = sincronizar_notificaciones_usuario(perfil, resumen=resumen)
+    request._mishi_notif_count = no_leidas
+
+    filtro = request.GET.get('filtro', 'todas').strip().lower()
+    if filtro not in ('todas', 'no_leidas'):
+        filtro = 'todas'
+
+    qs = Notificacion.objects.filter(idUsuario=perfil)
+    total_notificaciones = qs.count()
+    if filtro == 'no_leidas':
+        qs = qs.filter(leida=False)
+
+    notificaciones_ui = []
+    hoy = resumen['hoy']
+    for n in qs[:50]:
+        fecha_local = timezone.localtime(n.creada_en)
+        notificaciones_ui.append({
+            'id': n.idNotificacion,
+            'tipo': n.tipo,
+            'nivel': n.nivel,
+            'titulo': n.titulo,
+            'mensaje': n.mensaje,
+            'url_destino': n.url_destino,
+            'leida': n.leida,
+            'fecha_label': etiqueta_fecha_movimiento(fecha_local.date(), hoy),
+            'hora_label': fecha_local.strftime('%I:%M %p').lstrip('0').lower(),
+        })
+
+    return render(request, 'notificaciones.html', {
+        'usuario': perfil,
+        'notificaciones': notificaciones_ui,
+        'total_notificaciones': total_notificaciones,
+        'no_leidas_count': no_leidas,
+        'filtro': filtro,
+        'pestana_activa': 'notificaciones',
+    })
+
+
+@login_required
+def notificaciones_leer_view(request):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+
+    if request.method != 'POST':
+        return redirect('notificaciones')
+
+    if request.POST.get('todas') == '1':
+        Notificacion.objects.filter(idUsuario=perfil, leida=False).update(leida=True)
+        messages.success(request, 'Todas las notificaciones fueron marcadas como leídas.')
+        return redirect('notificaciones')
+
+    notif_id = request.POST.get('notificacion_id', '').strip()
+    destino = request.POST.get('next', '').strip()
+    if notif_id.isdigit():
+        notif = Notificacion.objects.filter(idNotificacion=int(notif_id), idUsuario=perfil).first()
+        if notif:
+            if not notif.leida:
+                notif.leida = True
+                notif.save(update_fields=['leida'])
+            if not destino:
+                destino = notif.url_destino
+
+    if destino.startswith('/app/') and not destino.startswith('//'):
+        return redirect(destino)
+    return redirect('notificaciones')
+
+
+@login_required
+def notificacion_eliminar_view(request, notificacion_id):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+
+    if request.method == 'POST':
+        Notificacion.objects.filter(idNotificacion=notificacion_id, idUsuario=perfil).delete()
+        messages.success(request, 'Notificación eliminada.')
+
+    return redirect('notificaciones')

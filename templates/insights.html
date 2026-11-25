@@ -185,9 +185,28 @@
                          style="width: {% if resumen.porcentaje_gasto_hoy > 100 %}100{% else %}{{ resumen.porcentaje_gasto_hoy }}{% endif %}%;"></div>
                 </div>
                 <div class="m-control-foot">
-                    <span>{% if resumen.limite_superado %}Superaste tu límite diario recomendado.{% elif resumen.alerta_activa %}Te acercas a tu límite de hoy.{% else %}Vas dentro de tu ritmo saludable hoy.{% endif %}</span>
+                    <span>{% if resumen.limite_superado %}Superaste tu límite diario activo.{% elif resumen.alerta_preventiva %}Alcanzaste el {{ resumen.porcentaje_gasto_hoy }}% de tu límite de hoy.{% else %}Restante para gastar hoy: <strong class="money-num">${{ resumen.dinero_restante_hoy_fmt }}</strong>.{% endif %}</span>
                     <a href="{% url 'presupuestos' %}" class="m-link-accent">Presupuestos</a>
                 </div>
+                <div class="m-cycle-meta">
+                    <div>
+                        <span>Saldo inicio día</span>
+                        <strong class="money-num">${{ resumen.saldo_inicio_dia_fmt }}</strong>
+                    </div>
+                    <div>
+                        <span>Límite sugerido</span>
+                        <strong class="money-num">${{ resumen.limite_diario_recomendado_fmt }}</strong>
+                    </div>
+                    <div>
+                        <span>Reservado metas</span>
+                        <strong class="money-num">${{ resumen.dinero_reservado_metas_fmt }}</strong>
+                    </div>
+                </div>
+                {% if resumen.alerta_saldo_insuficiente %}
+                <p class="m-inline-error" role="status">
+                    Saldo insuficiente: tu saldo disponible (${{ resumen.saldo_fmt }}) no alcanza para cubrir los {{ resumen.dias_restantes }} día{% if resumen.dias_restantes != 1 %}s{% endif %} restantes del ciclo.
+                </p>
+                {% endif %}
             </div>
 
             <hr class="m-hairline">

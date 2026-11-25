@@ -34,6 +34,44 @@ class Usuario(models.Model):
         default=Decimal('0.00')
     )
 
+    saldo_inicial = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    fecha_proximo_ingreso = models.DateField(
+        null=True,
+        blank=True
+    )
+
+    dia_pago_mensual = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True
+    )
+
+    avatar = models.CharField(
+        max_length=40,
+        default='mishi-naranja-feliz'
+    )
+
+    ocultar_saldo = models.BooleanField(default=False)
+
+    alertas_activas = models.BooleanField(default=True)
+
+    tema_visual = models.CharField(
+        max_length=16,
+        default='warm'
+    )
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.saldo_inicial is None:
+            self.saldo_inicial = self.mesada
+        if self.fecha_proximo_ingreso and self.frecuencia == 'mensual' and not self.dia_pago_mensual:
+            self.dia_pago_mensual = self.fecha_proximo_ingreso.day
+        super().save(*args, **kwargs)
+
     class Meta:
         db_table = 'Usuario'
 
@@ -140,3 +178,29 @@ class Participante(models.Model):
 
     class Meta:
         db_table = 'Participante'
+
+
+class Notificacion(models.Model):
+    idNotificacion = models.AutoField(primary_key=True, db_column='idNotificacion')
+    idUsuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        db_column='idUsuario',
+        related_name='notificaciones',
+    )
+    clave = models.CharField(max_length=80, blank=True, default='')
+    tipo = models.CharField(max_length=30, default='info')
+    nivel = models.CharField(max_length=16, default='info')
+    titulo = models.CharField(max_length=120)
+    mensaje = models.CharField(max_length=280)
+    url_destino = models.CharField(max_length=120, default='/app/insights/?tab=control')
+    leida = models.BooleanField(default=False)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'Notificacion'
+        ordering = ['-creada_en', '-idNotificacion']
+        indexes = [
+            models.Index(fields=['idUsuario', 'leida'], name='idx_notif_usr_leida'),
+            models.Index(fields=['idUsuario', 'clave'], name='idx_notif_usr_clave'),
+        ]

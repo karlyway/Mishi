@@ -195,6 +195,20 @@
                     </div>
                 </div>
 
+                <div class="auth-field-wrap">
+                    <input type="hidden" id="reg-avatar-input" name="avatar" value="{{ avatar_seleccionado.id }}">
+                    <button type="button" class="m-reg-avatar-pill" id="open-reg-avatar-sheet" aria-label="Elegir avatar de Mishi">
+                        <span class="m-reg-avatar-thumb">
+                            <img src="{% static avatar_seleccionado.archivo %}" alt="{{ avatar_seleccionado.nombre }}" id="reg-avatar-img" class="m-avatar-img" width="34" height="34">
+                        </span>
+                        <span class="m-reg-avatar-copy">
+                            <small>Tu avatar Mishi</small>
+                            <strong id="reg-avatar-name">{{ avatar_seleccionado.nombre }}</strong>
+                        </span>
+                        <span class="m-reg-avatar-cta">Cambiar</span>
+                    </button>
+                </div>
+
                 <button type="submit" class="auth-submit-btn">Registrarme</button>
             </form>
 
@@ -217,6 +231,50 @@
         </svg>
     </div>
 </section>
+{% endblock %}
+
+{% block modals %}
+    <div class="m-sheet-backdrop" id="mishi-reg-avatar-sheet" role="dialog" aria-modal="true" aria-labelledby="reg-avatar-title" aria-hidden="true">
+        <div class="m-sheet-scrim" data-close-reg-avatar></div>
+        <div class="m-sheet-panel m-sheet-panel--avatar" role="document">
+            <div class="m-sheet-handle-wrap" data-close-reg-avatar aria-hidden="true">
+                <span class="m-sheet-handle"></span>
+            </div>
+            <div class="m-sheet-head">
+                <h2 id="reg-avatar-title">Elige tu avatar Mishi</h2>
+                <button type="button" class="m-sheet-close" data-close-reg-avatar aria-label="Cerrar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                        <path d="M18 6 6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="m-avatar-preview-stage">
+                <img src="{% static avatar_seleccionado.archivo %}" alt="{{ avatar_seleccionado.nombre }}" class="m-avatar-preview-img" id="reg-preview-img" width="84" height="84">
+                <strong class="m-avatar-preview-name" id="reg-preview-name">{{ avatar_seleccionado.nombre }}</strong>
+                <span class="m-avatar-preview-sub">Podrás cambiarlo cuando quieras en Perfil</span>
+            </div>
+
+            <div class="m-avatar-grid" role="radiogroup" aria-label="Selecciona tu avatar Mishi">
+                {% for av in avatares_mishi %}
+                <button type="button"
+                        class="m-avatar-option {% if av.id == avatar_seleccionado.id %}is-selected{% endif %}"
+                        data-reg-av-id="{{ av.id }}"
+                        data-reg-av-name="{{ av.nombre }}"
+                        data-reg-av-src="{% static av.archivo %}"
+                        aria-pressed="{% if av.id == avatar_seleccionado.id %}true{% else %}false{% endif %}"
+                        title="{{ av.nombre }}">
+                    <span class="m-avatar-ring">
+                        <img src="{% static av.archivo %}" alt="{{ av.nombre }}" class="m-avatar-img" width="56" height="56" loading="lazy">
+                    </span>
+                    <span class="m-avatar-option-lbl">{{ av.nombre }}</span>
+                </button>
+                {% endfor %}
+            </div>
+
+            <button type="button" class="m-sheet-submit" data-close-reg-avatar style="margin-top: 16px;">Usar este avatar</button>
+        </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -421,6 +479,51 @@
             }
         });
     }
+
+    /* 5. Selector de avatar Mishi durante registro */
+    var regAvSheet = document.getElementById('mishi-reg-avatar-sheet');
+    var regAvOpen = document.getElementById('open-reg-avatar-sheet');
+    var regAvInput = document.getElementById('reg-avatar-input');
+    var regAvThumb = document.getElementById('reg-avatar-img');
+    var regAvName = document.getElementById('reg-avatar-name');
+    var regPrevImg = document.getElementById('reg-preview-img');
+    var regPrevName = document.getElementById('reg-preview-name');
+    var regAvOpts = Array.from(document.querySelectorAll('[data-reg-av-id]'));
+
+    function setRegAvSheet(open) {
+        if (!regAvSheet) return;
+        regAvSheet.classList.toggle('is-open', open);
+        regAvSheet.setAttribute('aria-hidden', open ? 'false' : 'true');
+        document.body.classList.toggle('is-sheet-open', open);
+    }
+
+    if (regAvOpen) regAvOpen.addEventListener('click', function () { setRegAvSheet(true); });
+    document.querySelectorAll('[data-close-reg-avatar]').forEach(function (el) {
+        el.addEventListener('click', function () { setRegAvSheet(false); });
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && regAvSheet && regAvSheet.classList.contains('is-open')) {
+            setRegAvSheet(false);
+        }
+    });
+
+    regAvOpts.forEach(function (opt) {
+        opt.addEventListener('click', function () {
+            regAvOpts.forEach(function (o) {
+                var sel = o === opt;
+                o.classList.toggle('is-selected', sel);
+                o.setAttribute('aria-pressed', sel ? 'true' : 'false');
+            });
+            var id = opt.getAttribute('data-reg-av-id');
+            var nm = opt.getAttribute('data-reg-av-name');
+            var src = opt.getAttribute('data-reg-av-src');
+            if (regAvInput) regAvInput.value = id;
+            if (regAvThumb) { regAvThumb.src = src; regAvThumb.alt = nm; }
+            if (regAvName) regAvName.textContent = nm;
+            if (regPrevImg) { regPrevImg.src = src; regPrevImg.alt = nm; }
+            if (regPrevName) regPrevName.textContent = nm;
+        });
+    });
 })();
 </script>
 {% endblock %}

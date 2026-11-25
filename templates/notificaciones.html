@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Notificaciones - Mishi{% endblock %}
+
+{% block content %}
+<div class="app-screen app-screen--content reveal">
+    <header class="m-sub-header">
+        <a href="{% url 'dashboard' %}" class="m-icon-btn" aria-label="Volver al inicio">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </a>
+        <div class="m-sub-header-center">
+            <h1>Notificaciones</h1>
+            {% if no_leidas_count %}
+            <p class="m-page-sub">{{ no_leidas_count }} sin leer</p>
+            {% endif %}
+        </div>
+        {% if no_leidas_count %}
+        <form method="POST" action="{% url 'notificaciones_leer' %}">
+            {% csrf_token %}
+            <input type="hidden" name="todas" value="1">
+            <button type="submit" class="m-link-pill">Leer todas</button>
+        </form>
+        {% else %}
+        <span style="width: 44px;" aria-hidden="true"></span>
+        {% endif %}
+    </header>
+
+    <div class="m-seg-links m-seg-links--2" role="tablist" aria-label="Filtrar notificaciones">
+        <a href="{% url 'notificaciones' %}?filtro=todas" class="m-seg-link {% if filtro == 'todas' %}is-active{% endif %}">
+            Todas ({{ total_notificaciones }})
+        </a>
+        <a href="{% url 'notificaciones' %}?filtro=no_leidas" class="m-seg-link {% if filtro == 'no_leidas' %}is-active{% endif %}">
+            Sin leer ({{ no_leidas_count }})
+        </a>
+    </div>
+
+    {% if not pref_alertas_activas %}
+    <div class="m-alert-pill is-warn" role="status">
+        <span class="m-alert-dot" aria-hidden="true"></span>
+        <span class="m-alert-text">
+            <strong>Alertas de límite pausadas.</strong> Puedes reactivarlas en <a href="{% url 'perfil' %}" style="color: inherit; font-weight: 700; text-decoration: underline;">Perfil</a>.
+        </span>
+    </div>
+    {% endif %}
+
+    {% if notificaciones %}
+    <div class="m-tx-surface m-notif-list">
+        {% for n in notificaciones %}
+        <article class="m-notif-row {% if not n.leida %}is-unread{% endif %}">
+            <form method="POST" action="{% url 'notificaciones_leer' %}" class="m-notif-open-form">
+                {% csrf_token %}
+                <input type="hidden" name="notificacion_id" value="{{ n.id }}">
+                <input type="hidden" name="next" value="{{ n.url_destino }}">
+                <button type="submit" class="m-notif-open-btn">
+                    <span class="m-notif-ico is-{{ n.nivel }}" aria-hidden="true">
+                        {% if n.nivel == 'danger' %}
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+                        {% elif n.nivel == 'warn' %}
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+                        {% elif n.nivel == 'success' %}
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>
+                        {% else %}
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        {% endif %}
+                    </span>
+                    <span class="m-notif-body">
+                        <span class="m-notif-title-line">
+                            <strong>{{ n.titulo }}</strong>
+                            {% if not n.leida %}<span class="m-notif-unread-dot" aria-label="Sin leer"></span>{% endif %}
+                        </span>
+                        <span class="m-notif-msg">{{ n.mensaje }}</span>
+                        <span class="m-notif-time">{{ n.fecha_label }} · {{ n.hora_label }}</span>
+                    </span>
+                </button>
+            </form>
+
+            <form method="POST" action="{% url 'notificacion_eliminar' n.id %}" class="m-notif-del-form">
+                {% csrf_token %}
+                <button type="submit" class="m-notif-del-btn" aria-label="Eliminar notificación">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <path d="M18 6 6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </form>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="m-empty-box">
+        <img src="{% if filtro == 'no_leidas' %}{% static 'img/mishi/mishi-celebrate.png' %}{% else %}{% static 'img/mishi/mishi-sleep.png' %}{% endif %}" alt="" class="m-empty-cat" aria-hidden="true">
+        <h3>{% if filtro == 'no_leidas' %}¡Estás al día!{% else %}Sin notificaciones por ahora{% endif %}</h3>
+        <p>{% if filtro == 'no_leidas' %}Ya revisaste todas tus alertas financieras.{% else %}Cuando alcances el 80% de tu límite diario, cumplas una meta o tengas préstamos pendientes, Mishi te avisará aquí.{% endif %}</p>
+        {% if filtro == 'no_leidas' and total_notificaciones %}
+        <a href="{% url 'notificaciones' %}?filtro=todas" class="m-btn-pill is-ghost">Ver historial completo</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

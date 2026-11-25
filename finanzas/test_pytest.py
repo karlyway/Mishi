@@ -539,3 +539,427 @@ def test_flujo_crear_meta_perfil_presupuestos_y_vistas_secundarias(client, crear
     assert client.get(reverse('categorias') + '?rango=3m').status_code == 200
     assert client.get(reverse('insights')).status_code == 200
     assert client.get(reverse('animo')).status_code == 200
+
+
+# ==============================================================================
+# 5. PRUEBAS DEL MOTOR FINANCIERO (FASE 1)
+# ==============================================================================
+
+@pytest.mark.django_db
+def test_fase1_sin_doble_contabilizacion_al_editar_ingreso_esperado_ni_al_avanzar_ciclo(
+    client, crear_estudiante, categoria_base
+):
+    from finanzas.services.finanzas_service import calcular_resumen_financiero
+
+    cuenta, perfil = crear_estudiante('contable@curn.edu.co', mesada='300000.00', frecuencia='quincenal')
+    perfil.fecha_proximo_ingreso = date(2026, 3, 1)
+    perfil.save()
+
+    # Saldo inicial queda fijado en $300.000
+    assert perfil.saldo_inicial == Decimal('300000.00')
+
+    # Cambiar ingreso esperado (mesada) en Perfil NO altera retroactivamente saldo_inicial ni saldo disponible
+    client.force_login(cuenta)
+    resp = client.post(reverse('perfil'), {
+        'nombre': perfil.nombre,
+        'universidad': perfil.universidad,
+        'frecuencia': 'mensual',
+        'mesada': '800000',
+        'fecha_proximo_ingreso': '2026-03-01',
+    })
+    assert resp.status_code == 302
+    perfil.refresh_from_db()
+    assert perfil.mesada == Decimal('800000.00')
+    assert perfil.saldo_inicial == Decimal('300000.00')
+
+    # Avanzar el reloj 2 meses despues de la fecha estimada NO agrega dinero automaticamente al saldo
+    resumen_futuro = calcular_resumen_financiero(perfil, hoy=date(2026, 5, 10))
+    assert resumen_futuro['saldo_disponible'] == Decimal('300000.00')
+    assert resumen_futuro['ciclo']['ciclos_avanzados'] == 3
+    assert resumen_futuro['ciclo']['fecha_proximo_ingreso'] == date(2026, 6, 1)
+
+
+@pytest.mark.django_db
+def test_fase1_dos_ingresos_legitimos_mismo_monto_y_fecha_se_contabilizan_ambos(
+    client, crear_estudiante, categoria_base
+):
+    from finanzas.services.finanzas_service import calcular_resumen_financiero
+
+    cuenta, perfil = crear_estudiante('ingresos_iguales@curn.edu.co', mesada='100000.00')
+    client.force_login(cuenta)
+    hoy = date.today()
+
+    for desc in ('Monitoría mañana', 'Monitoría tarde'):
+        resp = client.post(reverse('movimiento'), {
+            'tipo': 'ingreso',
+            'monto': '50000',
+            'categoria': categoria_base.idCategoria,
+            'descripcion': desc,
+            'fecha': hoy.isoformat(),
+        })
+        assert resp.status_code == 302
+
+    assert Transaccion.objects.filter(idUsuario=perfil, tipo='ingreso').count() == 2
+    resumen = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert resumen['ingresos_recibidos'] == Decimal('100000.00')
+    assert resumen['ingresos_hoy'] == Decimal('100000.00')
+    assert resumen['saldo_disponible'] == Decimal('200000.00')
+
+
+@pytest.mark.django_db
+def test_fase1_gastos_consecutivos_hoy_no_reducen_limite_diario_y_calculan_restante_exacto(
+    crear_estudiante, categoria_base
+):
+    from finanzas.services.finanzas_service import calcular_resumen_financiero
+
+    hoy = date(2026, 11, 25)
+    _, perfil = crear_estudiante('gastos_dia@curn.edu.co', mesada='150000.00', frecuencia='quincenal')
+    perfil.fecha_proximo_ingreso = hoy + timedelta(days=15)
+    perfil.save()
+
+    # Inicio del dia: saldo 150.000 / 15 dias = limite diario $10.000
+    r0 = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r0['saldo_inicio_dia'] == Decimal('150000.00')
+    assert r0['limite_diario_recomendado'] == Decimal('10000.00')
+    assert r0['dinero_restante_hoy'] == Decimal('10000.00')
+
+    # Primer gasto hoy de $4.000 -> limite sigue en $10.000, restante = $6.000
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Desayuno',
+        monto=Decimal('4000.00'), fecha=hoy, tipo='gasto'
+    )
+    r1 = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r1['saldo_disponible'] == Decimal('146000.00')
+    assert r1['limite_diario_recomendado'] == Decimal('10000.00')
+    assert r1['gasto_hoy'] == Decimal('4000.00')
+    assert r1['dinero_restante_hoy'] == Decimal('6000.00')
+    assert r1['estado_alerta_diaria'] == 'normal'
+
+    # Segundo gasto hoy de $4.000 (total $8.000 = 80% exacto) -> alerta preventiva, limite sigue en $10.000
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Almuerzo',
+        monto=Decimal('4000.00'), fecha=hoy, tipo='gasto'
+    )
+    r2 = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r2['limite_diario_recomendado'] == Decimal('10000.00')
+    assert r2['gasto_hoy'] == Decimal('8000.00')
+    assert r2['dinero_restante_hoy'] == Decimal('2000.00')
+    assert r2['estado_alerta_diaria'] == 'preventiva'
+    assert r2['alerta_preventiva'] is True
+    assert r2['limite_superado'] is False
+
+    # Tercer gasto hoy de $2.000 (total $10.000 = 100% exacto) -> sigue en advertencia preventiva, NO superado
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Jugo',
+        monto=Decimal('2000.00'), fecha=hoy, tipo='gasto'
+    )
+    r3 = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r3['porcentaje_gasto_hoy'] == 100.0
+    assert r3['estado_alerta_diaria'] == 'preventiva'
+    assert r3['limite_superado'] is False
+    assert r3['dinero_restante_hoy'] == Decimal('0.00')
+
+    # Cuarto gasto hoy de $1.000 (total $11.000 = 110% > 100%) -> limite superado
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Menta',
+        monto=Decimal('1000.00'), fecha=hoy, tipo='gasto'
+    )
+    r4 = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r4['limite_diario_recomendado'] == Decimal('10000.00')
+    assert r4['estado_alerta_diaria'] == 'superado'
+    assert r4['limite_superado'] is True
+    assert r4['excedente_hoy'] == Decimal('1000.00')
+
+
+@pytest.mark.django_db
+def test_fase1_ingreso_hoy_edicion_cambio_fecha_y_eliminacion_recalculan_correctamente(
+    crear_estudiante, categoria_base
+):
+    from finanzas.services.finanzas_service import calcular_resumen_financiero
+
+    hoy = date(2026, 11, 25)
+    ayer = hoy - timedelta(days=1)
+    _, perfil = crear_estudiante('recalculo@curn.edu.co', mesada='100000.00', frecuencia='semanal')
+    perfil.fecha_proximo_ingreso = hoy + timedelta(days=10)
+    perfil.save()
+
+    # Ingreso recibido HOY de $50.000 -> base_disponible_hoy = $150.000 -> limite = $15.000/dia
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Trabajo hoy',
+        monto=Decimal('50000.00'), fecha=hoy, tipo='ingreso'
+    )
+    gasto = Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Almuerzo',
+        monto=Decimal('10000.00'), fecha=hoy, tipo='gasto'
+    )
+    r_hoy = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r_hoy['base_disponible_hoy'] == Decimal('150000.00')
+    assert r_hoy['limite_diario_recomendado'] == Decimal('15000.00')
+    assert r_hoy['dinero_restante_hoy'] == Decimal('5000.00')
+
+    # Cambiar fecha del gasto de hoy -> ayer reduce saldo_inicio_dia a $90.000 y gasto_hoy a $0
+    gasto.fecha = ayer
+    gasto.save()
+    r_movido = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r_movido['saldo_inicio_dia'] == Decimal('90000.00')
+    assert r_movido['base_disponible_hoy'] == Decimal('140000.00')
+    assert r_movido['limite_diario_recomendado'] == Decimal('14000.00')
+    assert r_movido['gasto_hoy'] == Decimal('0.00')
+
+    # Editar monto del gasto a $20.000 y luego eliminarlo
+    gasto.monto = Decimal('20000.00')
+    gasto.save()
+    r_editado = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r_editado['saldo_disponible'] == Decimal('130000.00')
+
+    gasto.delete()
+    r_borrado = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r_borrado['saldo_disponible'] == Decimal('150000.00')
+    assert r_borrado['limite_diario_recomendado'] == Decimal('15000.00')
+
+
+@pytest.mark.django_db
+def test_fase1_saldo_cero_negativo_y_reconciliacion_metas(crear_estudiante, categoria_base):
+    from finanzas.services.finanzas_service import calcular_resumen_financiero
+
+    hoy = date(2026, 11, 25)
+    _, perfil = crear_estudiante('saldo_cero@curn.edu.co', mesada='50000.00', frecuencia='semanal')
+
+    # Reservar $20.000 en meta -> saldo_total $50.000, disponible $30.000
+    MetaAhorro.objects.create(
+        idUsuario=perfil, nombre='Libros', objetivo=Decimal('100000.00'), acumulado=Decimal('20000.00')
+    )
+    r_meta = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r_meta['saldo_total'] == Decimal('50000.00')
+    assert r_meta['dinero_reservado_metas'] == Decimal('20000.00')
+    assert r_meta['saldo_disponible'] == Decimal('30000.00')
+    assert r_meta['saldo_disponible'] + r_meta['dinero_reservado_metas'] == r_meta['saldo_total']
+
+    # Gasto ayer por $30.000 -> saldo disponible = $0 sin gasto hoy -> alerta independiente de saldo insuficiente
+    g_ayer = Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Mercado',
+        monto=Decimal('30000.00'), fecha=hoy - timedelta(days=1), tipo='gasto'
+    )
+    r_cero = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r_cero['saldo_disponible'] == Decimal('0.00')
+    assert r_cero['limite_diario_activo'] == Decimal('0.00')
+    assert r_cero['alerta_saldo_insuficiente'] is True
+    assert r_cero['alerta_activa'] is True
+    assert r_cero['alerta_principal']['tipo'] == 'saldo_insuficiente'
+
+    # Gasto mayor -> saldo negativo (-$10.000)
+    g_ayer.monto = Decimal('40000.00')
+    g_ayer.save()
+    r_neg = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert r_neg['saldo_disponible'] == Decimal('-10000.00')
+    assert r_neg['limite_diario_activo'] == Decimal('0.00')
+    assert r_neg['dinero_restante_hoy'] == Decimal('0.00')
+    assert r_neg['alerta_saldo_insuficiente'] is True
+
+
+@pytest.mark.django_db
+def test_fase1_ciclo_fin_de_mes_anio_bisiesto_irregular_y_sin_division_por_cero(crear_estudiante):
+    from finanzas.services.finanzas_service import avanzar_fecha_ciclo, calcular_ciclo_financiero, sumar_un_mes
+
+    # Meses de distinta duracion y preservacion del dia ancla 31
+    assert sumar_un_mes(date(2026, 1, 31), dia_ancla=31) == date(2026, 2, 28)
+    assert sumar_un_mes(date(2026, 2, 28), dia_ancla=31) == date(2026, 3, 31)
+    assert sumar_un_mes(date(2026, 3, 31), dia_ancla=31) == date(2026, 4, 30)
+
+    # Anio bisiesto 2028
+    assert sumar_un_mes(date(2028, 1, 31), dia_ancla=31) == date(2028, 2, 29)
+    assert sumar_un_mes(date(2028, 2, 29), dia_ancla=31) == date(2028, 3, 31)
+
+    # Proyeccion vencida multi-mes en anio bisiesto
+    proy, saltos, vencido = avanzar_fecha_ciclo(date(2028, 1, 31), 'mensual', date(2028, 2, 15), dia_ancla=31)
+    assert proy == date(2028, 2, 29)
+    assert saltos == 1
+    assert vencido is True
+
+    # Fecha de proximo ingreso igual a HOY -> dias_restantes = 1 (nunca divide por cero)
+    _, perfil = crear_estudiante('ciclos@curn.edu.co', mesada='100000.00', frecuencia='mensual')
+    perfil.fecha_proximo_ingreso = date(2026, 11, 25)
+    perfil.save()
+    ciclo_hoy = calcular_ciclo_financiero(perfil, hoy=date(2026, 11, 25))
+    assert ciclo_hoy['dias_restantes'] == 1
+
+    # Usuario con ingresos irregulares y fecha vencida: no inventa nueva fecha ni suma dinero
+    perfil.frecuencia = 'irregular'
+    perfil.fecha_proximo_ingreso = date(2026, 11, 10)
+    perfil.save()
+    ciclo_irr = calcular_ciclo_financiero(perfil, hoy=date(2026, 11, 25))
+    assert ciclo_irr['ciclo_vencido'] is True
+    assert ciclo_irr['requiere_fecha_ciclo'] is True
+    assert ciclo_irr['dias_restantes'] == 1
+    assert ciclo_irr['fecha_proximo_ingreso'] == date(2026, 11, 10)
+
+
+@pytest.mark.django_db
+def test_fase1_consistencia_alertas_entre_dashboard_insights_y_presupuestos_y_aislamiento(
+    client, crear_estudiante, categoria_base
+):
+    cuenta_a, perfil_a = crear_estudiante('cons_a@curn.edu.co', mesada='300000.00', frecuencia='quincenal')
+    _, perfil_b = crear_estudiante('cons_b@curn.edu.co', mesada='10000.00', frecuencia='diario')
+
+    # Datos de usuario B no deben afectar a usuario A
+    Presupuesto.objects.create(idUsuario=perfil_b, limiteDiario=Decimal('1000.00'), limiteMensual=Decimal('30000.00'))
+    MetaAhorro.objects.create(idUsuario=perfil_b, nombre='Ajena', objetivo=Decimal('10000.00'), acumulado=Decimal('9000.00'))
+
+    # Usuario A configura limite diario personalizado $50.000 y gasta $15.000 hoy (30% -> normal)
+    Presupuesto.objects.create(idUsuario=perfil_a, limiteDiario=Decimal('50000.00'), limiteMensual=Decimal('600000.00'))
+    Transaccion.objects.create(
+        idUsuario=perfil_a, idCategoria=categoria_base, descripcion='Almuerzo',
+        monto=Decimal('15000.00'), fecha=date.today(), tipo='gasto'
+    )
+
+    client.force_login(cuenta_a)
+    r_dash = client.get(reverse('dashboard'))
+    r_pres = client.get(reverse('presupuestos'))
+    r_ins = client.get(reverse('insights'))
+
+    # Mismo limite diario activo ($50.000) y cero contradiccion de limite_superado en las 3 pantallas
+    assert r_dash.context['limite_diario'] == Decimal('50000.00')
+    assert r_ins.context['resumen']['limite_diario_activo'] == Decimal('50000.00')
+    assert r_pres.context['limite_diario_fmt'] == '50.000'
+    assert r_dash.context['limite_superado'] is False
+    assert r_pres.context['limite_superado_hoy'] is False
+    # Pero saldo $285.000 no alcanza para $50.000 x 15 dias ($750.000) -> alerta de saldo ajustado consistente
+    assert r_dash.context['alerta_saldo_insuficiente'] is True
+    assert r_pres.context['alerta_saldo_insuficiente'] is True
+    assert r_dash.context['saldo'] == Decimal('285000.00')
+
+
+# ==============================================================================
+# 6. PRUEBAS DE AVATARES PERSONALIZADOS Y PREFERENCIAS PERSISTENTES
+# ==============================================================================
+
+@pytest.mark.django_db
+def test_avatares_registro_seleccion_y_persistencia_en_bd(client):
+    resp = client.post(reverse('registro_usuario'), {
+        'nombre': 'Luna Gato',
+        'universidad': 'CURN',
+        'frecuencia': 'quincenal',
+        'mesada': '250000',
+        'correo': 'luna@curn.edu.co',
+        'pass': 'ClaveSegura1!',
+        'avatar': 'mishi-negro-capucha',
+    })
+    assert resp.status_code == 302
+    perfil = Usuario.objects.get(cuenta__username='luna@curn.edu.co')
+    assert perfil.avatar == 'mishi-negro-capucha'
+
+    # Se visualiza el avatar seleccionado en Dashboard (navbar) y en Perfil
+    resp_dash = client.get(reverse('dashboard'))
+    assert 'img/mishi-avatars/avatars/mishi-negro-capucha.png' in resp_dash.content.decode('utf-8')
+    resp_perf = client.get(reverse('perfil'))
+    assert 'img/mishi-avatars/avatars/mishi-negro-capucha.png' in resp_perf.content.decode('utf-8')
+
+
+@pytest.mark.django_db
+def test_avatares_cambio_preferencias_validacion_y_aislamiento(client, crear_estudiante):
+    cuenta_a, perfil_a = crear_estudiante('av_a@curn.edu.co', nombre='Ana')
+    _, perfil_b = crear_estudiante('av_b@curn.edu.co', nombre='Beto')
+    client.force_login(cuenta_a)
+
+    # Cambiar avatar a uno valido de la coleccion de 15 PNGs y preferencias persistentes
+    resp_ok = client.post(reverse('perfil_preferencias'), {
+        'avatar': 'mishi-blanco-gafas',
+        'ocultar_saldo': '1',
+        'alertas_activas': '0',
+        'tema_visual': 'pure',
+    })
+    assert resp_ok.status_code == 302
+    perfil_a.refresh_from_db()
+    perfil_b.refresh_from_db()
+    assert perfil_a.avatar == 'mishi-blanco-gafas'
+    assert perfil_a.ocultar_saldo is True
+    assert perfil_a.alertas_activas is False
+    assert perfil_a.tema_visual == 'pure'
+    # Aislamiento: usuario B mantiene valores por defecto intactos
+    assert perfil_b.avatar == 'mishi-naranja-feliz'
+    assert perfil_b.ocultar_saldo is False
+
+    # Rechaza avatar invalido o intento de path traversal
+    resp_bad = client.post(
+        reverse('perfil_preferencias'),
+        {'avatar': '../../etc/passwd'},
+        HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+    )
+    assert resp_bad.status_code == 400
+    perfil_a.refresh_from_db()
+    assert perfil_a.avatar == 'mishi-blanco-gafas'
+
+
+# ==============================================================================
+# 7. PRUEBAS DE NOTIFICACIONES REALES IN-APP
+# ==============================================================================
+
+@pytest.mark.django_db
+def test_notificaciones_generacion_real_deduplicacion_y_lectura(client, crear_estudiante, categoria_base):
+    from finanzas.models import Notificacion
+
+    cuenta, perfil = crear_estudiante('notif@curn.edu.co', mesada='150000.00', frecuencia='quincenal')
+    # Limite diario = $10.000; gasto hoy de $8.500 (85% -> alerta preventiva) + meta lograda + prestamo pendiente
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Almuerzo',
+        monto=Decimal('8500.00'), fecha=date.today(), tipo='gasto'
+    )
+    MetaAhorro.objects.create(
+        idUsuario=perfil, nombre='Audífonos', objetivo=Decimal('20000.00'), acumulado=Decimal('20000.00')
+    )
+    Prestamo.objects.create(
+        idUsuario=perfil, deudor='Mateo', concepto='Copias', monto=Decimal('5000.00'), estado='Pendiente'
+    )
+
+    client.force_login(cuenta)
+    resp1 = client.get(reverse('notificaciones'))
+    assert resp1.status_code == 200
+    tipos = set(Notificacion.objects.filter(idUsuario=perfil).values_list('tipo', flat=True))
+    assert {'alerta_80', 'meta_lograda', 'prestamo_pendiente'}.issubset(tipos)
+    conteo_inicial = Notificacion.objects.filter(idUsuario=perfil).count()
+
+    # Recargar varias veces NO duplica notificaciones del mismo dia/evento
+    client.get(reverse('notificaciones'))
+    client.get(reverse('dashboard'))
+    assert Notificacion.objects.filter(idUsuario=perfil).count() == conteo_inicial
+
+    # Marcar una notificacion como leida redirige a su destino
+    una = Notificacion.objects.filter(idUsuario=perfil, tipo='meta_lograda').first()
+    resp_leer = client.post(reverse('notificaciones_leer'), {'notificacion_id': str(una.idNotificacion)})
+    assert resp_leer.status_code == 302
+    assert resp_leer.url == '/app/metas/'
+    una.refresh_from_db()
+    assert una.leida is True
+
+    # Marcar todas como leidas deja no_leidas en 0
+    resp_all = client.post(reverse('notificaciones_leer'), {'todas': '1'})
+    assert resp_all.status_code == 302
+    assert Notificacion.objects.filter(idUsuario=perfil, leida=False).count() == 0
+
+
+@pytest.mark.django_db
+def test_notificaciones_aislamiento_entre_usuarios_y_eliminacion(client, crear_estudiante, categoria_base):
+    from finanzas.models import Notificacion
+
+    cuenta_a, perfil_a = crear_estudiante('notif_a@curn.edu.co', mesada='50000.00')
+    cuenta_b, _ = crear_estudiante('notif_b@curn.edu.co', mesada='50000.00')
+    notif_a = Notificacion.objects.create(
+        idUsuario=perfil_a, clave='manual_a', tipo='info', nivel='info',
+        titulo='Privada A', mensaje='Solo para A', url_destino='/app/', leida=False
+    )
+
+    # Usuario B no puede leer ni eliminar la notificacion de A
+    client.force_login(cuenta_b)
+    client.post(reverse('notificaciones_leer'), {'notificacion_id': str(notif_a.idNotificacion)})
+    client.post(reverse('notificacion_eliminar', args=[notif_a.idNotificacion]))
+    notif_a.refresh_from_db()
+    assert notif_a.leida is False
+
+    # Usuario A si puede eliminar su propia notificacion
+    client.force_login(cuenta_a)
+    resp_del = client.post(reverse('notificacion_eliminar', args=[notif_a.idNotificacion]))
+    assert resp_del.status_code == 302
+    assert not Notificacion.objects.filter(idNotificacion=notif_a.idNotificacion).exists()
+
+
+

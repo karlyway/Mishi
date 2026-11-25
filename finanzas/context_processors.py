@@ -1,7 +1,10 @@
 from django.utils import timezone
 
 from .models import Categoria, Usuario
-from .ui_helpers import calcular_resumen_usuario, estilo_categoria
+from .services.avatares import AVATARES_MISHI, obtener_avatar_info
+from .services.finanzas_service import calcular_resumen_financiero
+from .services.notificaciones_service import sincronizar_notificaciones_usuario
+from .ui_helpers import estilo_categoria
 
 
 CATEGORIAS_BASE = (
@@ -17,7 +20,7 @@ CATEGORIAS_BASE = (
 
 
 def mishi_app_chrome(request):
-    """Expone categorías reales y resumen ligero para el bottom sheet global de movimientos."""
+    """Expone categorías reales y resumen financiero compartido para el bottom sheet global."""
     user = getattr(request, 'user', None)
     if not user or not user.is_authenticated:
         return {}
@@ -40,11 +43,30 @@ def mishi_app_chrome(request):
         for c in categorias
     ]
 
-    resumen = calcular_resumen_usuario(perfil)
+    resumen = getattr(request, '_mishi_resumen', None)
+    if resumen is None:
+        resumen = calcular_resumen_financiero(perfil)
+        request._mishi_resumen = resumen
+
+    avatar_info = obtener_avatar_info(getattr(perfil, 'avatar', None))
+    no_leidas = getattr(request, '_mishi_notif_count', None)
+    if no_leidas is None:
+        no_leidas = sincronizar_notificaciones_usuario(perfil, resumen=resumen)
+        request._mishi_notif_count = no_leidas
+
     return {
         'sheet_categorias_ui': sheet_categorias_ui,
         'sheet_hoy_iso': timezone.localdate().isoformat(),
         'sheet_saldo_fmt': resumen['saldo_fmt'],
         'sheet_limite_diario_fmt': resumen['limite_diario_fmt'],
+        'sheet_restante_hoy_fmt': resumen['dinero_restante_hoy_fmt'],
         'sheet_alerta_activa': resumen['alerta_activa'],
+        'notificaciones_no_leidas': no_leidas,
+        'usuario_avatar': avatar_info,
+        'usuario_avatar_path': avatar_info['archivo'],
+        'usuario_avatar_nombre': avatar_info['nombre'],
+        'avatares_mishi': AVATARES_MISHI,
+        'pref_ocultar_saldo': bool(getattr(perfil, 'ocultar_saldo', False)),
+        'pref_alertas_activas': bool(getattr(perfil, 'alertas_activas', True)),
+        'pref_tema_visual': getattr(perfil, 'tema_visual', 'warm') or 'warm',
     }

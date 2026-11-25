@@ -23,24 +23,22 @@
                     <circle cx="11" cy="11" r="7.5"/><path d="m20 20-3.6-3.6"/>
                 </svg>
             </a>
-            <a href="{% url 'insights' %}#control" class="m-icon-btn m-bell-btn" aria-label="Notificaciones y alertas">
+            <a href="{% url 'notificaciones' %}" class="m-icon-btn m-bell-btn" aria-label="Notificaciones{% if notificaciones_no_leidas %} ({{ notificaciones_no_leidas }} sin leer){% endif %}">
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
                 </svg>
-                {% if alerta_activa %}<span class="m-bell-dot" aria-hidden="true"></span>{% endif %}
+                {% if notificaciones_no_leidas %}
+                <span class="m-bell-count" aria-hidden="true">{% if notificaciones_no_leidas > 9 %}9+{% else %}{{ notificaciones_no_leidas }}{% endif %}</span>
+                {% endif %}
             </a>
         </div>
     </header>
 
-    {% if alerta_activa %}
-    <a href="{% url 'insights' %}?tab=control" class="m-alert-pill {% if limite_superado %}is-danger{% else %}is-warn{% endif %}" id="mishi-home-alert" role="{% if limite_superado %}alert{% else %}status{% endif %}">
+    {% if alerta_principal %}
+    <a href="{% url 'insights' %}?tab=control" class="m-alert-pill {% if alerta_principal.nivel == 'danger' %}is-danger{% else %}is-warn{% endif %}" id="mishi-home-alert" role="{% if alerta_principal.nivel == 'danger' %}alert{% else %}status{% endif %}">
         <span class="m-alert-dot" aria-hidden="true"></span>
         <span class="m-alert-text">
-            {% if limite_superado %}
-                <strong>Límite diario superado</strong> · Hoy ${{ gasto_hoy_fmt }} de ${{ limite_diario_fmt }}
-            {% else %}
-                <strong>Límite diario al {{ porcentaje_gasto_hoy }}%</strong> · Hoy ${{ gasto_hoy_fmt }}
-            {% endif %}
+            <strong>{{ alerta_principal.titulo }}</strong> · {{ alerta_principal.detalle }}
         </span>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
     </a>
@@ -74,10 +72,10 @@
                         <span>Límite hoy</span>
                         <strong class="money-num">${{ limite_diario_fmt }}</strong>
                     </a>
-                    <span class="m-balance-cycle">{{ dias_restantes }} días de ciclo</span>
+                    <span class="m-balance-cycle">{{ dias_restantes }} día{% if dias_restantes != 1 %}s{% endif %} de ciclo</span>
                 </div>
 
-                <img src="{% if limite_superado %}{% static 'img/mishi/mishi-alert.png' %}{% else %}{% static 'img/mishi/mishi-peek.png' %}{% endif %}"
+                <img src="{% if limite_superado or alerta_saldo_insuficiente %}{% static 'img/mishi/mishi-alert.png' %}{% else %}{% static 'img/mishi/mishi-peek.png' %}{% endif %}"
                      alt=""
                      class="m-balance-mascot"
                      aria-hidden="true"
@@ -168,16 +166,16 @@ document.addEventListener('DOMContentLoaded', function () {
     var saldoEl = document.getElementById('saldo-valor');
     var toggleBtn = document.getElementById('toggle-saldo-btn');
     var alertPill = document.getElementById('mishi-home-alert');
+    var dbAlertsActive = {% if pref_alertas_activas %}true{% else %}false{% endif %};
+    var dbHideBalance = {% if pref_ocultar_saldo %}true{% else %}false{% endif %};
 
-    try {
-        if (alertPill && localStorage.getItem('mishi_alerts_muted') === '1') {
-            alertPill.style.display = 'none';
-        }
-    } catch (e) {}
+    if (alertPill && !dbAlertsActive) {
+        alertPill.style.display = 'none';
+    }
 
     if (saldoEl && toggleBtn) {
-        var oculto = false;
-        try { oculto = localStorage.getItem('mishi_hide_balance') === '1'; } catch (e) {}
+        var oculto = dbHideBalance;
+        try { localStorage.setItem('mishi_hide_balance', oculto ? '1' : '0'); } catch (e) {}
 
         function renderBalance(animate) {
             toggleBtn.classList.toggle('is-hidden', oculto);
@@ -198,6 +196,17 @@ document.addEventListener('DOMContentLoaded', function () {
             oculto = !oculto;
             try { localStorage.setItem('mishi_hide_balance', oculto ? '1' : '0'); } catch (e) {}
             renderBalance(true);
+            var csrfEl = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfEl) {
+                var fd = new FormData();
+                fd.append('csrfmiddlewaretoken', csrfEl.value);
+                fd.append('ocultar_saldo', oculto ? '1' : '0');
+                fetch('{% url "perfil_preferencias" %}', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd
+                }).catch(function () {});
+            }
         });
     }
 });

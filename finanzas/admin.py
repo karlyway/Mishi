@@ -7,7 +7,8 @@ from .models import (
     Transaccion,
     Prestamo,
     GastoCompartido,
-    Participante
+    Participante,
+    Notificacion,
 )
 
 admin.site.register(Usuario)
@@ -18,3 +19,4 @@ admin.site.register(Transaccion)
 admin.site.register(Prestamo)
 admin.site.register(GastoCompartido)
 admin.site.register(Participante)
+admin.site.register(Notificacion)

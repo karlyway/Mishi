@@ -51,18 +51,18 @@
         </div>
     </section>
 
-    {% if estado_mensual != 'ok' or alerta_hoy %}
+    {% if estado_mensual != 'ok' or alerta_principal %}
     <section class="m-insight-banner is-alert">
         <img src="{% static 'img/mishi/mishi-alert.png' %}" alt="" class="m-insight-mascot" aria-hidden="true">
         <div class="m-insight-copy">
             {% if estado_mensual == 'excedido' %}
                 <h2>Superaste tu presupuesto mensual</h2>
                 <p>Llevas ${{ gastos_mes_fmt }} sobre tu tope de ${{ limite_mensual_fmt }}. Ajusta tus límites o pausa gastos opcionales.</p>
-            {% elif limite_superado_hoy %}
-                <h2>Límite diario superado</h2>
-                <p>Hoy registras ${{ gasto_hoy_fmt }} frente a tu límite diario de ${{ limite_diario_fmt }}.</p>
+            {% elif alerta_principal %}
+                <h2>{{ alerta_principal.titulo }}</h2>
+                <p>{{ alerta_principal.detalle }}</p>
             {% else %}
-                <h2>Te acercas a tu límite</h2>
+                <h2>Te acercas a tu límite mensual</h2>
                 <p>Has consumido el {{ porcentaje_mensual_real }}% de tu presupuesto del mes. Revisa las categorías resaltadas.</p>
             {% endif %}
         </div>

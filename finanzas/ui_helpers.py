@@ -4,6 +4,11 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from .models import Transaccion
+from .services.finanzas_service import (
+    calcular_dias_frecuencia,
+    calcular_resumen_financiero,
+    formatear_cop,
+)
 
 
 CATEGORIA_ESTILOS = (
@@ -76,6 +81,7 @@ FRECUENCIA_ETIQUETAS = {
     'semanal': 'Semanal',
     'quincenal': 'Quincenal',
     'mensual': 'Mensual',
+    'irregular': 'Irregular',
 }
 
 
@@ -205,113 +211,9 @@ def estilo_categoria(nombre):
     return dict(ESTILO_POR_DEFECTO)
 
 
-def formatear_cop(valor):
-    """Formatea un valor numérico con separador de miles en punto estilo COP."""
-    if valor is None:
-        return '0'
-    numero = Decimal(valor)
-    negativo = numero < 0
-    numero = abs(numero)
-    entero = int(numero)
-    fraccion = numero - entero
-    entero_fmt = f'{entero:,}'.replace(',', '.')
-    if fraccion > 0:
-        dec = f'{fraccion:.2f}'[2:].rstrip('0')
-        resultado = f'{entero_fmt},{dec}' if dec else entero_fmt
-    else:
-        resultado = entero_fmt
-    return f'-{resultado}' if negativo else resultado
-
-
-def calcular_dias_frecuencia(frecuencia):
-    dias_por_frecuencia = {
-        'diario': 1,
-        'semanal': 7,
-        'quincenal': 15,
-        'mensual': 30,
-    }
-    return dias_por_frecuencia.get(frecuencia, 15)
-
-
 def calcular_resumen_usuario(perfil, hoy=None):
-    """Calcula saldo disponible, límites y alertas diarias del estudiante."""
-    hoy = hoy or timezone.localdate()
-    movimientos = Transaccion.objects.filter(
-        idUsuario=perfil
-    ).select_related('idCategoria').order_by('-fecha', '-idTransaccion')
-
-    ingresos = movimientos.filter(
-        tipo__iexact='ingreso'
-    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
-
-    gastos = movimientos.filter(
-        tipo__iexact='gasto'
-    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
-
-    saldo = perfil.mesada + ingresos - gastos
-    dias = calcular_dias_frecuencia(perfil.frecuencia)
-    limite_diario = round(saldo / dias) if saldo > 0 else 0
-
-    gasto_hoy = movimientos.filter(
-        tipo__iexact='gasto',
-        fecha=hoy
-    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
-
-    if limite_diario > 0:
-        porcentaje_gasto_hoy = round(float(gasto_hoy / limite_diario) * 100, 2)
-    elif gasto_hoy > 0:
-        porcentaje_gasto_hoy = 100
-    else:
-        porcentaje_gasto_hoy = 0
-
-    limite_superado = (
-        (gasto_hoy >= limite_diario and limite_diario > 0)
-        or (limite_diario <= 0 and gasto_hoy > 0)
-    )
-    alerta_activa = porcentaje_gasto_hoy >= 75 or limite_superado
-
-    total_hormiga = movimientos.filter(
-        tipo__iexact='gasto',
-        fecha=hoy,
-        monto__lte=Decimal('15000.00')
-    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
-
-    inicio_mes = hoy.replace(day=1)
-    gastos_mes = movimientos.filter(
-        tipo__iexact='gasto',
-        fecha__gte=inicio_mes,
-        fecha__lte=hoy
-    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
-
-    referencia_mensual = perfil.mesada + ingresos
-    if referencia_mensual > 0:
-        porcentaje_mes = min(100, round(float(gastos_mes / referencia_mensual) * 100))
-    elif gastos_mes > 0:
-        porcentaje_mes = 100
-    else:
-        porcentaje_mes = 0
-
-    return {
-        'movimientos': movimientos,
-        'hoy': hoy,
-        'ingresos': ingresos,
-        'gastos': gastos,
-        'saldo': saldo,
-        'saldo_fmt': formatear_cop(saldo),
-        'dias_restantes': dias,
-        'limite_diario': limite_diario,
-        'limite_diario_fmt': formatear_cop(limite_diario),
-        'gasto_hoy': gasto_hoy,
-        'gasto_hoy_fmt': formatear_cop(gasto_hoy),
-        'porcentaje_gasto_hoy': porcentaje_gasto_hoy,
-        'limite_superado': limite_superado,
-        'alerta_activa': alerta_activa,
-        'total_hormiga': total_hormiga,
-        'total_hormiga_fmt': formatear_cop(total_hormiga),
-        'gastos_mes': gastos_mes,
-        'gastos_mes_fmt': formatear_cop(gastos_mes),
-        'porcentaje_mes': porcentaje_mes,
-    }
+    """Delega en el motor financiero centralizado para mantener una sola fuente de verdad."""
+    return calcular_resumen_financiero(perfil, hoy=hoy)
 
 
 def agrupar_categorias_gasto(gastos_qs):
