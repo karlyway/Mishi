@@ -1,73 +1,367 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Mis Insights - Mishi{% endblock %}
+{% block title %}Estadísticas e Insights - Mishi{% endblock %}
 
 {% block content %}
-<div class="app-screen app-screen--narrow reveal">
-    <div class="app-sub-topbar">
-        <a href="{% url 'dashboard' %}" class="icon-circle-btn" aria-label="Volver al inicio">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="m15 18-6-6 6-6"/>
-            </svg>
-        </a>
-        <h1>Mis insights</h1>
-        <span style="width: 38px;"></span>
+<div class="app-screen app-screen--content reveal">
+    <header class="m-page-header">
+        <div>
+            <h1>Estadísticas</h1>
+            <p class="m-page-sub">{{ etiqueta_periodo }} · Análisis de tu dinero</p>
+        </div>
+        <a href="{% url 'categorias' %}" class="m-link-pill">Categorías</a>
+    </header>
+
+    <div class="m-seg-links" role="navigation" aria-label="Periodo de análisis">
+        <a href="{% url 'insights' %}?periodo=semanal" class="m-seg-link {% if periodo == 'semanal' %}is-active{% endif %}">Semanal</a>
+        <a href="{% url 'insights' %}?periodo=mensual" class="m-seg-link {% if periodo == 'mensual' %}is-active{% endif %}">Mensual</a>
+        <a href="{% url 'insights' %}?periodo=anual" class="m-seg-link {% if periodo == 'anual' %}is-active{% endif %}">Anual</a>
     </div>
 
-    <section class="app-card insight-hero-card">
-        <img src="{% static 'img/mishi-hero.png' %}" alt="" class="insight-hero-cat" aria-hidden="true">
-        <div>
-            {% if resumen.limite_superado %}
-                <h2>¡Ojo con el límite de hoy!</h2>
-                <p>Llevas <strong>${{ resumen.gasto_hoy_fmt }}</strong> gastados hoy sobre tu límite diario de ${{ resumen.limite_diario_fmt }}.</p>
-            {% elif variacion < 0 %}
-                <h2>Vas muy bien con tus gastos este mes</h2>
-                <p>Has gastado <strong>{{ variacion_abs }}% menos</strong> que el mes pasado. ¡Sigue así!</p>
-            {% elif variacion > 0 %}
-                <h2>Tus gastos subieron {{ variacion_abs }}%</h2>
-                <p>Este mes llevas <strong>${{ resumen.gastos_mes_fmt }}</strong> acumulados. Revisa tus categorías principales.</p>
-            {% else %}
-                <h2>Tu resumen inteligente</h2>
-                <p>Llevas <strong>${{ resumen.gastos_mes_fmt }}</strong> este mes y <strong>${{ resumen.gasto_hoy_fmt }}</strong> hoy ({{ resumen.porcentaje_gasto_hoy }}% del límite diario).</p>
-            {% endif %}
+    <section class="m-stats-hero" aria-label="Balance del período">
+        <div class="m-stats-balance-block">
+            <span class="m-stats-kicker">Balance · {{ etiqueta_periodo }}</span>
+            <div class="m-stats-balance money-num {% if balance_periodo_positivo %}is-income{% endif %}">
+                {% if balance_periodo_positivo %}+{% else %}-{% endif %}${{ balance_periodo_fmt }}
+            </div>
+        </div>
+        <div class="m-stats-io-row">
+            <div class="m-stats-io">
+                <span class="m-io-dot is-in" aria-hidden="true"></span>
+                <div>
+                    <span class="m-io-lbl">Ingresos</span>
+                    <strong class="money-num is-income">+${{ ingresos_periodo_fmt }}</strong>
+                </div>
+            </div>
+            <div class="m-stats-io">
+                <span class="m-io-dot is-out" aria-hidden="true"></span>
+                <div>
+                    <span class="m-io-lbl">Gastos</span>
+                    <strong class="money-num">-${{ gastos_periodo_fmt }}</strong>
+                </div>
+            </div>
         </div>
     </section>
 
-    <div class="insights-stack">
-        <article class="app-card insight-item-card">
-            <div class="insight-item-head">
-                <span class="app-cat-badge tone-amber">
-                    {% include 'includes/cat_icon.html' with icon='tag' %}
-                </span>
-                <div class="insight-item-meta">
-                    <span class="insight-item-title">Gastos hormiga</span>
-                    <strong class="insight-item-val money-num">$ {{ hormiga_mes_fmt }}</strong>
-                </div>
-            </div>
-            <p class="insight-item-desc">Compras pequeñas de $15.000 o menos acumuladas este mes. Controlarlas libera ahorro rápido para tus metas.</p>
-            <a href="{% url 'historial' %}" class="btn-soft-pill">Ver movimientos</a>
-        </article>
+    <div class="m-tabs-underline" role="tablist" aria-label="Vistas de estadísticas">
+        <button type="button" class="m-tab-btn is-active" role="tab" aria-selected="true" data-stats-tab="resumen">Resumen</button>
+        <button type="button" class="m-tab-btn" role="tab" aria-selected="false" data-stats-tab="graficas">Gráficas</button>
+        <button type="button" class="m-tab-btn" role="tab" aria-selected="false" data-stats-tab="control">Control</button>
+    </div>
 
-        {% for cat in categorias_top %}
-        <article class="app-card insight-item-card">
-            <div class="insight-item-head">
-                <span class="app-cat-badge tone-{{ cat.ui.tone }}">
-                    {% include 'includes/cat_icon.html' with icon=cat.ui.icon %}
-                </span>
-                <div class="insight-item-meta">
-                    <span class="insight-item-title">{{ cat.nombre }}</span>
-                    <strong class="insight-item-val money-num">$ {{ cat.total_fmt }}</strong>
+    <!-- TAB 1: RESUMEN -->
+    <div class="m-tab-panel is-active" data-stats-panel="resumen" role="tabpanel">
+        <section class="m-insight-banner is-{{ mishi_mood }}">
+            <img src="{% if mishi_mood == 'alert' %}{% static 'img/mishi/mishi-alert.png' %}{% elif mishi_mood == 'celebrate' %}{% static 'img/mishi/mishi-celebrate.png' %}{% else %}{% static 'img/mishi/mishi-laptop.png' %}{% endif %}"
+                 alt="" class="m-insight-mascot" aria-hidden="true">
+            <div class="m-insight-copy">
+                <h2>{{ mishi_titulo }}</h2>
+                <p>{{ mishi_mensaje }}</p>
+            </div>
+        </section>
+
+        <section class="m-clean-section">
+            <div class="m-section-head">
+                <h2>Evolución de gastos</h2>
+                <span class="m-section-meta">{{ etiqueta_periodo }}</span>
+            </div>
+            <div class="m-surface-box">
+                <div class="weekly-bars-grid m-evol-bars" style="--bar-cols: {{ barras_evolucion|length }};">
+                    {% for b in barras_evolucion %}
+                    <div class="weekly-bar-col {% if b.destacada and not b.vacia %}is-peak-col{% endif %}">
+                        <div class="weekly-bar-track">
+                            {% if b.destacada and not b.vacia %}
+                            <span class="weekly-bar-callout" aria-hidden="true">${{ b.total_fmt }}</span>
+                            {% endif %}
+                            <div class="weekly-bar-fill {% if b.destacada and not b.vacia %}is-peak{% endif %} {% if b.vacia %}is-empty{% endif %}"
+                                 style="height: {{ b.altura }}%;"
+                                 title="{{ b.letra }}: ${{ b.total_fmt }}">
+                            </div>
+                        </div>
+                        <span class="weekly-bar-day {% if b.destacada and not b.vacia %}is-peak-day{% endif %}">{{ b.letra }}</span>
+                    </div>
+                    {% endfor %}
                 </div>
-                <span class="mini-pill">{{ cat.porcentaje }}%</span>
             </div>
-            <p class="insight-item-desc">Es una de tus categorías con mayor gasto este mes. Puedes definir un tope para cuidar tu presupuesto.</p>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <a href="{% url 'presupuestos' %}" class="btn-soft-pill">Configurar límite</a>
-                <a href="{% url 'historial' %}?categoria={{ cat.id }}" class="btn-soft-pill is-neutral">Ver gastos</a>
+        </section>
+
+        <section class="m-clean-section">
+            <div class="m-section-head">
+                <h2>Top categorías</h2>
+                <a href="{% url 'historial' %}?tipo=gasto" class="m-link-accent">Ver movimientos</a>
             </div>
-        </article>
-        {% endfor %}
+            {% if categorias_top %}
+            <div class="m-surface-box m-surface-box--flush">
+                {% for c in categorias_top %}
+                <a href="{% url 'historial' %}?categoria={{ c.id }}&tipo=gasto" class="m-cat-bar-row">
+                    <span class="app-cat-badge tone-{{ c.ui.tone }}">
+                        {% include 'includes/cat_icon.html' with icon=c.ui.icon %}
+                    </span>
+                    <div class="m-cat-bar-main">
+                        <div class="m-cat-bar-top">
+                            <span class="m-cat-bar-name">{{ c.nombre }}</span>
+                            <span class="m-cat-bar-val money-num">${{ c.total_fmt }} <small>{{ c.porcentaje }}%</small></span>
+                        </div>
+                        <div class="m-progress-track">
+                            <div class="m-progress-fill" style="width: {{ c.porcentaje }}%; background-color: {{ c.ui.color }};"></div>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="m-empty-box m-empty-box--compact">
+                <img src="{% static 'img/mishi/mishi-empty.png' %}" alt="" class="m-empty-cat" aria-hidden="true">
+                <p>No hay gastos registrados en {{ etiqueta_periodo|lower }}.</p>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <!-- TAB 2: GRÁFICAS -->
+    <div class="m-tab-panel" data-stats-panel="graficas" role="tabpanel">
+        <div class="m-charts-grid">
+            <section class="m-clean-section">
+                <div class="m-section-head">
+                    <h2>Ingresos vs Gastos</h2>
+                    <span class="m-section-meta">{{ etiqueta_periodo }}</span>
+                </div>
+                <div class="m-surface-box">
+                    <div class="m-chart-canvas-wrap">
+                        <canvas id="statsBarChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="m-clean-section">
+                <div class="m-section-head">
+                    <h2>Distribución por categorías</h2>
+                    <span class="m-section-meta">${{ gastos_periodo_fmt }}</span>
+                </div>
+                <div class="m-surface-box">
+                    <div class="m-donut-stage">
+                        <canvas id="statsDonutChart"></canvas>
+                        <div class="m-donut-center">
+                            <strong class="money-num">${{ gastos_periodo_fmt }}</strong>
+                            <span>Gastado</span>
+                        </div>
+                    </div>
+
+                    {% if categorias_periodo %}
+                    <div class="m-legend-list">
+                        {% for c in categorias_periodo %}
+                        <a href="{% url 'historial' %}?categoria={{ c.id }}" class="m-legend-row">
+                            <span class="m-legend-left">
+                                <span class="m-legend-dot" style="background-color: {{ c.ui.color }};"></span>
+                                <span>{{ c.nombre }}</span>
+                            </span>
+                            <span class="m-legend-pct money-num">{{ c.porcentaje }}%</span>
+                            <strong class="m-legend-amt money-num">${{ c.total_fmt }}</strong>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- TAB 3: CONTROL -->
+    <div class="m-tab-panel" data-stats-panel="control" id="control" role="tabpanel">
+        <section class="m-surface-box m-control-stack">
+            <div class="m-control-block">
+                <div class="m-control-head">
+                    <div>
+                        <span class="m-control-kicker">Límite diario y gasto hoy</span>
+                        <div class="m-control-big money-num">${{ resumen.gasto_hoy_fmt }} <small>de ${{ resumen.limite_diario_fmt }}</small></div>
+                    </div>
+                    <span class="m-status-chip {% if resumen.limite_superado %}is-danger{% elif resumen.alerta_activa %}is-warn{% else %}is-ok{% endif %} money-num">
+                        {{ resumen.porcentaje_gasto_hoy }}%
+                    </span>
+                </div>
+                <div class="m-progress-track m-progress-track--lg">
+                    <div class="m-progress-fill {% if resumen.limite_superado %}is-danger{% elif resumen.alerta_activa %}is-warn{% endif %}"
+                         style="width: {% if resumen.porcentaje_gasto_hoy > 100 %}100{% else %}{{ resumen.porcentaje_gasto_hoy }}{% endif %}%;"></div>
+                </div>
+                <div class="m-control-foot">
+                    <span>{% if resumen.limite_superado %}Superaste tu límite diario recomendado.{% elif resumen.alerta_activa %}Te acercas a tu límite de hoy.{% else %}Vas dentro de tu ritmo saludable hoy.{% endif %}</span>
+                    <a href="{% url 'presupuestos' %}" class="m-link-accent">Presupuestos</a>
+                </div>
+            </div>
+
+            <hr class="m-hairline">
+
+            <div class="m-control-block">
+                <div class="m-control-head">
+                    <div>
+                        <span class="m-control-kicker">Gastos hormiga (&le; $15.000)</span>
+                        <div class="m-control-big money-num">${{ hormiga_periodo_fmt }}</div>
+                    </div>
+                    <span class="m-status-chip is-neutral">{{ hormiga_count }} compras</span>
+                </div>
+                <p class="m-control-desc">En este mes acumulas <strong class="money-num">${{ hormiga_mes_fmt }}</strong> en pequeños gastos. Reducirlos libera ahorro directo para tus metas.</p>
+                <div class="m-control-foot">
+                    <span>Microgastos de {{ etiqueta_periodo|lower }}</span>
+                    <a href="{% url 'historial' %}?tipo=gasto" class="m-link-accent">Revisar gastos</a>
+                </div>
+            </div>
+
+            <hr class="m-hairline">
+
+            <div class="m-control-block">
+                <div class="m-control-head">
+                    <div>
+                        <span class="m-control-kicker">Ciclo financiero</span>
+                        <div class="m-control-big">{{ frecuencia_label }} · {{ resumen.dias_restantes }} días</div>
+                    </div>
+                    <a href="{% url 'perfil' %}" class="m-link-accent">Editar</a>
+                </div>
+                <div class="m-cycle-meta">
+                    <div>
+                        <span>Mesada base</span>
+                        <strong class="money-num">${{ mesada_fmt }}</strong>
+                    </div>
+                    <div>
+                        <span>Gastado este mes</span>
+                        <strong class="money-num">${{ resumen.gastos_mes_fmt }}</strong>
+                    </div>
+                    <div>
+                        <span>Variación mensual</span>
+                        <strong class="money-num">{% if variacion > 0 %}+{% elif variacion < 0 %}-{% endif %}{{ variacion_abs }}%</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 </div>
+
+{{ ingresos_periodo|json_script:"stats-ingresos" }}
+{{ gastos_periodo|json_script:"stats-gastos" }}
+{{ etiquetas_categorias|json_script:"stats-cat-labels" }}
+{{ valores_categorias|json_script:"stats-cat-values" }}
+{{ colores_categorias|json_script:"stats-cat-colors" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var tabs = Array.from(document.querySelectorAll('[data-stats-tab]'));
+    var panels = Array.from(document.querySelectorAll('[data-stats-panel]'));
+    var chartsBuilt = false;
+
+    function buildCharts() {
+        if (chartsBuilt) return;
+        chartsBuilt = true;
+
+        var ingresos = JSON.parse(document.getElementById('stats-ingresos').textContent);
+        var gastos = JSON.parse(document.getElementById('stats-gastos').textContent);
+        var labels = JSON.parse(document.getElementById('stats-cat-labels').textContent);
+        var values = JSON.parse(document.getElementById('stats-cat-values').textContent);
+        var colors = JSON.parse(document.getElementById('stats-cat-colors').textContent);
+
+        var barEl = document.getElementById('statsBarChart');
+        if (barEl) {
+            new Chart(barEl.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Ingresos', 'Gastos'],
+                    datasets: [{
+                        label: 'COP',
+                        data: [ingresos, gastos],
+                        backgroundColor: ['#22A06B', '#F97A22'],
+                        borderRadius: 12,
+                        borderSkipped: false,
+                        barPercentage: 0.44
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1F242D',
+                            cornerRadius: 10,
+                            padding: 10
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            border: { display: false },
+                            grid: { color: 'rgba(31, 36, 45, 0.05)' },
+                            ticks: { color: '#666A73', font: { size: 11 } }
+                        },
+                        x: {
+                            border: { display: false },
+                            grid: { display: false },
+                            ticks: { color: '#1F242D', font: { weight: '600', size: 12 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        var donutEl = document.getElementById('statsDonutChart');
+        if (donutEl) {
+            new Chart(donutEl.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels.length ? labels : ['Sin gastos'],
+                    datasets: [{
+                        data: values.length ? values : [1],
+                        backgroundColor: values.length ? colors : ['#EFECE6'],
+                        borderColor: '#FFFFFF',
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        spacing: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1F242D',
+                            cornerRadius: 10,
+                            padding: 10
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function activateTab(name) {
+        tabs.forEach(function (t) {
+            var match = t.getAttribute('data-stats-tab') === name;
+            t.classList.toggle('is-active', match);
+            t.setAttribute('aria-selected', match ? 'true' : 'false');
+        });
+        panels.forEach(function (p) {
+            p.classList.toggle('is-active', p.getAttribute('data-stats-panel') === name);
+        });
+        if (name === 'graficas') {
+            window.requestAnimationFrame(buildCharts);
+        }
+    }
+
+    tabs.forEach(function (t) {
+        t.addEventListener('click', function () {
+            activateTab(t.getAttribute('data-stats-tab'));
+        });
+    });
+
+    var params = new URLSearchParams(window.location.search);
+    var hashTab = (window.location.hash || '').replace('#', '');
+    var initial = params.get('tab') || hashTab || 'resumen';
+    if (['resumen', 'graficas', 'control'].indexOf(initial) !== -1) {
+        activateTab(initial);
+    }
+});
+</script>
 {% endblock %}

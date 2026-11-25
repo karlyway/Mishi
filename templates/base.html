@@ -4,18 +4,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#FFFFFF">
+    <meta name="theme-color" content="#FAF8F5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>{% block title %}Mishi - Tu plata, bajo control{% endblock %}</title>
+    <script>
+    (function () {
+        try {
+            var theme = localStorage.getItem('mishi_theme');
+            if (theme === 'pure' || theme === 'warm') {
+                document.documentElement.setAttribute('data-mishi-theme', theme);
+            }
+        } catch (e) {}
+    })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&display=swap" rel="stylesheet">
     <link rel="manifest" href="{% static 'manifest.json' %}">
-    <link rel="icon" type="image/svg+xml" href="{% static 'img/mishi-icon.svg' %}">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=12">
+    <link rel="icon" type="image/png" href="{% static 'img/mishi-icon.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/mishi-icon.png' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=28">
 </head>
-<body class="{% if ocultar_chrome %}is-fullbleed-body{% elif pestana_activa %}is-app-body{% endif %}">
+<body class="{% if ocultar_chrome %}is-fullbleed-body{% elif pestana_activa %}is-app-body{% else %}is-public-body{% endif %}">
     {% if not ocultar_chrome %}
     <div class="ambient-canvas" aria-hidden="true">
         <span class="ambient-orb is-orange"></span>
@@ -28,7 +39,7 @@
     <header class="navbar {% if not pestana_activa %}navbar--public{% else %}navbar--app{% endif %}">
         <div class="nav-container">
             <a href="{% if pestana_activa %}{% url 'dashboard' %}{% else %}{% url 'landing' %}{% endif %}" class="brand-link">
-                <img src="{% static 'img/mishi-icon.svg' %}" alt="Mishi" class="brand-mark" width="36" height="36">
+                <img src="{% static 'img/mishi-icon.png' %}" alt="Mishi" class="brand-mark" width="36" height="36">
                 <span class="brand-wordmark">mishi</span>
             </a>
 
@@ -36,20 +47,27 @@
                 <ul class="nav-links">
                     {% if pestana_activa %}
                         <li><a href="{% url 'dashboard' %}" class="{% if pestana_activa == 'dashboard' %}active{% endif %}">Inicio</a></li>
-                        <li><a href="{% url 'historial' %}" class="{% if pestana_activa == 'historial' %}active{% endif %}">Gastos</a></li>
-                        <li><a href="{% url 'movimiento' %}" class="{% if pestana_activa == 'movimiento' %}active{% endif %}">Nuevo gasto</a></li>
+                        <li><a href="{% url 'historial' %}" class="{% if pestana_activa == 'historial' %}active{% endif %}">Movimientos</a></li>
+                        <li><a href="{% url 'insights' %}" class="{% if pestana_activa == 'insights' %}active{% endif %}">Estadísticas</a></li>
                         <li><a href="{% url 'metas' %}" class="{% if pestana_activa == 'metas' %}active{% endif %}">Metas</a></li>
+                        <li><a href="{% url 'presupuestos' %}" class="{% if pestana_activa == 'presupuestos' %}active{% endif %}">Presupuestos</a></li>
                         <li><a href="{% url 'perfil' %}" class="{% if pestana_activa == 'perfil' %}active{% endif %}">Perfil</a></li>
                     {% else %}
                         <li><a href="{% url 'landing' %}#como-funciona">¿Cómo funciona?</a></li>
-                        <li><a href="{% url 'login' %}">Iniciar sesion</a></li>
-                        <li><a href="{% url 'registro_usuario' %}" class="nav-cta">Comenzar ahora</a></li>
+                        <li><a href="{% url 'login' %}" class="nav-secondary-pill">Iniciar sesión</a></li>
+                        <li><a href="{% url 'registro_usuario' %}" class="nav-cta">Comenzar gratis</a></li>
                     {% endif %}
                 </ul>
             </nav>
 
             {% if pestana_activa %}
             <div class="nav-user-area">
+                <button type="button" class="nav-quick-add" data-open-mov-sheet="gasto">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    <span>Agregar</span>
+                </button>
                 {% if usuario %}
                 <a href="{% url 'perfil' %}" class="user-pill">
                     <span class="user-avatar" aria-hidden="true">{{ usuario.nombre|slice:":1"|upper }}</span>
@@ -59,14 +77,14 @@
                 <form method="POST" action="{% url 'logout' %}" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="btn-nav-logout">
-                        Cerrar sesión
+                        Salir
                     </button>
                 </form>
             </div>
             {% else %}
             <button type="button" class="nav-toggle" id="public-menu-btn" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-public-menu">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                    <path d="M4 7h16M4 12h16M4 17h16"/>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                    <path d="M5 9h14M5 15h14"/>
                 </svg>
             </button>
             {% endif %}
@@ -75,15 +93,16 @@
         {% if not pestana_activa %}
         <div class="mobile-public-drawer" id="mobile-public-menu">
             <a href="{% url 'landing' %}#como-funciona">¿Cómo funciona?</a>
-            <a href="{% url 'login' %}">Iniciar sesion</a>
-            <a href="{% url 'registro_usuario' %}" class="is-primary">Comenzar ahora</a>
+            <a href="{% url 'login' %}">Iniciar sesión</a>
+            <a href="{% url 'registro_usuario' %}" class="is-primary">Comenzar gratis</a>
         </div>
         {% endif %}
     </header>
     {% endif %}
 
-    <main class="{% if ocultar_chrome %}app-fullbleed{% else %}container {% if pestana_activa %}container-app container-with-bottom-nav{% endif %}{% endif %}">
+    <main class="{% if ocultar_chrome %}app-fullbleed{% else %}container {% if pestana_activa %}container-app container-with-bottom-nav{% else %}container-public{% endif %}{% endif %}">
         {% if messages %}
+            <div class="app-toast-stack" aria-live="polite">
             {% for message in messages %}
                 {% if 'error' in message.tags %}
                     <div class="alert alert-danger" role="alert">
@@ -95,6 +114,7 @@
                     </div>
                 {% endif %}
             {% endfor %}
+            </div>
         {% endif %}
 
         {% block content %}
@@ -102,37 +122,68 @@
     </main>
 
     {% if pestana_activa and not ocultar_chrome %}
-    <nav class="bottom-nav" aria-label="Menú inferior de la aplicación">
-        <a href="{% url 'dashboard' %}" class="bottom-nav-item {% if pestana_activa == 'dashboard' %}active{% endif %}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/>
-            </svg>
-            <span>Inicio</span>
-        </a>
-        <a href="{% url 'historial' %}" class="bottom-nav-item {% if pestana_activa == 'historial' %}active{% endif %}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="2" y="5" width="20" height="14" rx="3"/><path d="M16 12h.01M2 10h20"/>
-            </svg>
-            <span>Gastos</span>
-        </a>
-        <a href="{% url 'movimiento' %}" class="bottom-nav-fab {% if pestana_activa == 'movimiento' %}is-active{% endif %}" aria-label="Nuevo gasto">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
-                <path d="M12 5v14M5 12h14"/>
-            </svg>
-        </a>
-        <a href="{% url 'metas' %}" class="bottom-nav-item {% if pestana_activa == 'metas' %}active{% endif %}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M16 8l3-3"/>
-            </svg>
-            <span>Metas</span>
-        </a>
-        <a href="{% url 'perfil' %}" class="bottom-nav-item {% if pestana_activa == 'perfil' %}active{% endif %}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.8 3.6-6 8-6s8 2.2 8 6"/>
-            </svg>
-            <span>Perfil</span>
-        </a>
+    <nav class="bottom-nav-dock" aria-label="Navegación principal móvil">
+        <div class="bottom-nav-capsule" id="mishi-bottom-pill">
+            <span class="bottom-nav-slider" id="mishi-bottom-slider" aria-hidden="true"></span>
+
+            <a href="{% url 'dashboard' %}" class="bnav-tab {% if pestana_activa == 'dashboard' %}active{% endif %}" data-bnav-idx="0" aria-label="Inicio">
+                <span class="bnav-ico" aria-hidden="true">
+                    <svg class="bnav-ico-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3.5 10.5 12 3.5l8.5 7V19.5a1.5 1.5 0 0 1-1.5 1.5h-4.5v-5.2a1.3 1.3 0 0 0-1.3-1.3h-2.4a1.3 1.3 0 0 0-1.3 1.3V21H5a1.5 1.5 0 0 1-1.5-1.5v-9Z"/>
+                    </svg>
+                    <svg class="bnav-ico-fill" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.37 2.52a1 1 0 0 1 1.26 0l8.75 7.29a1 1 0 0 1 .37.77V19.5A2.5 2.5 0 0 1 19.25 22h-4.5a1 1 0 0 1-1-1v-5.25a1.75 1.75 0 0 0-3.5 0V21a1 1 0 0 1-1 1h-4.5A2.5 2.5 0 0 1 2.25 19.5v-8.92a1 1 0 0 1 .37-.77l8.75-7.29Z"/>
+                    </svg>
+                </span>
+                <span class="bnav-lbl">Inicio</span>
+            </a>
+
+            <a href="{% url 'historial' %}" class="bnav-tab {% if pestana_activa == 'historial' %}active{% endif %}" data-bnav-idx="1" aria-label="Movimientos">
+                <span class="bnav-ico" aria-hidden="true">
+                    <svg class="bnav-ico-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/>
+                    </svg>
+                    <svg class="bnav-ico-fill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1.3" fill="currentColor"/><circle cx="4" cy="12" r="1.3" fill="currentColor"/><circle cx="4" cy="18" r="1.3" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span class="bnav-lbl">Movs</span>
+            </a>
+
+            <button type="button" class="bnav-center-add {% if pestana_activa == 'movimiento' %}is-active{% endif %}" data-open-mov-sheet="gasto" aria-label="Agregar movimiento">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+            </button>
+
+            <a href="{% url 'insights' %}" class="bnav-tab {% if pestana_activa == 'insights' %}active{% endif %}" data-bnav-idx="2" aria-label="Estadísticas">
+                <span class="bnav-ico" aria-hidden="true">
+                    <svg class="bnav-ico-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 19v-6M12 19V5M19 19v-9"/>
+                    </svg>
+                    <svg class="bnav-ico-fill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 19v-6M12 19V5M19 19v-9"/>
+                    </svg>
+                </span>
+                <span class="bnav-lbl">Stats</span>
+            </a>
+
+            <a href="{% url 'perfil' %}" class="bnav-tab {% if pestana_activa == 'perfil' %}active{% endif %}" data-bnav-idx="3" aria-label="Perfil">
+                <span class="bnav-ico" aria-hidden="true">
+                    <svg class="bnav-ico-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="8" r="4"/><path d="M4.5 20c0-3.6 3.4-5.8 7.5-5.8s7.5 2.2 7.5 5.8"/>
+                    </svg>
+                    <svg class="bnav-ico-fill" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="12" cy="8" r="4.1"/><path d="M4 20.2c0-3.9 3.6-6.2 8-6.2s8 2.3 8 6.2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"/>
+                    </svg>
+                </span>
+                <span class="bnav-lbl">Perfil</span>
+            </a>
+        </div>
     </nav>
+
+    {% include 'includes/movimiento_sheet.html' %}
+    {% include 'includes/mas_sheet.html' %}
     {% endif %}
 
     {% if not ocultar_chrome %}
@@ -157,6 +208,7 @@
 
     <script>
     (function () {
+        /* Segmented controls */
         document.querySelectorAll('.segmented-control').forEach(function (ctrl) {
             var radios = Array.from(ctrl.querySelectorAll('input[type="radio"]'));
             if (radios.length < 2) return;
@@ -172,18 +224,17 @@
                 thumb.style.width = 'calc((100% - 10px) / ' + radios.length + ')';
                 thumb.style.transform = 'translateX(' + (idx * 100) + '%)';
             }
-            radios.forEach(function (r) {
-                r.addEventListener('change', syncThumb);
-            });
+            radios.forEach(function (r) { r.addEventListener('change', syncThumb); });
             syncThumb();
         });
 
-        /* Apple Nav Spring Glass Pill + Specular Tracking + Google Material Ripple */
         var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* Desktop navbar glass indicator */
         var desktopNavList = document.querySelector('.navbar .nav-links');
         if (desktopNavList) {
-            var navLinks = Array.from(desktopNavList.querySelectorAll('a:not(.nav-cta)'));
-            var activeLink = desktopNavList.querySelector('a.active:not(.nav-cta)');
+            var navLinks = Array.from(desktopNavList.querySelectorAll('a:not(.nav-cta):not(.nav-secondary-pill)'));
+            var activeLink = desktopNavList.querySelector('a.active:not(.nav-cta):not(.nav-secondary-pill)');
             if (navLinks.length >= 2) {
                 var navPill = document.createElement('span');
                 navPill.className = 'nav-glass-pill';
@@ -211,49 +262,242 @@
             }
         }
 
-        if (!reduceMotion && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
-            var glassSelector = '.app-card, .wallet-combo-card, .kpi-glass-tile, .m-feature-item, .m-hero-glass-stage, .m-promo-banner, .goal-app-card, .auth-card, .mishi-banner-card';
-            document.querySelectorAll(glassSelector).forEach(function (card) {
-                var rafId = 0;
-                card.addEventListener('pointermove', function (e) {
-                    if (rafId) return;
-                    var rect = card.getBoundingClientRect();
-                    var px = ((e.clientX - rect.left) / rect.width) * 100;
-                    var py = ((e.clientY - rect.top) / rect.height) * 100;
-                    rafId = window.requestAnimationFrame(function () {
-                        card.style.setProperty('--mx', px.toFixed(1) + '%');
-                        card.style.setProperty('--my', py.toFixed(1) + '%');
-                        card.classList.add('is-glass-lit');
-                        rafId = 0;
+        /* Cápsula flotante inferior con fondo naranja suave deslizante */
+        var bottomPill = document.getElementById('mishi-bottom-pill');
+        var bottomSlider = document.getElementById('mishi-bottom-slider');
+        if (bottomPill && bottomSlider) {
+            var bnavItems = Array.from(bottomPill.querySelectorAll('.bnav-tab'));
+            var currentActive = bottomPill.querySelector('.bnav-tab.active');
+
+            var placeSlider = function (target, animate) {
+                if (!target || bottomPill.offsetWidth === 0) {
+                    bottomSlider.style.opacity = '0';
+                    return;
+                }
+                var pillRect = bottomPill.getBoundingClientRect();
+                var itemRect = target.getBoundingClientRect();
+                if (!animate) bottomSlider.style.transition = 'none';
+                bottomSlider.style.width = itemRect.width + 'px';
+                bottomSlider.style.transform = 'translate3d(' + (itemRect.left - pillRect.left) + 'px, 0, 0)';
+                bottomSlider.style.opacity = '1';
+                if (!animate) {
+                    void bottomSlider.offsetWidth;
+                    bottomSlider.style.transition = '';
+                }
+            };
+
+            var prevIdxRaw = null;
+            try { prevIdxRaw = sessionStorage.getItem('mishi_bnav_from'); } catch (e) {}
+            var prevEl = prevIdxRaw !== null ? bnavItems[Number(prevIdxRaw)] : null;
+
+            if (!reduceMotion && prevEl && currentActive && prevEl !== currentActive && bottomPill.offsetWidth > 0) {
+                placeSlider(prevEl, false);
+                window.requestAnimationFrame(function () {
+                    window.requestAnimationFrame(function () {
+                        placeSlider(currentActive, true);
                     });
                 });
-                card.addEventListener('pointerleave', function () {
-                    card.classList.remove('is-glass-lit');
+            } else {
+                placeSlider(currentActive, false);
+            }
+            try { sessionStorage.removeItem('mishi_bnav_from'); } catch (e) {}
+
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(function () {
+                    placeSlider(bottomPill.querySelector('.bnav-tab.active'), false);
                 });
+            }
+
+            bnavItems.forEach(function (item) {
+                item.addEventListener('click', function (e) {
+                    var href = item.getAttribute('href');
+                    if (!href || item.classList.contains('active') || e.metaKey || e.ctrlKey || e.shiftKey) return;
+                    if (reduceMotion) return;
+
+                    e.preventDefault();
+                    var activeNow = bottomPill.querySelector('.bnav-tab.active');
+                    if (activeNow) {
+                        try { sessionStorage.setItem('mishi_bnav_from', activeNow.getAttribute('data-bnav-idx')); } catch (err) {}
+                        activeNow.classList.remove('active');
+                    }
+                    item.classList.add('active');
+                    placeSlider(item, true);
+                    window.setTimeout(function () {
+                        window.location.href = href;
+                    }, 175);
+                });
+            });
+
+            window.addEventListener('resize', function () {
+                placeSlider(bottomPill.querySelector('.bnav-tab.active'), false);
             });
         }
 
-        if (!reduceMotion) {
-            var rippleSelector = '.btn, .m-feature-item, .quick-action-circle, .kpi-glass-tile, .mov-list-item, .cat-row-item, .cat-picker-box, .icon-circle-btn, .app-bell-btn, .wallet-corner-arrow, .bottom-nav-item, .bottom-nav-fab, .pill-tab, .app-hero-cta-pill';
-            document.addEventListener('pointerdown', function (e) {
-                var host = e.target && e.target.closest ? e.target.closest(rippleSelector) : null;
-                if (!host || host.disabled) return;
-                var rect = host.getBoundingClientRect();
-                if (!rect.width || !rect.height) return;
-                var size = Math.max(rect.width, rect.height) * 1.9;
-                var rip = document.createElement('span');
-                rip.className = 'm-ripple';
-                rip.style.width = size + 'px';
-                rip.style.height = size + 'px';
-                rip.style.left = (e.clientX - rect.left - size / 2) + 'px';
-                rip.style.top = (e.clientY - rect.top - size / 2) + 'px';
-                host.appendChild(rip);
-                window.setTimeout(function () {
-                    if (rip.parentNode) rip.parentNode.removeChild(rip);
-                }, 480);
-            }, { passive: true });
+        /* Bottom Sheets globales (Agregar movimiento + Más opciones) */
+        var movSheet = document.getElementById('mishi-mov-sheet');
+        var masSheet = document.getElementById('mishi-mas-sheet');
+        var lastTrigger = null;
+
+        function setSheetState(sheetEl, open) {
+            if (!sheetEl) return;
+            sheetEl.classList.toggle('is-open', open);
+            sheetEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+            var anyOpen = document.querySelector('.m-sheet-backdrop.is-open');
+            document.body.classList.toggle('is-sheet-open', Boolean(anyOpen));
+            if (!open && lastTrigger && typeof lastTrigger.focus === 'function') {
+                lastTrigger.focus();
+                lastTrigger = null;
+            }
         }
 
+        var movForm = document.getElementById('mishi-sheet-mov-form');
+        var movTitle = document.getElementById('sheet-mov-title');
+        var movSubmit = document.getElementById('sheet-mov-submit');
+        var movSign = document.getElementById('sheet-amount-sign');
+        var movStage = document.getElementById('sheet-amount-stage');
+        var movMonto = document.getElementById('sheet-monto');
+        var movMontoErr = document.getElementById('sheet-monto-err');
+        var movFecha = document.getElementById('sheet-fecha');
+        var movFechaErr = document.getElementById('sheet-fecha-err');
+        var movCatInput = document.getElementById('sheet-categoria');
+        var movSegThumb = movForm ? movForm.querySelector('.m-sheet-seg-thumb') : null;
+        var movRadios = movForm ? Array.from(movForm.querySelectorAll('input[name="tipo"]')) : [];
+        var movCatBtns = movForm ? Array.from(movForm.querySelectorAll('[data-sheet-cat]')) : [];
+
+        function syncMovTipo(tipo) {
+            if (!movForm) return;
+            var isIncome = tipo === 'ingreso';
+            movRadios.forEach(function (r) { r.checked = (r.value === tipo); });
+            if (movSegThumb) {
+                movSegThumb.style.transform = isIncome ? 'translateX(100%)' : 'translateX(0)';
+            }
+            if (movTitle) movTitle.textContent = isIncome ? 'Agregar ingreso' : 'Agregar gasto';
+            if (movSubmit) {
+                movSubmit.textContent = isIncome ? 'Guardar ingreso' : 'Guardar gasto';
+                movSubmit.classList.toggle('is-income', isIncome);
+            }
+            if (movSign) movSign.textContent = isIncome ? '+$' : '-$';
+            if (movStage) movStage.classList.toggle('is-income', isIncome);
+
+            // Sugerir automáticamente categoría de Mesada/Ingreso al pasar a ingreso
+            if (isIncome && movCatBtns.length) {
+                var incomeBtn = movCatBtns.find(function (b) {
+                    var nm = b.getAttribute('data-sheet-cat-name') || '';
+                    return nm.indexOf('mesada') !== -1 || nm.indexOf('ingreso') !== -1;
+                });
+                if (incomeBtn) selectSheetCat(incomeBtn);
+            }
+        }
+
+        function selectSheetCat(btn) {
+            movCatBtns.forEach(function (b) { b.classList.remove('is-selected'); });
+            btn.classList.add('is-selected');
+            if (movCatInput) movCatInput.value = btn.getAttribute('data-sheet-cat');
+        }
+
+        movCatBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () { selectSheetCat(btn); });
+        });
+
+        movRadios.forEach(function (r) {
+            r.addEventListener('change', function () { syncMovTipo(r.value); });
+        });
+
+        if (movForm) {
+            movForm.addEventListener('submit', function (e) {
+                var ok = true;
+                var val = Number(movMonto ? movMonto.value : 0);
+                if (!movMonto || !movMonto.value || isNaN(val) || val < 100) {
+                    if (movMontoErr) movMontoErr.textContent = 'Ingresa un monto de al menos $100 COP.';
+                    if (movMonto) movMonto.focus();
+                    ok = false;
+                } else if (movMontoErr) {
+                    movMontoErr.textContent = '';
+                }
+
+                var maxFecha = movFecha ? movFecha.getAttribute('max') : '';
+                if (!movFecha || !movFecha.value || (maxFecha && movFecha.value > maxFecha)) {
+                    if (movFechaErr) movFechaErr.textContent = 'Selecciona una fecha válida (no futura).';
+                    ok = false;
+                } else if (movFechaErr) {
+                    movFechaErr.textContent = '';
+                }
+
+                if (!ok) {
+                    e.preventDefault();
+                } else if (movSubmit) {
+                    movSubmit.disabled = true;
+                    movSubmit.textContent = 'Guardando...';
+                }
+            });
+
+            if (movMonto) {
+                movMonto.addEventListener('input', function () {
+                    if (movMontoErr) movMontoErr.textContent = '';
+                });
+            }
+        }
+
+        window.MishiSheets = {
+            openMov: function (tipo, trigger) {
+                lastTrigger = trigger || document.activeElement;
+                setSheetState(masSheet, false);
+                syncMovTipo(tipo === 'ingreso' ? 'ingreso' : 'gasto');
+                if (movMontoErr) movMontoErr.textContent = '';
+                if (movFechaErr) movFechaErr.textContent = '';
+                setSheetState(movSheet, true);
+                window.setTimeout(function () {
+                    if (movMonto) movMonto.focus();
+                }, 260);
+            },
+            openMas: function (trigger) {
+                lastTrigger = trigger || document.activeElement;
+                setSheetState(movSheet, false);
+                setSheetState(masSheet, true);
+            },
+            closeAll: function () {
+                setSheetState(movSheet, false);
+                setSheetState(masSheet, false);
+            }
+        };
+
+        document.addEventListener('click', function (e) {
+            var openMov = e.target && e.target.closest ? e.target.closest('[data-open-mov-sheet]') : null;
+            if (openMov && movSheet) {
+                e.preventDefault();
+                window.MishiSheets.openMov(openMov.getAttribute('data-open-mov-sheet'), openMov);
+                return;
+            }
+            var openMas = e.target && e.target.closest ? e.target.closest('[data-open-mas-sheet]') : null;
+            if (openMas && masSheet) {
+                e.preventDefault();
+                window.MishiSheets.openMas(openMas);
+                return;
+            }
+            var closeBtn = e.target && e.target.closest ? e.target.closest('[data-close-sheet]') : null;
+            if (closeBtn) {
+                var targetId = closeBtn.getAttribute('data-close-sheet');
+                setSheetState(document.getElementById(targetId), false);
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                window.MishiSheets.closeAll();
+            }
+        });
+
+        /* Auto-dismiss subtle success toasts after 4.5s */
+        document.querySelectorAll('.app-toast-stack .alert-success').forEach(function (toast) {
+            window.setTimeout(function () {
+                toast.classList.add('is-fading');
+                window.setTimeout(function () {
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                }, 320);
+            }, 4200);
+        });
+
+        /* Scroll reveal */
         if (!reduceMotion && 'IntersectionObserver' in window) {
             var revealTargets = document.querySelectorAll('[data-scroll-reveal]');
             var io = new IntersectionObserver(function (entries) {

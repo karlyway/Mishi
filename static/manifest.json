@@ -8,9 +8,9 @@
   "theme_color": "#FF8C3A",
   "icons": [
     {
-      "src": "/static/img/mishi-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/static/img/mishi-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

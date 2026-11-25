@@ -23,9 +23,9 @@
         {% endif %}
 
         <div class="segmented-control app-segmented">
-            <input type="radio" id="tipo-gasto" name="tipo" value="gasto" checked>
+            <input type="radio" id="tipo-gasto" name="tipo" value="gasto" {% if tipo_inicial != 'ingreso' %}checked{% endif %}>
             <label for="tipo-gasto">Gasto</label>
-            <input type="radio" id="tipo-ingreso" name="tipo" value="ingreso">
+            <input type="radio" id="tipo-ingreso" name="tipo" value="ingreso" {% if tipo_inicial == 'ingreso' %}checked{% endif %}>
             <label for="tipo-ingreso">Ingreso</label>
         </div>
 

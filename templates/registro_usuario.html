@@ -1,81 +1,426 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Crear Cuenta - Mishi{% endblock %}
+{% block title %}Crear cuenta de estudiante - Mishi{% endblock %}
 
 {% block content %}
-<div class="auth-app-shell auth-app-shell--wide reveal">
-    <div class="auth-mascot-hero auth-mascot-hero--compact">
-        <img src="{% static 'img/mishi-hero.png' %}" alt="Mishi" class="auth-mascot-img" width="565" height="513">
-        <div>
-            <div class="auth-brand-title" style="font-size: 28px;">mishi</div>
-            <p class="auth-brand-sub" style="margin: 0;">Tu plata, bajo control.</p>
+<section class="auth-split-wrap auth-split-wrap--register is-mob-form-open reveal" aria-label="Crear cuenta de estudiante">
+    <div class="auth-mob-corner-blob" aria-hidden="true"></div>
+
+    <div class="auth-split-card auth-split-card--register">
+        <div class="auth-split-visual" aria-hidden="true">
+            <img src="{% static 'img/mishi/login-banner.jpg' %}"
+                 alt="Gestiona tus finanzas con Mishi"
+                 class="auth-split-banner"
+                 width="414"
+                 height="536"
+                 decoding="async"
+                 fetchpriority="high">
+        </div>
+
+        <div class="auth-split-form auth-split-form--register">
+            <a href="{% url 'login' %}?form=1" class="auth-mob-top-back" aria-label="Volver a iniciar sesión">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m15 18-6-6 6-6"/>
+                </svg>
+            </a>
+
+            <div class="auth-split-brand">
+                <img src="{% static 'img/mishi-icon.png' %}" alt="Mishi" width="56" height="56">
+                <span>mishi</span>
+            </div>
+
+            <div class="auth-split-head">
+                <h1>Crea tu cuenta</h1>
+                <p>Es gratis y solo te toma un momento.</p>
+                <span class="sr-only">Crear cuenta de estudiante</span>
+            </div>
+
+            <form action="{% url 'registro_usuario' %}" method="POST" class="auth-modern-form" id="mishi-register-form" novalidate>
+                {% csrf_token %}
+
+                {% if error %}
+                    <div class="alert alert-danger" role="alert">{{ error }}</div>
+                {% endif %}
+
+                <div class="auth-field-wrap" data-field-wrap>
+                    <div class="auth-input-group">
+                        <label for="nombre" class="sr-only">Nombre completo</label>
+                        <span class="auth-input-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="8" r="4"/>
+                                <path d="M4 20c0-3.8 3.6-6 8-6s8 2.2 8 6"/>
+                            </svg>
+                        </span>
+                        <input type="text" id="nombre" name="nombre" class="auth-input"
+                               placeholder="Nombre completo" autocomplete="name" required
+                               data-msg-empty="Escribe tu nombre completo.">
+                    </div>
+                    <p class="auth-field-error" role="alert" aria-live="polite"></p>
+                </div>
+
+                <div class="auth-field-wrap" data-field-wrap>
+                    <div class="auth-input-group">
+                        <label for="universidad" class="sr-only">Institución universitaria</label>
+                        <span class="auth-input-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                                <path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>
+                            </svg>
+                        </span>
+                        <input type="text" id="universidad" name="universidad" class="auth-input"
+                               placeholder="Universidad" required
+                               data-msg-empty="Indica tu institución universitaria.">
+                    </div>
+                    <p class="auth-field-error" role="alert" aria-live="polite"></p>
+                </div>
+
+                <div class="auth-field-wrap" data-field-wrap>
+                    <div class="auth-input-group">
+                        <label for="correo" class="sr-only">Correo electrónico</label>
+                        <span class="auth-input-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="4" width="20" height="16" rx="3"/>
+                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                            </svg>
+                        </span>
+                        <input type="email" id="correo" name="correo" class="auth-input"
+                               placeholder="Correo electrónico" autocomplete="email" required
+                               data-msg-empty="Ingresa tu correo electrónico."
+                               data-msg-invalid="Revisa el formato de tu correo (ej: tu@correo.com).">
+                    </div>
+                    <p class="auth-field-error" role="alert" aria-live="polite"></p>
+                </div>
+
+                <div class="auth-field-wrap" data-field-wrap>
+                    <div class="auth-input-group">
+                        <label for="pass" class="sr-only">Contraseña</label>
+                        <span class="auth-input-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="4" y="11" width="16" height="10" rx="2.5"/>
+                                <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                            </svg>
+                        </span>
+                        <input type="password" id="pass" name="pass" class="auth-input auth-input--has-eye"
+                               placeholder="Contraseña (mín. 8 caracteres)" autocomplete="new-password" required
+                               data-msg-empty="Crea una contraseña para tu cuenta."
+                               data-msg-short="Usa al menos 8 caracteres para mayor seguridad.">
+                        <button type="button" class="auth-eye-btn" id="toggle-reg-pass" aria-label="Mostrar u ocultar contraseña" aria-pressed="false">
+                            <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg class="eye-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                                <path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                                <line x1="2" y1="2" x2="22" y2="22"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="auth-field-error" role="alert" aria-live="polite"></p>
+
+                    <div class="auth-pw-meter" id="auth-pw-meter" data-level="0" aria-live="polite">
+                        <div class="auth-pw-meter-top">
+                            <span class="auth-pw-meter-lbl">Seguridad</span>
+                            <span class="auth-pw-meter-status" id="auth-pw-status">Mínimo 8 caracteres</span>
+                        </div>
+                        <div class="auth-pw-bars" aria-hidden="true">
+                            <span><i></i></span>
+                            <span><i></i></span>
+                            <span><i></i></span>
+                            <span><i></i></span>
+                        </div>
+                        <div class="auth-pw-checks">
+                            <span class="auth-pw-chip" data-rule="len">8+ car.</span>
+                            <span class="auth-pw-chip" data-rule="upper">Mayúscula</span>
+                            <span class="auth-pw-chip" data-rule="num">Número</span>
+                            <span class="auth-pw-chip" data-rule="sym">Símbolo</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="auth-field-row">
+                    <div class="auth-field-wrap" data-field-wrap>
+                        <div class="mishi-select" id="mishi-frec-select">
+                            <input type="hidden" id="frecuencia" name="frecuencia" value="quincenal">
+                            <button type="button" class="mishi-select-trigger auth-input"
+                                    id="mishi-frec-trigger"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    aria-controls="mishi-frec-menu"
+                                    aria-label="Frecuencia de ingresos">
+                                <span class="auth-input-icon" aria-hidden="true">
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/>
+                                    </svg>
+                                </span>
+                                <span class="mishi-select-val" id="mishi-frec-label">Quincenal</span>
+                                <span class="mishi-select-chev" aria-hidden="true">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m6 9 6 6 6-6"/>
+                                    </svg>
+                                </span>
+                            </button>
+                            <ul class="mishi-select-menu" id="mishi-frec-menu" role="listbox" aria-label="Frecuencia de ingresos">
+                                <li role="option" data-value="diario" aria-selected="false" tabindex="-1">
+                                    <span>Diario</span>
+                                    <svg class="mishi-opt-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                                </li>
+                                <li role="option" data-value="semanal" aria-selected="false" tabindex="-1">
+                                    <span>Semanal</span>
+                                    <svg class="mishi-opt-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                                </li>
+                                <li role="option" data-value="quincenal" aria-selected="true" class="is-selected" tabindex="-1">
+                                    <span>Quincenal</span>
+                                    <svg class="mishi-opt-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                                </li>
+                                <li role="option" data-value="mensual" aria-selected="false" tabindex="-1">
+                                    <span>Mensual</span>
+                                    <svg class="mishi-opt-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                                </li>
+                            </ul>
+                        </div>
+                        <p class="auth-field-error" role="alert" aria-live="polite"></p>
+                    </div>
+
+                    <div class="auth-field-wrap" data-field-wrap>
+                        <div class="auth-input-group">
+                            <label for="mesada" class="sr-only">Mesada o saldo inicial (COP)</label>
+                            <span class="auth-input-icon auth-input-dollar" aria-hidden="true">$</span>
+                            <input type="number" id="mesada" name="mesada" class="auth-input auth-input--money"
+                                   placeholder="Mesada COP" min="0" step="0.01" inputmode="decimal"
+                                   data-msg-invalid="Ingresa un monto mayor o igual a 0.">
+                        </div>
+                        <p class="auth-field-error" role="alert" aria-live="polite"></p>
+                    </div>
+                </div>
+
+                <button type="submit" class="auth-submit-btn">Registrarme</button>
+            </form>
+
+            <div class="auth-split-divider" aria-hidden="true">
+                <span></span>
+                <small>o</small>
+                <span></span>
+            </div>
+
+            <p class="auth-split-footer">
+                ¿Ya tienes una cuenta?
+                <a href="{% url 'login' %}?form=1">Inicia sesión</a>
+            </p>
         </div>
     </div>
 
-    <div class="card auth-card">
-        <h1 style="font-size: 23px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 4px;">Crear cuenta de estudiante</h1>
-        <p style="font-size: 13.5px; color: var(--fg-muted); margin-bottom: 20px;">Configura tu mesada inicial para calcular tu límite diario desde hoy</p>
-
-        <form action="{% url 'registro_usuario' %}" method="POST">
-            {% csrf_token %}
-
-            {% if error %}
-                <div class="alert alert-danger" role="alert">{{ error }}</div>
-            {% endif %}
-
-            <div class="grid-2" style="margin-bottom: 0; gap: 14px;">
-                <div class="form-group">
-                    <label for="nombre">Nombre completo</label>
-                    <input type="text" id="nombre" name="nombre" class="form-control app-field"
-                           placeholder="Ej: Valentina García" autocomplete="name" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="universidad">Institución universitaria</label>
-                    <input type="text" id="universidad" name="universidad" class="form-control app-field"
-                           placeholder="Ej: Corporación Universitaria Rafael Núñez" required>
-                </div>
-            </div>
-
-            <div class="grid-2" style="margin-bottom: 0; gap: 14px;">
-                <div class="form-group">
-                    <label for="frecuencia">Frecuencia de ingresos</label>
-                    <select id="frecuencia" name="frecuencia" class="form-control app-field">
-                        <option value="diario">Diariamente</option>
-                        <option value="semanal">Semanalmente</option>
-                        <option value="quincenal" selected>Quincenalmente</option>
-                        <option value="mensual">Mensualmente</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="mesada">Mesada o saldo inicial (COP)</label>
-                    <input type="number" id="mesada" name="mesada" class="form-control app-field"
-                           placeholder="Ej: 350000" min="0" step="0.01" inputmode="decimal">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="correo">Correo electrónico</label>
-                <input type="email" id="correo" name="correo" class="form-control app-field"
-                       placeholder="ejemplo@curnvirtual.edu.co" autocomplete="email" required>
-            </div>
-
-            <div class="form-group">
-                <label for="pass">Contraseña</label>
-                <input type="password" id="pass" name="pass" class="form-control app-field"
-                       placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
-            </div>
-
-            <div style="margin-top: 20px;">
-                <button type="submit" class="btn btn-primary btn-block-pill">Registrarme e ingresar</button>
-            </div>
-        </form>
-
-        <div style="margin-top: 18px; text-align: center; font-size: 13px; color: var(--fg-muted);">
-            ¿Ya tienes una cuenta? <a href="{% url 'login' %}" style="color: var(--orange-text); font-weight: 700;">Iniciar sesion</a>
-        </div>
+    <div class="auth-mob-wave-footer" aria-hidden="true">
+        <svg class="auth-mob-wave-svg" viewBox="0 0 390 64" preserveAspectRatio="none">
+            <path d="M0,34 C95,6 175,54 275,30 C330,17 365,12 390,20 L390,64 L0,64 Z" fill="#FCECD9" fill-opacity="0.72"/>
+        </svg>
     </div>
-</div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    /* 1. Toggle mostrar/ocultar contraseña */
+    var eyeBtn = document.getElementById('toggle-reg-pass');
+    var passInput = document.getElementById('pass');
+    if (eyeBtn && passInput) {
+        eyeBtn.addEventListener('click', function () {
+            var visible = passInput.type === 'text';
+            passInput.type = visible ? 'password' : 'text';
+            eyeBtn.classList.toggle('is-visible', !visible);
+            eyeBtn.setAttribute('aria-pressed', String(!visible));
+        });
+    }
+
+    /* 2. Medidor dinámico de seguridad de contraseña */
+    var meter = document.getElementById('auth-pw-meter');
+    var statusEl = document.getElementById('auth-pw-status');
+    if (passInput && meter && statusEl) {
+        var chips = {
+            len: meter.querySelector('[data-rule="len"]'),
+            upper: meter.querySelector('[data-rule="upper"]'),
+            num: meter.querySelector('[data-rule="num"]'),
+            sym: meter.querySelector('[data-rule="sym"]')
+        };
+        var labels = ['Mínimo 8 caracteres', 'Débil', 'Regular', 'Buena', 'Segura'];
+
+        var updateMeter = function () {
+            var val = passInput.value;
+            var rules = {
+                len: val.length >= 8,
+                upper: /[A-ZÁÉÍÓÚÑ]/.test(val),
+                num: /[0-9]/.test(val),
+                sym: /[^A-Za-z0-9ÁÉÍÓÚÑáéíóúñ]/.test(val)
+            };
+            Object.keys(chips).forEach(function (k) {
+                if (chips[k]) chips[k].classList.toggle('is-met', rules[k]);
+            });
+
+            var score = 0;
+            if (val.length > 0) {
+                score = (rules.len ? 1 : 0) + (rules.upper ? 1 : 0) + (rules.num ? 1 : 0) + (rules.sym ? 1 : 0);
+                if (score === 0) score = 1;
+                if (!rules.len && score > 2) score = 2;
+                meter.classList.add('is-active');
+            } else {
+                meter.classList.remove('is-active');
+            }
+            meter.setAttribute('data-level', String(score));
+            statusEl.textContent = labels[score];
+        };
+
+        passInput.addEventListener('focus', function () { meter.classList.add('is-open'); });
+        passInput.addEventListener('input', function () {
+            meter.classList.add('is-open');
+            updateMeter();
+        });
+    }
+
+    /* 3. Dropdown custom estilo Mishi para Frecuencia */
+    var selectRoot = document.getElementById('mishi-frec-select');
+    var trigger = document.getElementById('mishi-frec-trigger');
+    var menu = document.getElementById('mishi-frec-menu');
+    var hiddenInput = document.getElementById('frecuencia');
+    var labelEl = document.getElementById('mishi-frec-label');
+    if (selectRoot && trigger && menu && hiddenInput && labelEl) {
+        var options = Array.from(menu.querySelectorAll('[role="option"]'));
+
+        var closeMenu = function () {
+            selectRoot.classList.remove('is-open');
+            trigger.setAttribute('aria-expanded', 'false');
+        };
+        var openMenu = function () {
+            selectRoot.classList.add('is-open');
+            trigger.setAttribute('aria-expanded', 'true');
+        };
+        var pickOption = function (opt) {
+            var val = opt.getAttribute('data-value');
+            var text = opt.querySelector('span').textContent;
+            hiddenInput.value = val;
+            labelEl.textContent = text;
+            options.forEach(function (o) {
+                var selected = o === opt;
+                o.classList.toggle('is-selected', selected);
+                o.setAttribute('aria-selected', String(selected));
+            });
+            closeMenu();
+            trigger.focus();
+        };
+
+        trigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (selectRoot.classList.contains('is-open')) closeMenu();
+            else openMenu();
+        });
+
+        options.forEach(function (opt) {
+            opt.addEventListener('click', function (e) {
+                e.stopPropagation();
+                pickOption(opt);
+            });
+        });
+
+        trigger.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openMenu();
+                var cur = menu.querySelector('.is-selected') || options[0];
+                if (cur) cur.focus();
+            } else if (e.key === 'Escape') {
+                closeMenu();
+            }
+        });
+
+        menu.addEventListener('keydown', function (e) {
+            var idx = options.indexOf(document.activeElement);
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                options[(idx + 1) % options.length].focus();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                options[(idx - 1 + options.length) % options.length].focus();
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (idx >= 0) pickOption(options[idx]);
+            } else if (e.key === 'Escape') {
+                closeMenu();
+                trigger.focus();
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!selectRoot.contains(e.target)) closeMenu();
+        });
+    }
+
+    /* 4. Validación inline estilo Mishi (reemplaza tooltip nativo del navegador) */
+    var form = document.getElementById('mishi-register-form');
+    if (form) {
+        var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+        var setFieldError = function (inputEl, msg) {
+            var wrap = inputEl.closest('[data-field-wrap]');
+            if (!wrap) return;
+            var errEl = wrap.querySelector('.auth-field-error');
+            if (msg) {
+                wrap.classList.add('is-invalid');
+                inputEl.setAttribute('aria-invalid', 'true');
+                if (errEl) errEl.textContent = msg;
+            } else {
+                wrap.classList.remove('is-invalid');
+                inputEl.removeAttribute('aria-invalid');
+                if (errEl) errEl.textContent = '';
+            }
+        };
+
+        var validateField = function (inputEl) {
+            var val = inputEl.value.trim();
+            if (inputEl.hasAttribute('required') && !val) {
+                setFieldError(inputEl, inputEl.dataset.msgEmpty || 'Completa este campo.');
+                return false;
+            }
+            if (inputEl.type === 'email' && val && !emailRe.test(val)) {
+                setFieldError(inputEl, inputEl.dataset.msgInvalid || 'Ingresa un correo válido.');
+                return false;
+            }
+            if (inputEl.id === 'pass' && val && val.length < 8) {
+                setFieldError(inputEl, inputEl.dataset.msgShort || 'Usa al menos 8 caracteres.');
+                return false;
+            }
+            if (inputEl.id === 'mesada' && val !== '' && (isNaN(Number(val)) || Number(val) < 0)) {
+                setFieldError(inputEl, inputEl.dataset.msgInvalid || 'Ingresa un monto válido.');
+                return false;
+            }
+            setFieldError(inputEl, '');
+            return true;
+        };
+
+        var fields = Array.from(form.querySelectorAll('input.auth-input'));
+        fields.forEach(function (inp) {
+            inp.addEventListener('input', function () {
+                if (inp.closest('[data-field-wrap]').classList.contains('is-invalid')) {
+                    validateField(inp);
+                }
+            });
+            inp.addEventListener('blur', function () {
+                if (inp.value.trim() !== '') validateField(inp);
+            });
+        });
+
+        form.addEventListener('submit', function (e) {
+            var firstBad = null;
+            fields.forEach(function (inp) {
+                if (!validateField(inp) && !firstBad) firstBad = inp;
+            });
+            if (firstBad) {
+                e.preventDefault();
+                if (firstBad.id === 'pass' && meter) meter.classList.add('is-open');
+                firstBad.focus();
+            }
+        });
+    }
+})();
+</script>
 {% endblock %}

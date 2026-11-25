@@ -4,390 +4,202 @@
 {% block title %}Inicio - Mishi{% endblock %}
 
 {% block content %}
-<div class="app-screen reveal" role="region" aria-label="Panel principal">
-    <div class="app-greeting-bar">
-        <div class="app-greeting-user">
-            <a href="{% url 'perfil' %}" class="app-greeting-avatar" aria-label="Mi perfil">
-                {{ usuario.nombre|slice:":1"|upper }}
+<div class="app-screen app-dashboard-screen reveal" role="region" aria-label="Panel principal">
+    <header class="m-home-header">
+        <div class="m-home-brand-wrap">
+            <a href="{% url 'dashboard' %}" class="m-home-brand" aria-label="Inicio Mishi">
+                <img src="{% static 'img/mishi-icon.png' %}" alt="" width="34" height="34">
+                <span>mishi</span>
             </a>
-            <div>
-                <p class="eyebrow-muted">Hola de nuevo 👋 · {{ usuario.universidad }}</p>
-                <h1 class="app-greeting-title">{{ usuario.nombre }}</h1>
+            <div class="m-home-desktop-greet">
+                <p class="eyebrow-muted">Hola, {{ usuario.nombre }}</p>
+                <h1>Inicio</h1>
             </div>
         </div>
-        <div class="app-greeting-actions">
-            <a href="{% url 'movimiento' %}" class="app-hero-cta-pill">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-                    <path d="M12 5v14M5 12h14"/>
+
+        <div class="m-home-header-actions">
+            <a href="{% url 'historial' %}?focus=1" class="m-icon-btn" aria-label="Buscar movimientos">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7.5"/><path d="m20 20-3.6-3.6"/>
                 </svg>
-                <span>Nuevo gasto</span>
             </a>
-            <a href="{% url 'insights' %}" class="app-bell-btn" aria-label="Mis insights y alertas">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <a href="{% url 'insights' %}#control" class="m-icon-btn m-bell-btn" aria-label="Notificaciones y alertas">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
                 </svg>
-                {% if alerta_activa %}<span class="app-bell-dot" aria-hidden="true"></span>{% endif %}
+                {% if alerta_activa %}<span class="m-bell-dot" aria-hidden="true"></span>{% endif %}
             </a>
         </div>
-    </div>
+    </header>
 
     {% if alerta_activa %}
-        {% if limite_superado %}
-            <a href="{% url 'insights' %}" class="app-alert-strip is-danger" role="alert">
-                <strong>Límite diario superado:</strong>
-                Llevas ${{ gasto_hoy_fmt }} de ${{ limite_diario_fmt }} hoy ({{ porcentaje_gasto_hoy }}%). Ver insights →
-            </a>
-        {% else %}
-            <a href="{% url 'insights' %}" class="app-alert-strip is-warning" role="status">
-                <strong>Aviso preventivo:</strong>
-                Has consumido el {{ porcentaje_gasto_hoy }}% de tu límite diario (${{ gasto_hoy_fmt }} de ${{ limite_diario_fmt }}).
-            </a>
-        {% endif %}
+    <a href="{% url 'insights' %}?tab=control" class="m-alert-pill {% if limite_superado %}is-danger{% else %}is-warn{% endif %}" id="mishi-home-alert" role="{% if limite_superado %}alert{% else %}status{% endif %}">
+        <span class="m-alert-dot" aria-hidden="true"></span>
+        <span class="m-alert-text">
+            {% if limite_superado %}
+                <strong>Límite diario superado</strong> · Hoy ${{ gasto_hoy_fmt }} de ${{ limite_diario_fmt }}
+            {% else %}
+                <strong>Límite diario al {{ porcentaje_gasto_hoy }}%</strong> · Hoy ${{ gasto_hoy_fmt }}
+            {% endif %}
+        </span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    </a>
     {% endif %}
 
-    <div class="app-home-grid">
-        <div class="app-home-primary">
-            <section class="wallet-combo-card" aria-label="Resumen de saldo y gastos del mes">
-                <div class="wallet-combo-top">
-                    <div class="wallet-combo-copy">
-                        <div class="wallet-combo-label-row">
-                            <span class="wallet-label-chip">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <rect x="2" y="5" width="20" height="14" rx="3"/><path d="M16 12h.01"/>
-                                </svg>
-                                Saldo disponible
-                            </span>
-                            <a href="{% url 'presupuestos' %}" class="wallet-corner-arrow" aria-label="Configurar presupuestos">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M7 17 17 7M9 7h8v8"/>
-                                </svg>
-                            </a>
-                        </div>
-
-                        <div class="wallet-balance-row">
-                            <div class="wallet-combo-balance money-num" id="saldo-valor" data-real="$ {{ saldo_fmt }}">$ {{ saldo_fmt }}</div>
-                            <button type="button" class="wallet-eye-btn" id="toggle-saldo-btn" aria-label="Ocultar o mostrar saldo" aria-pressed="false">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <a href="{% url 'insights' %}" class="wallet-combo-hint-pill">
-                            <span class="wallet-hint-dot" aria-hidden="true"></span>
-                            <span class="wallet-hint-text"><span class="wallet-hint-seg">Límite diario: <strong>${{ limite_diario_fmt }}</strong></span> <span class="wallet-hint-seg">· Hoy: <strong>${{ gasto_hoy_fmt }}</strong></span></span>
-                            <span class="wallet-hint-chevron" aria-hidden="true">&rsaquo;</span>
-                        </a>
-                    </div>
-                    <img src="{% static 'img/mishi-hero.png' %}" alt="" class="wallet-combo-cat" aria-hidden="true">
+    <div class="m-home-layout">
+        <div class="m-home-main-col">
+            <section class="m-balance-card" aria-label="Saldo disponible">
+                <div class="m-balance-top">
+                    <span class="m-balance-label">Saldo disponible</span>
+                    <button type="button" class="m-eye-btn" id="toggle-saldo-btn" aria-label="Ocultar o mostrar saldo" aria-pressed="false">
+                        <svg class="eye-open" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <svg class="eye-closed" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                            <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                            <path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                            <line x1="2" y1="2" x2="22" y2="22"/>
+                        </svg>
+                    </button>
                 </div>
 
-                <div class="wallet-combo-bottom">
-                    <div class="wallet-month-head">
-                        <div>
-                            <div class="wallet-month-lbl">Gastos de este mes</div>
-                            <div class="wallet-month-val money-num">$ {{ gastos_mes_fmt }}</div>
-                        </div>
-                        <div class="wallet-month-right">
-                            <div class="wallet-month-track">
-                                <div class="wallet-month-fill {% if limite_superado %}is-danger{% endif %}"
-                                     style="width: {{ porcentaje_mes }}%;"></div>
-                            </div>
-                            <span class="wallet-month-pct money-num">{{ porcentaje_mes }}%</span>
-                        </div>
-                    </div>
+                <div class="m-balance-value-wrap">
+                    <div class="m-balance-value money-num" id="saldo-valor" data-real="${{ saldo_fmt }}">${{ saldo_fmt }}</div>
+                    <span class="m-balance-currency">COP</span>
                 </div>
+
+                <div class="m-balance-footer">
+                    <a href="{% url 'presupuestos' %}" class="m-balance-chip">
+                        <span>Límite hoy</span>
+                        <strong class="money-num">${{ limite_diario_fmt }}</strong>
+                    </a>
+                    <span class="m-balance-cycle">{{ dias_restantes }} días de ciclo</span>
+                </div>
+
+                <img src="{% if limite_superado %}{% static 'img/mishi/mishi-alert.png' %}{% else %}{% static 'img/mishi/mishi-peek.png' %}{% endif %}"
+                     alt=""
+                     class="m-balance-mascot"
+                     aria-hidden="true"
+                     loading="eager">
             </section>
 
-            <nav class="quick-actions-row" aria-label="Accesos rápidos">
-                <a href="{% url 'movimiento' %}" class="quick-action-tile is-primary">
-                    <span class="quick-action-circle">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>
+            <nav class="m-quick-grid" aria-label="Accesos rápidos">
+                <button type="button" class="m-quick-btn is-primary" data-open-mov-sheet="gasto">
+                    <span class="m-quick-ico">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true">
+                            <path d="M12 5v14M5 12h14"/>
                         </svg>
                     </span>
-                    <span>Agregar gasto</span>
-                </a>
-                <a href="{% url 'historial' %}" class="quick-action-tile">
-                    <span class="quick-action-circle">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M7 16V4m0 0L3 8m4-4 4 4M17 8v12m0 0 4-4m-4 4-4-4"/>
+                    <span class="m-quick-lbl">Agregar gasto</span>
+                </button>
+
+                <button type="button" class="m-quick-btn" data-open-mov-sheet="ingreso">
+                    <span class="m-quick-ico">
+                        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 19V5"/><path d="m6 11 6-6 6 6"/>
                         </svg>
                     </span>
-                    <span>Gastos</span>
+                    <span class="m-quick-lbl">Agregar ingreso</span>
+                </button>
+
+                <a href="{% url 'presupuestos' %}" class="m-quick-btn">
+                    <span class="m-quick-ico">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 11h8M8 15h4"/>
+                        </svg>
+                    </span>
+                    <span class="m-quick-lbl">Presupuestos</span>
                 </a>
-                <a href="{% url 'metas' %}" class="quick-action-tile">
-                    <span class="quick-action-circle">
+
+                <button type="button" class="m-quick-btn" data-open-mas-sheet="1">
+                    <span class="m-quick-ico">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M16 8l3-3"/>
+                            <circle cx="6" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="18" cy="12" r="1.4" fill="currentColor"/>
                         </svg>
                     </span>
-                    <span>Metas</span>
-                </a>
-                <a href="{% url 'presupuestos' %}" class="quick-action-tile">
-                    <span class="quick-action-circle">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                            <circle cx="6" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="18" cy="12" r="1.5" fill="currentColor"/>
-                        </svg>
-                    </span>
-                    <span>Presupuestos</span>
-                </a>
+                    <span class="m-quick-lbl">Más</span>
+                </button>
             </nav>
-
-            <section class="kpi-glass-strip" aria-label="Pulso financiero de hoy">
-                <a href="{% url 'presupuestos' %}" class="kpi-glass-tile">
-                    <span class="kpi-tile-head">
-                        <span class="kpi-dot is-orange" aria-hidden="true"></span>
-                        <span>Gasto hoy</span>
-                    </span>
-                    <strong class="kpi-tile-val money-num">$ {{ gasto_hoy_fmt }}</strong>
-                    <span class="kpi-tile-sub money-num">{{ porcentaje_gasto_hoy }}% del límite</span>
-                </a>
-                <a href="{% url 'insights' %}" class="kpi-glass-tile">
-                    <span class="kpi-tile-head">
-                        <span class="kpi-dot is-gold" aria-hidden="true"></span>
-                        <span>Hormiga</span>
-                    </span>
-                    <strong class="kpi-tile-val money-num">$ {{ total_hormiga_fmt }}</strong>
-                    <span class="kpi-tile-sub">Microgastos mes</span>
-                </a>
-                <a href="{% url 'animo' %}" class="kpi-glass-tile">
-                    <span class="kpi-tile-head">
-                        <span class="kpi-dot is-emerald" aria-hidden="true"></span>
-                        <span>Ciclo</span>
-                    </span>
-                    <strong class="kpi-tile-val money-num">{{ dias_restantes }} días</strong>
-                    <span class="kpi-tile-sub">Restantes hoy</span>
-                </a>
-            </section>
-
-            <section class="app-section-block">
-                <div class="app-section-head">
-                    <h2>Tus categorías</h2>
-                    <a href="{% url 'categorias' %}" class="app-link-more">Ver todas &gt;</a>
-                </div>
-
-                {% if categorias_resumen %}
-                <div class="app-card cat-list-card">
-                    {% for c in categorias_resumen %}
-                    <a href="{% url 'historial' %}?categoria={{ c.id }}" class="cat-row-item">
-                        <span class="app-cat-badge tone-{{ c.ui.tone }}">
-                            {% include 'includes/cat_icon.html' with icon=c.ui.icon %}
-                        </span>
-                        <span class="cat-row-main">
-                            <span class="cat-row-top">
-                                <span class="cat-row-name">{{ c.nombre }}</span>
-                                <span class="cat-row-nums">
-                                    <span class="cat-row-val money-num">$ {{ c.total_fmt }}</span>
-                                    <span class="cat-row-pct money-num">{{ c.porcentaje }}%</span>
-                                </span>
-                            </span>
-                            <span class="cat-row-track" aria-hidden="true">
-                                <span class="cat-row-fill" style="width: {{ c.porcentaje }}%;"></span>
-                            </span>
-                        </span>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="empty-soft-card">
-                    <p>Aún no tienes gastos este mes. Registra tu primer movimiento para ver tus categorías.</p>
-                    <a href="{% url 'movimiento' %}" class="btn btn-primary btn-sm">+ Registrar gasto</a>
-                </div>
-                {% endif %}
-            </section>
         </div>
 
-        <div class="app-home-secondary">
-            <section class="app-card mov-glass-card">
-                <div class="app-section-head">
-                    <h2>Últimos movimientos</h2>
-                    <a href="{% url 'historial' %}" class="app-link-more">Ver todos &gt;</a>
-                </div>
+        <section class="m-home-tx-section" aria-label="Últimos movimientos">
+            <div class="m-section-head">
+                <h2>Últimos movimientos</h2>
+                <a href="{% url 'historial' %}" class="m-link-accent">Ver todos</a>
+            </div>
 
-                <div class="mov-list">
-                    {% for m in ultimos_movimientos %}
-                    <a href="{% url 'detalle_movimiento' m.id %}" class="mov-list-item">
-                        <span class="app-cat-badge tone-{{ m.ui.tone }}">
-                            {% include 'includes/cat_icon.html' with icon=m.ui.icon %}
-                        </span>
-                        <div class="mov-list-info">
-                            <div class="mov-list-title">
-                                <span>{{ m.titulo }}</span>
-                                {% if m.es_hormiga %}<span class="mini-pill is-warn">Hormiga</span>{% endif %}
-                            </div>
-                            <div class="mov-list-sub">{{ m.categoria }} · {{ m.fecha|date:"d M" }}</div>
+            {% if ultimos_movimientos %}
+            <div class="m-tx-surface">
+                {% for m in ultimos_movimientos %}
+                <a href="{% url 'detalle_movimiento' m.id %}" class="m-tx-row">
+                    <span class="app-cat-badge tone-{{ m.ui.tone }}">
+                        {% include 'includes/cat_icon.html' with icon=m.ui.icon %}
+                    </span>
+                    <div class="m-tx-info">
+                        <div class="m-tx-title">
+                            <span>{{ m.titulo }}</span>
+                            {% if m.es_hormiga %}<span class="m-tag-hormiga">Hormiga</span>{% endif %}
                         </div>
-                        <div class="mov-list-amount money-num {% if m.tipo == 'ingreso' %}is-income{% endif %}">
-                            {% if m.tipo == 'gasto' %}$ {{ m.monto_fmt }}{% else %}+$ {{ m.monto_fmt }}{% endif %}
-                        </div>
-                    </a>
-                    {% empty %}
-                    <p class="empty-note">Todavía no tienes movimientos registrados.</p>
-                    {% endfor %}
-                </div>
-            </section>
-
-            <section class="app-card visual-glass-card">
-                <div class="app-section-head">
-                    <h2>Resumen visual</h2>
-                    <form method="GET" action="{% url 'dashboard' %}">
-                        <label for="periodo" class="sr-only">Periodo</label>
-                        <select name="periodo" id="periodo" class="mini-select" onchange="this.form.submit()">
-                            <option value="semanal" {% if periodo == 'semanal' %}selected{% endif %}>Esta semana</option>
-                            <option value="mensual" {% if periodo == 'mensual' %}selected{% endif %}>Este mes</option>
-                        </select>
-                    </form>
-                </div>
-
-                <div class="visual-stat-row">
-                    <div class="visual-stat-chip is-in">
-                        <span>Ingresos</span>
-                        <strong class="money-num" id="resumen-ingresos-chip">+$ 0</strong>
+                        <div class="m-tx-sub">{{ m.categoria }} · {{ m.fecha_label }}</div>
                     </div>
-                    <div class="visual-stat-chip is-out">
-                        <span>Gastos</span>
-                        <strong class="money-num" id="resumen-gastos-chip">$ 0</strong>
+                    <div class="m-tx-amount money-num {% if m.tipo == 'ingreso' %}is-income{% endif %}">
+                        {% if m.tipo == 'gasto' %}-${{ m.monto_fmt }}{% else %}+${{ m.monto_fmt }}{% endif %}
                     </div>
-                </div>
-
-                <div class="chart-box-sm">
-                    <canvas id="graficaIngresosGastos"></canvas>
-                </div>
-                <div class="chart-box-sm chart-box-sm--donut" style="margin-top: 14px;">
-                    <canvas id="graficaCategorias"></canvas>
-                </div>
-            </section>
-        </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="m-empty-box">
+                <img src="{% static 'img/mishi/mishi-empty.png' %}" alt="" class="m-empty-cat" aria-hidden="true">
+                <h3>Sin movimientos todavía</h3>
+                <p>Registra tu primer gasto o ingreso en segundos.</p>
+                <button type="button" class="m-btn-pill is-primary" data-open-mov-sheet="gasto">Agregar movimiento</button>
+            </div>
+            {% endif %}
+        </section>
     </div>
 </div>
-
-{{ ingresos_periodo|json_script:"datos-ingresos" }}
-{{ gastos_periodo|json_script:"datos-gastos" }}
-{{ etiquetas_categorias|json_script:"etiquetas-categorias" }}
-{{ valores_categorias|json_script:"valores-categorias" }}
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/chart.umd.min.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const saldoEl = document.getElementById('saldo-valor');
-    const toggleBtn = document.getElementById('toggle-saldo-btn');
+    var saldoEl = document.getElementById('saldo-valor');
+    var toggleBtn = document.getElementById('toggle-saldo-btn');
+    var alertPill = document.getElementById('mishi-home-alert');
+
+    try {
+        if (alertPill && localStorage.getItem('mishi_alerts_muted') === '1') {
+            alertPill.style.display = 'none';
+        }
+    } catch (e) {}
+
     if (saldoEl && toggleBtn) {
-        let oculto = false;
+        var oculto = false;
+        try { oculto = localStorage.getItem('mishi_hide_balance') === '1'; } catch (e) {}
+
+        function renderBalance(animate) {
+            toggleBtn.classList.toggle('is-hidden', oculto);
+            toggleBtn.setAttribute('aria-pressed', oculto ? 'true' : 'false');
+            if (animate) {
+                saldoEl.classList.add('is-blur-swap');
+                window.setTimeout(function () {
+                    saldoEl.textContent = oculto ? '$••••••' : saldoEl.getAttribute('data-real');
+                    saldoEl.classList.remove('is-blur-swap');
+                }, 90);
+            } else {
+                saldoEl.textContent = oculto ? '$••••••' : saldoEl.getAttribute('data-real');
+            }
+        }
+
+        renderBalance(false);
         toggleBtn.addEventListener('click', function () {
             oculto = !oculto;
-            toggleBtn.setAttribute('aria-pressed', oculto ? 'true' : 'false');
-            saldoEl.classList.add('is-blur-swap');
-            setTimeout(function () {
-                saldoEl.textContent = oculto ? '$ ••••••' : saldoEl.getAttribute('data-real');
-                saldoEl.classList.remove('is-blur-swap');
-            }, 95);
+            try { localStorage.setItem('mishi_hide_balance', oculto ? '1' : '0'); } catch (e) {}
+            renderBalance(true);
         });
     }
-
-    const ingresos = JSON.parse(document.getElementById('datos-ingresos').textContent);
-    const gastos = JSON.parse(document.getElementById('datos-gastos').textContent);
-    const etiquetas = JSON.parse(document.getElementById('etiquetas-categorias').textContent);
-    const valores = JSON.parse(document.getElementById('valores-categorias').textContent);
-
-    const fmtCop = (n) => Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    const inChip = document.getElementById('resumen-ingresos-chip');
-    const outChip = document.getElementById('resumen-gastos-chip');
-    if (inChip) inChip.textContent = '+$ ' + fmtCop(ingresos);
-    if (outChip) outChip.textContent = '$ ' + fmtCop(gastos);
-
-    const barCtx = document.getElementById('graficaIngresosGastos').getContext('2d');
-    const barGreenGrad = barCtx.createLinearGradient(0, 0, 0, 180);
-    barGreenGrad.addColorStop(0, '#34D399');
-    barGreenGrad.addColorStop(1, '#189A88');
-    const barOrangeGrad = barCtx.createLinearGradient(0, 0, 0, 180);
-    barOrangeGrad.addColorStop(0, '#FFB35C');
-    barOrangeGrad.addColorStop(0.55, '#F97A22');
-    barOrangeGrad.addColorStop(1, '#E05E0A');
-
-    new Chart(barCtx, {
-        type: 'bar',
-        data: {
-            labels: ['Ingresos', 'Gastos'],
-            datasets: [{
-                label: 'COP',
-                data: [ingresos, gastos],
-                backgroundColor: [barGreenGrad, barOrangeGrad],
-                borderRadius: 14,
-                borderSkipped: false,
-                barPercentage: 0.42
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 750, easing: 'easeOutQuart' },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(31, 36, 45, 0.92)',
-                    cornerRadius: 12,
-                    padding: 10
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    border: { display: false },
-                    grid: { color: 'rgba(31, 36, 45, 0.055)' },
-                    ticks: { color: '#666A73', font: { size: 11 } }
-                },
-                x: {
-                    border: { display: false },
-                    grid: { display: false },
-                    ticks: { color: '#1F242D', font: { weight: '600', size: 12 } }
-                }
-            }
-        }
-    });
-
-    new Chart(document.getElementById('graficaCategorias'), {
-        type: 'doughnut',
-        data: {
-            labels: etiquetas.length ? etiquetas : ['Sin gastos en el periodo'],
-            datasets: [{
-                data: valores.length ? valores : [1],
-                backgroundColor: valores.length
-                    ? ['#F97A22', '#F5B82E', '#6466E9', '#22A06B', '#313846', '#E25563']
-                    : ['#EFECE2'],
-                borderColor: '#FFFFFF',
-                borderWidth: 2,
-                borderRadius: 5,
-                spacing: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 820, easing: 'easeOutQuart' },
-            cutout: '68%',
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        boxWidth: 9,
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        padding: 10,
-                        font: { size: 11, weight: '600' },
-                        color: '#313846'
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(31, 36, 45, 0.92)',
-                    cornerRadius: 12,
-                    padding: 10
-                }
-            }
-        }
-    });
 });
 </script>
 {% endblock %}

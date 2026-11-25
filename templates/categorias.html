@@ -41,7 +41,10 @@
             <span class="cat-dot-amt money-num">$ {{ c.total_fmt }}</span>
         </a>
         {% empty %}
-        <p class="empty-note" style="padding: 18px 4px; text-align: center;">No hay gastos registrados en este periodo.</p>
+        <div class="m-empty-box m-empty-box--compact">
+            <img src="{% static 'img/mishi/mishi-empty.png' %}" alt="" class="m-empty-cat" aria-hidden="true">
+            <p>No hay gastos registrados en este periodo.</p>
+        </div>
         {% endfor %}
     </section>
 </div>

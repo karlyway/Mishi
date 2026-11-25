@@ -5,18 +5,22 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from .models import Categoria, MetaAhorro, Presupuesto, Prestamo, Transaccion, Usuario
 from .ui_helpers import (
+    FRECUENCIA_ETIQUETAS,
     agrupar_categorias_gasto,
+    agrupar_movimientos_por_fecha,
     calcular_dias_frecuencia,
     calcular_resumen_usuario,
     enriquecer_metas,
     estilo_categoria,
+    etiqueta_fecha_movimiento,
     formatear_cop,
+    serie_evolucion_periodo,
     serie_semanal_gastos,
 )
 
@@ -173,6 +177,7 @@ def dashboard_view(request):
         ultimos_movimientos.append({
             'id': mov.idTransaccion,
             'fecha': mov.fecha,
+            'fecha_label': etiqueta_fecha_movimiento(mov.fecha, hoy),
             'titulo': mov.descripcion or mov.idCategoria.nombre,
             'categoria': mov.idCategoria.nombre,
             'tipo': mov.tipo.lower(),
@@ -280,6 +285,9 @@ def movimiento_view(request):
             )
 
             messages.success(request, 'Movimiento registrado correctamente.')
+            next_url = request.POST.get('next', '').strip()
+            if next_url.startswith('/app/') and not next_url.startswith('//'):
+                return redirect(next_url)
             return redirect('dashboard')
 
         except (InvalidOperation, ValueError, TypeError, Categoria.DoesNotExist):
@@ -287,6 +295,10 @@ def movimiento_view(request):
                 request,
                 'Verifica los datos. El monto mínimo es $100 y la fecha no puede ser futura.'
             )
+
+    tipo_inicial = request.GET.get('tipo', 'gasto').strip().lower()
+    if tipo_inicial not in ['gasto', 'ingreso']:
+        tipo_inicial = 'gasto'
 
     return render(request, 'registro.html', {
         'usuario': perfil,
@@ -297,6 +309,7 @@ def movimiento_view(request):
         'limite_diario_fmt': resumen['limite_diario_fmt'],
         'categorias': categorias,
         'categorias_ui': categorias_ui,
+        'tipo_inicial': tipo_inicial,
         'pestana_activa': 'movimiento',
     })
 
@@ -318,6 +331,11 @@ def historial_view(request):
     rango = request.GET.get('rango', '').strip()
     if rango not in ['mes', '3m', 'todos']:
         rango = ''
+
+    q = request.GET.get('q', '').strip()
+    tipo_filtro = request.GET.get('tipo', 'todos').strip().lower()
+    if tipo_filtro not in ['todos', 'gasto', 'ingreso']:
+        tipo_filtro = 'todos'
 
     fecha_inicio = request.GET.get('fecha_inicio', '').strip()
     fecha_fin = request.GET.get('fecha_fin', '').strip()
@@ -352,6 +370,14 @@ def historial_view(request):
         else:
             error_filtros = 'La categoría seleccionada no es válida.'
 
+    if tipo_filtro in ['gasto', 'ingreso']:
+        movimientos_db = movimientos_db.filter(tipo__iexact=tipo_filtro)
+
+    if q:
+        movimientos_db = movimientos_db.filter(
+            Q(descripcion__icontains=q) | Q(idCategoria__nombre__icontains=q)
+        )
+
     total_ingresos = movimientos_db.filter(
         tipo__iexact='ingreso'
     ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
@@ -374,27 +400,37 @@ def historial_view(request):
             'monto': m.monto,
             'monto_fmt': formatear_cop(m.monto),
             'fecha': m.fecha,
+            'fecha_label': etiqueta_fecha_movimiento(m.fecha, hoy),
             'es_hormiga': es_hormiga,
             'es_compartido': False,
             'ui': estilo_categoria(m.idCategoria.nombre),
         })
 
+    movimientos_agrupados = agrupar_movimientos_por_fecha(movimientos, hoy)
+    balance = total_ingresos - total_gastos
+
     context = {
         'usuario': perfil,
         'movimientos': movimientos,
+        'movimientos_agrupados': movimientos_agrupados,
+        'total_cantidad': len(movimientos),
         'total_ingresos': total_ingresos,
         'total_ingresos_fmt': formatear_cop(total_ingresos),
         'total_gastos': total_gastos,
         'total_gastos_fmt': formatear_cop(total_gastos),
-        'balance': total_ingresos - total_gastos,
-        'balance_fmt': formatear_cop(total_ingresos - total_gastos),
+        'balance': balance,
+        'balance_fmt': formatear_cop(abs(balance)),
+        'balance_positivo': balance >= 0,
         'barras_semana': serie_semanal_gastos(movimientos_base, hoy),
         'categorias': obtener_categorias(),
-        'rango': rango or 'mes',
+        'q': q,
+        'tipo_filtro': tipo_filtro,
+        'rango': rango or 'todos',
         'fecha_inicio': fecha_inicio,
         'fecha_fin': fecha_fin,
         'categoria_seleccionada': categoria_id,
         'filtros_activos': bool(fecha_inicio or fecha_fin or categoria_id or error_filtros),
+        'hay_busqueda_o_filtro': bool(q or tipo_filtro != 'todos' or fecha_inicio or fecha_fin or categoria_id or rango in ['mes', '3m']),
         'error_filtros': error_filtros,
         'pestana_activa': 'historial',
     }
@@ -586,12 +622,32 @@ def metas_view(request):
 
     metas = MetaAhorro.objects.filter(idUsuario=perfil).order_by('-idMeta')
     prestamos = Prestamo.objects.filter(idUsuario=perfil).order_by('estado', '-idPrestamo')
+    metas_ui = enriquecer_metas(metas, perfil=perfil, hoy=timezone.localdate())
+
+    total_ahorrado = sum((m['acumulado'] for m in metas_ui), Decimal('0.00'))
+    total_objetivo = sum((m['objetivo'] for m in metas_ui), Decimal('0.00'))
+    porcentaje_global = (
+        min(100, round(float(total_ahorrado / total_objetivo) * 100))
+        if total_objetivo > 0
+        else 0
+    )
+    metas_completadas_count = sum(1 for m in metas_ui if m['completada'])
+    metas_activas_count = len(metas_ui) - metas_completadas_count
+    prestamos_pendientes_count = prestamos.filter(estado='Pendiente').count()
+    tab_activo = 'prestamos' if request.GET.get('tab') == 'prestamos' else 'metas'
 
     context = {
         'usuario': perfil,
         'metas': metas,
-        'metas_ui': enriquecer_metas(metas),
+        'metas_ui': metas_ui,
         'prestamos': prestamos,
+        'total_ahorrado_fmt': formatear_cop(total_ahorrado),
+        'total_objetivo_fmt': formatear_cop(total_objetivo),
+        'porcentaje_global': porcentaje_global,
+        'metas_activas_count': metas_activas_count,
+        'metas_completadas_count': metas_completadas_count,
+        'prestamos_pendientes_count': prestamos_pendientes_count,
+        'tab_activo': tab_activo,
         'pestana_activa': 'metas',
     }
     return render(request, 'metas.html', context)
@@ -664,7 +720,7 @@ def categorias_view(request):
     })
 
 
-# Pantalla Mis Insights (Alertas inteligentes, hormiga y comparativo mensual)
+# Pantalla Estadísticas e Insights (analítica completa, gráficos, hormiga y ciclo)
 @login_required
 def insights_view(request):
     perfil = _obtener_perfil_autenticado(request)
@@ -677,15 +733,40 @@ def insights_view(request):
     fin_mes_pasado = inicio_mes - timedelta(days=1)
     inicio_mes_pasado = fin_mes_pasado.replace(day=1)
 
+    periodo = request.GET.get('periodo', 'mensual').strip().lower()
+    if periodo not in ['semanal', 'mensual', 'anual']:
+        periodo = 'mensual'
+
+    if periodo == 'semanal':
+        desde_periodo = hoy - timedelta(days=hoy.weekday())
+        etiqueta_periodo = 'Esta semana'
+    elif periodo == 'anual':
+        desde_periodo = hoy.replace(month=1, day=1)
+        etiqueta_periodo = f'Año {hoy.year}'
+    else:
+        desde_periodo = inicio_mes
+        etiqueta_periodo = 'Este mes'
+
+    movimientos_periodo = resumen['movimientos'].filter(
+        fecha__gte=desde_periodo,
+        fecha__lte=hoy,
+    )
+    ingresos_periodo = movimientos_periodo.filter(
+        tipo__iexact='ingreso'
+    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+    gastos_periodo_qs = movimientos_periodo.filter(tipo__iexact='gasto')
+    gastos_periodo = gastos_periodo_qs.aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+    balance_periodo = ingresos_periodo - gastos_periodo
+
     gastos_mes_qs = resumen['movimientos'].filter(
         tipo__iexact='gasto',
         fecha__gte=inicio_mes,
-        fecha__lte=hoy
+        fecha__lte=hoy,
     )
     gastos_mes_pasado = resumen['movimientos'].filter(
         tipo__iexact='gasto',
         fecha__gte=inicio_mes_pasado,
-        fecha__lte=fin_mes_pasado
+        fecha__lte=fin_mes_pasado,
     ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
     gastos_mes = resumen['gastos_mes']
@@ -698,16 +779,77 @@ def insights_view(request):
         monto__lte=Decimal('15000.00')
     ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
-    categorias_top, _ = agrupar_categorias_gasto(gastos_mes_qs)
+    hormiga_periodo_qs = gastos_periodo_qs.filter(monto__lte=Decimal('15000.00'))
+    hormiga_periodo = hormiga_periodo_qs.aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+    hormiga_count = hormiga_periodo_qs.count()
+
+    categorias_periodo, _ = agrupar_categorias_gasto(gastos_periodo_qs)
+    barras_evolucion = serie_evolucion_periodo(resumen['movimientos'], hoy, periodo)
+
+    if resumen['limite_superado']:
+        mishi_mood = 'alert'
+        mishi_titulo = 'Ojo con el límite de hoy'
+        mishi_mensaje = (
+            f"Llevas ${resumen['gasto_hoy_fmt']} hoy sobre tu límite diario de ${resumen['limite_diario_fmt']}. "
+            'Pausa los gastos pequeños el resto del día.'
+        )
+    elif resumen['alerta_activa']:
+        mishi_mood = 'alert'
+        mishi_titulo = 'Cerca de tu límite diario'
+        mishi_mensaje = (
+            f"Has usado el {resumen['porcentaje_gasto_hoy']}% de tu límite diario. "
+            'Revisa tus gastos hormiga antes de comprar.'
+        )
+    elif variacion < 0:
+        mishi_mood = 'celebrate'
+        mishi_titulo = 'Ritmo de ahorro saludable'
+        mishi_mensaje = (
+            f'Llevas {abs(variacion)}% menos en gastos que el mes pasado. '
+            'Buen momento para abonar a una meta.'
+        )
+    elif variacion > 0:
+        mishi_mood = 'alert'
+        mishi_titulo = f'Tus gastos subieron {variacion}%'
+        mishi_mensaje = (
+            f"Este mes acumulas ${resumen['gastos_mes_fmt']}. "
+            'Revisa tu categoría principal en la pestaña Gráficas.'
+        )
+    else:
+        mishi_mood = 'neutral'
+        mishi_titulo = 'Tu dinero va en equilibrio'
+        mishi_mensaje = (
+            f"Llevas ${resumen['gasto_hoy_fmt']} hoy de tu límite diario de ${resumen['limite_diario_fmt']} "
+            f"en tu ciclo {FRECUENCIA_ETIQUETAS.get(perfil.frecuencia, perfil.frecuencia).lower()}."
+        )
 
     return render(request, 'insights.html', {
         'usuario': perfil,
         'resumen': resumen,
+        'periodo': periodo,
+        'etiqueta_periodo': etiqueta_periodo,
+        'ingresos_periodo': float(ingresos_periodo),
+        'gastos_periodo': float(gastos_periodo),
+        'ingresos_periodo_fmt': formatear_cop(ingresos_periodo),
+        'gastos_periodo_fmt': formatear_cop(gastos_periodo),
+        'balance_periodo_fmt': formatear_cop(abs(balance_periodo)),
+        'balance_periodo_positivo': balance_periodo >= 0,
+        'etiquetas_categorias': [c['nombre'] for c in categorias_periodo],
+        'valores_categorias': [float(c['total']) for c in categorias_periodo],
+        'colores_categorias': [c['ui']['color'] for c in categorias_periodo],
+        'categorias_periodo': categorias_periodo,
+        'categorias_top': categorias_periodo[:4],
+        'barras_evolucion': barras_evolucion,
         'variacion': variacion,
         'variacion_abs': abs(variacion),
         'hormiga_mes_fmt': formatear_cop(hormiga_mes),
-        'categorias_top': categorias_top[:3],
-        'pestana_activa': 'dashboard',
+        'hormiga_periodo_fmt': formatear_cop(hormiga_periodo),
+        'hormiga_count': hormiga_count,
+        'mesada_fmt': formatear_cop(perfil.mesada),
+        'frecuencia_label': FRECUENCIA_ETIQUETAS.get(perfil.frecuencia, perfil.frecuencia),
+        'mishi_mood': mishi_mood,
+        'mishi_titulo': mishi_titulo,
+        'mishi_mensaje': mishi_mensaje,
+        'pestana_activa': 'insights',
     })
 
 
@@ -753,6 +895,11 @@ def perfil_view(request):
         'correo': request.user.email or request.user.username,
         'saldo_fmt': resumen['saldo_fmt'],
         'limite_diario_fmt': resumen['limite_diario_fmt'],
+        'mesada_fmt': formatear_cop(perfil.mesada),
+        'dias_restantes': resumen['dias_restantes'],
+        'frecuencia_label': FRECUENCIA_ETIQUETAS.get(perfil.frecuencia, perfil.frecuencia),
+        'alerta_activa': resumen['alerta_activa'],
+        'presupuesto_configurado': Presupuesto.objects.filter(idUsuario=perfil).exists(),
         'pestana_activa': 'perfil',
     })
 
@@ -802,6 +949,22 @@ def presupuestos_view(request):
     )
     categorias_gasto, _ = agrupar_categorias_gasto(gastos_mes_qs)
 
+    gastos_mes = resumen['gastos_mes']
+    disponible_mensual = max(limite_mensual_activo - gastos_mes, Decimal('0.00'))
+    excedente_mensual = max(gastos_mes - limite_mensual_activo, Decimal('0.00'))
+    porcentaje_mensual_real = (
+        round(float(gastos_mes / limite_mensual_activo) * 100)
+        if limite_mensual_activo > 0
+        else 0
+    )
+    porcentaje_mensual = min(100, porcentaje_mensual_real)
+    if gastos_mes > limite_mensual_activo:
+        estado_mensual = 'excedido'
+    elif porcentaje_mensual_real >= 75:
+        estado_mensual = 'preventivo'
+    else:
+        estado_mensual = 'ok'
+
     # Distribución orientativa sobre el presupuesto mensual para mostrar avance por categoría
     if not categorias_gasto:
         categorias_gasto = [
@@ -813,13 +976,19 @@ def presupuestos_view(request):
     tope_categoria = limite_mensual_activo / divisor
     barras_presupuesto = []
     for item in categorias_gasto:
-        pct = min(100, round(float(item['total'] / tope_categoria) * 100)) if tope_categoria > 0 else 0
+        pct_real = round(float(item['total'] / tope_categoria) * 100) if tope_categoria > 0 else 0
+        pct = min(100, pct_real)
+        excedido = item['total'] > tope_categoria
+        cerca = (not excedido) and pct_real >= 75
         barras_presupuesto.append({
             'nombre': item['nombre'],
             'gastado_fmt': item['total_fmt'],
             'tope_fmt': formatear_cop(round(tope_categoria)),
+            'disponible_fmt': formatear_cop(max(round(tope_categoria) - item['total'], Decimal('0.00'))),
             'porcentaje': pct,
-            'excedido': item['total'] > tope_categoria,
+            'porcentaje_real': pct_real,
+            'excedido': excedido,
+            'cerca': cerca,
             'ui': item['ui'],
         })
 
@@ -831,8 +1000,17 @@ def presupuestos_view(request):
         'limite_diario_fmt': formatear_cop(limite_diario_activo),
         'limite_mensual_fmt': formatear_cop(limite_mensual_activo),
         'gastos_mes_fmt': resumen['gastos_mes_fmt'],
+        'disponible_mensual_fmt': formatear_cop(disponible_mensual),
+        'excedente_mensual_fmt': formatear_cop(excedente_mensual),
+        'porcentaje_mensual': porcentaje_mensual,
+        'porcentaje_mensual_real': porcentaje_mensual_real,
+        'estado_mensual': estado_mensual,
+        'gasto_hoy_fmt': resumen['gasto_hoy_fmt'],
+        'porcentaje_gasto_hoy': resumen['porcentaje_gasto_hoy'],
+        'limite_superado_hoy': resumen['limite_superado'],
+        'alerta_hoy': resumen['alerta_activa'],
         'barras_presupuesto': barras_presupuesto,
-        'pestana_activa': 'perfil',
+        'pestana_activa': 'presupuestos',
     })
 
 

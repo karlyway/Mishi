@@ -1,75 +1,85 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Gastos y Movimientos - Mishi{% endblock %}
+{% block title %}Movimientos - Mishi{% endblock %}
 
 {% block content %}
-<div class="app-screen reveal">
-    <div class="app-page-topbar">
+<div class="app-screen app-screen--content reveal">
+    <header class="m-page-header">
         <div>
-            <p class="eyebrow-muted">Historial de transacciones</p>
-            <h1>Gastos</h1>
+            <p class="sr-only">Historial de transacciones</p>
+            <h1>Movimientos</h1>
+            <p class="m-page-sub">{{ total_cantidad }} registro{% if total_cantidad != 1 %}s{% endif %}</p>
         </div>
-        <div class="app-topbar-actions">
-            <button type="button" class="icon-circle-btn" id="toggle-filtros-btn" aria-label="Filtrar movimientos" aria-expanded="{% if filtros_activos %}true{% else %}false{% endif %}">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <div class="m-page-actions">
+            <button type="button" class="m-icon-btn {% if filtros_activos %}is-highlighted{% endif %}" id="toggle-filtros-btn" aria-label="Filtrar por fecha o categoría" aria-expanded="{% if filtros_activos %}true{% else %}false{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
                     <path d="M3 6h18M7 12h10M10 18h4"/>
                 </svg>
+                {% if filtros_activos %}<span class="m-bell-dot" aria-hidden="true"></span>{% endif %}
             </button>
-            <a href="{% url 'movimiento' %}" class="icon-circle-btn is-primary" aria-label="Agregar gasto">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+            <button type="button" class="m-icon-btn is-primary" data-open-mov-sheet="gasto" aria-label="Agregar movimiento">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
                     <path d="M12 5v14M5 12h14"/>
                 </svg>
-            </a>
+            </button>
         </div>
+    </header>
+
+    <form method="GET" action="{% url 'historial' %}" class="m-search-bar" id="historial-search-form" role="search">
+        <input type="hidden" name="tipo" value="{{ tipo_filtro }}">
+        {% if rango != 'todos' %}<input type="hidden" name="rango" value="{{ rango }}">{% endif %}
+        {% if fecha_inicio %}<input type="hidden" name="fecha_inicio" value="{{ fecha_inicio }}">{% endif %}
+        {% if fecha_fin %}<input type="hidden" name="fecha_fin" value="{{ fecha_fin }}">{% endif %}
+        {% if categoria_seleccionada %}<input type="hidden" name="categoria" value="{{ categoria_seleccionada }}">{% endif %}
+
+        <svg class="m-search-ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7.5"/><path d="m20 20-3.6-3.6"/>
+        </svg>
+        <label for="mov-search-input" class="sr-only">Buscar por descripción o categoría</label>
+        <input type="search" id="mov-search-input" name="q" value="{{ q }}" placeholder="Buscar almuerzo, transporte, mesada..." autocomplete="off">
+        {% if q %}
+        <a href="{% url 'historial' %}?tipo={{ tipo_filtro }}{% if rango != 'todos' %}&rango={{ rango }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}" class="m-search-clear" aria-label="Limpiar búsqueda">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </a>
+        {% endif %}
+    </form>
+
+    <div class="m-seg-links" role="tablist" aria-label="Filtrar por tipo de movimiento">
+        <a href="{% url 'historial' %}?tipo=todos{% if q %}&q={{ q|urlencode }}{% endif %}{% if rango != 'todos' %}&rango={{ rango }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if fecha_inicio %}&fecha_inicio={{ fecha_inicio }}{% endif %}{% if fecha_fin %}&fecha_fin={{ fecha_fin }}{% endif %}"
+           class="m-seg-link {% if tipo_filtro == 'todos' %}is-active{% endif %}">Todos</a>
+        <a href="{% url 'historial' %}?tipo=gasto{% if q %}&q={{ q|urlencode }}{% endif %}{% if rango != 'todos' %}&rango={{ rango }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if fecha_inicio %}&fecha_inicio={{ fecha_inicio }}{% endif %}{% if fecha_fin %}&fecha_fin={{ fecha_fin }}{% endif %}"
+           class="m-seg-link {% if tipo_filtro == 'gasto' %}is-active{% endif %}">Gastos</a>
+        <a href="{% url 'historial' %}?tipo=ingreso{% if q %}&q={{ q|urlencode }}{% endif %}{% if rango != 'todos' %}&rango={{ rango }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if fecha_inicio %}&fecha_inicio={{ fecha_inicio }}{% endif %}{% if fecha_fin %}&fecha_fin={{ fecha_fin }}{% endif %}"
+           class="m-seg-link {% if tipo_filtro == 'ingreso' %}is-active{% endif %}">Ingresos</a>
     </div>
 
-    <div class="pill-tabs-row">
-        <a href="{% url 'historial' %}?rango=mes" class="pill-tab {% if rango == 'mes' %}is-active{% endif %}">Este mes</a>
-        <a href="{% url 'historial' %}?rango=3m" class="pill-tab {% if rango == '3m' %}is-active{% endif %}">Últimos 3 meses</a>
-    </div>
-
-    <div class="gastos-hero-wrap">
-        <div class="app-card gastos-hero-summary">
-            <span class="gastos-hero-kicker">Resumen del periodo</span>
-            <div class="gastos-hero-total money-num">$ {{ total_gastos_fmt }}</div>
-            <div class="gastos-hero-label">Total gastado · Ingresos: <span class="text-success">+$ {{ total_ingresos_fmt }}</span></div>
-        </div>
-
-        <div class="app-card weekly-bars-card" aria-label="Gastos de esta semana de lunes a domingo">
-            <div class="weekly-bars-grid">
-                {% for b in barras_semana %}
-                <div class="weekly-bar-col {% if b.destacada and not b.vacia %}is-peak-col{% endif %}">
-                    <div class="weekly-bar-track">
-                        {% if b.destacada and not b.vacia %}
-                        <span class="weekly-bar-callout" aria-hidden="true">↗ ${{ b.total_fmt }}</span>
-                        {% endif %}
-                        <div class="weekly-bar-fill {% if b.destacada and not b.vacia %}is-peak{% endif %} {% if b.vacia %}is-empty{% endif %}"
-                             style="height: {{ b.altura }}%;"
-                             title="{{ b.fecha|date:'d M' }}: ${{ b.total_fmt }}">
-                            {% if not b.vacia %}<span class="weekly-bar-pct">{{ b.pct_semana }}%</span>{% endif %}
-                        </div>
-                    </div>
-                    <span class="weekly-bar-day {% if b.destacada and not b.vacia %}is-peak-day{% endif %}">{{ b.letra }}</span>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-
-    <section class="app-card filter-drawer {% if filtros_activos %}is-open{% endif %}" id="filtros-panel">
+    <section class="m-filter-panel {% if filtros_activos %}is-open{% endif %}" id="filtros-panel">
         <form method="GET" action="{% url 'historial' %}">
-            <div class="grid-3" style="margin-bottom: 0;">
-                <div class="form-group">
+            <input type="hidden" name="tipo" value="{{ tipo_filtro }}">
+            {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+
+            <div class="m-chip-row" aria-label="Accesos rápidos de fecha">
+                <a href="{% url 'historial' %}?tipo={{ tipo_filtro }}&rango=mes{% if q %}&q={{ q|urlencode }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}"
+                   class="m-filter-chip {% if rango == 'mes' and not fecha_inicio and not fecha_fin %}is-active{% endif %}">Este mes</a>
+                <a href="{% url 'historial' %}?tipo={{ tipo_filtro }}&rango=3m{% if q %}&q={{ q|urlencode }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}"
+                   class="m-filter-chip {% if rango == '3m' and not fecha_inicio and not fecha_fin %}is-active{% endif %}">3 meses</a>
+                <a href="{% url 'historial' %}?tipo={{ tipo_filtro }}&rango=todos{% if q %}&q={{ q|urlencode }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}"
+                   class="m-filter-chip {% if rango == 'todos' and not fecha_inicio and not fecha_fin %}is-active{% endif %}">Todo</a>
+            </div>
+
+            <div class="m-filter-grid">
+                <div class="m-field-group">
                     <label for="fecha_inicio">Desde</label>
-                    <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control app-field" value="{{ fecha_inicio }}">
+                    <input type="date" id="fecha_inicio" name="fecha_inicio" class="m-input" value="{{ fecha_inicio }}">
                 </div>
-                <div class="form-group">
+                <div class="m-field-group">
                     <label for="fecha_fin">Hasta</label>
-                    <input type="date" id="fecha_fin" name="fecha_fin" class="form-control app-field" value="{{ fecha_fin }}">
+                    <input type="date" id="fecha_fin" name="fecha_fin" class="m-input" value="{{ fecha_fin }}">
                 </div>
-                <div class="form-group">
+                <div class="m-field-group m-field-group--full">
                     <label for="categoria">Categoría</label>
-                    <select id="categoria" name="categoria" class="form-control app-field">
+                    <select id="categoria" name="categoria" class="m-input">
                         <option value="">Todas las categorías</option>
                         {% for cat in categorias %}
                             <option value="{{ cat.idCategoria }}"
@@ -82,71 +92,101 @@
             </div>
 
             {% if error_filtros %}
-                <div class="alert alert-danger" role="alert" style="margin-top: 8px;">{{ error_filtros }}</div>
+                <p class="m-inline-error" role="alert">{{ error_filtros }}</p>
             {% endif %}
 
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                <button type="submit" class="btn btn-primary btn-sm">Aplicar filtros</button>
-                <a href="{% url 'historial' %}?rango=todos" class="btn btn-secondary btn-sm">Ver todos</a>
+            <div class="m-filter-actions">
+                <button type="submit" class="m-btn-pill is-primary">Aplicar filtros</button>
+                <a href="{% url 'historial' %}" class="m-btn-pill is-ghost">Limpiar</a>
             </div>
         </form>
     </section>
 
-    <section class="app-section-block" style="margin-top: 18px;">
-        <div class="app-section-head">
-            <h2>Últimos movimientos</h2>
-            <a href="{% url 'categorias' %}" class="app-link-more">Por categoría &gt;</a>
+    <div class="m-summary-ribbon" aria-label="Totales filtrados">
+        <div class="m-ribbon-cell">
+            <span>Ingresos</span>
+            <strong class="money-num is-income">+${{ total_ingresos_fmt }}</strong>
         </div>
+        <span class="m-ribbon-sep" aria-hidden="true"></span>
+        <div class="m-ribbon-cell">
+            <span>Gastos</span>
+            <strong class="money-num">-${{ total_gastos_fmt }}</strong>
+        </div>
+        <span class="m-ribbon-sep" aria-hidden="true"></span>
+        <div class="m-ribbon-cell">
+            <span>Balance</span>
+            <strong class="money-num {% if balance_positivo %}is-income{% endif %}">{% if balance_positivo %}+{% else %}-{% endif %}${{ balance_fmt }}</strong>
+        </div>
+    </div>
 
-        <div class="app-card" style="padding: 8px 16px;">
-            <div class="mov-list">
-                {% for m in movimientos %}
-                <div class="mov-list-row-wrap">
-                    <a href="{% url 'detalle_movimiento' m.id %}" class="mov-list-item">
-                        <span class="app-cat-badge tone-{{ m.ui.tone }}">
-                            {% include 'includes/cat_icon.html' with icon=m.ui.icon %}
-                        </span>
-                        <div class="mov-list-info">
-                            <div class="mov-list-title">
-                                <span>{{ m.titulo }}</span>
-                                {% if m.es_hormiga %}<span class="mini-pill is-warn">Hormiga</span>{% endif %}
-                            </div>
-                            <div class="mov-list-sub">{{ m.categoria }} · {{ m.fecha|date:"d M Y" }}</div>
+    {% if movimientos_agrupados %}
+    <div class="m-date-groups">
+        {% for grupo in movimientos_agrupados %}
+        <section class="m-date-group" aria-label="Movimientos del {{ grupo.etiqueta }}">
+            <div class="m-date-group-head">
+                <span class="m-date-group-title">{{ grupo.etiqueta }}</span>
+                <span class="m-date-group-net money-num {% if grupo.es_positivo %}is-income{% endif %}">
+                    {% if grupo.es_positivo %}+{% else %}-{% endif %}${{ grupo.neto_abs_fmt }}
+                </span>
+            </div>
+
+            <div class="m-tx-surface">
+                {% for m in grupo.items %}
+                <a href="{% url 'detalle_movimiento' m.id %}" class="m-tx-row">
+                    <span class="app-cat-badge tone-{{ m.ui.tone }}">
+                        {% include 'includes/cat_icon.html' with icon=m.ui.icon %}
+                    </span>
+                    <div class="m-tx-info">
+                        <div class="m-tx-title">
+                            <span>{{ m.titulo }}</span>
+                            {% if m.es_hormiga %}<span class="m-tag-hormiga">Hormiga</span>{% endif %}
                         </div>
-                        <div class="mov-list-amount money-num {% if m.tipo == 'ingreso' %}is-income{% endif %}">
-                            {% if m.tipo == 'gasto' %}$ {{ m.monto_fmt }}{% else %}+$ {{ m.monto_fmt }}{% endif %}
-                        </div>
-                    </a>
-                    <div class="mov-row-actions">
-                        <a href="{% url 'editar_movimiento' m.id %}" class="mini-action-link">Editar</a>
-                        <form method="POST" action="{% url 'eliminar_movimiento' m.id %}" style="display:inline;" onsubmit="return confirm('¿Eliminar este movimiento?');">
-                            {% csrf_token %}
-                            <button type="submit" class="mini-action-link is-danger">Eliminar</button>
-                        </form>
+                        <div class="m-tx-sub">{{ m.categoria }}</div>
                     </div>
-                </div>
-                {% empty %}
-                <div style="padding: 20px 4px; text-align: center;">
-                    <p class="empty-note">Todavía no tienes movimientos en este filtro.</p>
-                    <a href="{% url 'movimiento' %}" class="btn btn-primary btn-sm" style="margin-top: 10px;">+ Registrar gasto</a>
-                </div>
+                    <div class="m-tx-right">
+                        <span class="m-tx-amount money-num {% if m.tipo == 'ingreso' %}is-income{% endif %}">
+                            {% if m.tipo == 'gasto' %}-${{ m.monto_fmt }}{% else %}+${{ m.monto_fmt }}{% endif %}
+                        </span>
+                        <svg class="m-tx-chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                    </div>
+                </a>
                 {% endfor %}
             </div>
+        </section>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="m-empty-box">
+        <img src="{% static 'img/mishi/mishi-empty.png' %}" alt="" class="m-empty-cat" aria-hidden="true">
+        <h3>Sin resultados</h3>
+        <p>{% if hay_busqueda_o_filtro %}No encontramos movimientos con esos filtros.{% else %}Aún no tienes movimientos registrados.{% endif %}</p>
+        <div class="m-empty-actions">
+            {% if hay_busqueda_o_filtro %}
+            <a href="{% url 'historial' %}" class="m-btn-pill is-ghost">Quitar filtros</a>
+            {% endif %}
+            <button type="button" class="m-btn-pill is-primary" data-open-mov-sheet="gasto">Agregar movimiento</button>
         </div>
-    </section>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const btn = document.getElementById('toggle-filtros-btn');
-    const panel = document.getElementById('filtros-panel');
+    var btn = document.getElementById('toggle-filtros-btn');
+    var panel = document.getElementById('filtros-panel');
     if (btn && panel) {
         btn.addEventListener('click', function () {
-            const abierto = panel.classList.toggle('is-open');
+            var abierto = panel.classList.toggle('is-open');
             btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
         });
+    }
+
+    var params = new URLSearchParams(window.location.search);
+    var searchInput = document.getElementById('mov-search-input');
+    if (params.get('focus') === '1' && searchInput) {
+        searchInput.focus();
     }
 });
 </script>

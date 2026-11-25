@@ -1,75 +1,131 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Presupuestos - Mishi{% endblock %}
 
 {% block content %}
-<div class="app-screen app-screen--narrow reveal">
-    <div class="app-sub-topbar">
-        <a href="{% url 'perfil' %}" class="icon-circle-btn" aria-label="Volver al perfil">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<div class="app-screen app-screen--content reveal">
+    <header class="m-sub-header">
+        <a href="{% url 'dashboard' %}" class="m-icon-btn" aria-label="Volver al inicio">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="m15 18-6-6 6-6"/>
             </svg>
         </a>
         <h1>Presupuestos</h1>
-        <span style="width: 38px;"></span>
-    </div>
+        <button type="button" class="m-link-pill" id="toggle-budget-form">Editar</button>
+    </header>
 
-    <p class="app-sub-lead">Establece tu límite diario y mensual para controlar tus gastos fácilmente.</p>
-
-    <div class="app-budget-summary-grid">
-        <div class="app-card" style="margin-bottom: 0; padding: 14px 16px;">
-            <div class="perfil-balance-lbl">Límite diario</div>
-            <div class="budget-mini-num money-num">$ {{ limite_diario_fmt }}</div>
-        </div>
-        <div class="app-card" style="margin-bottom: 0; padding: 14px 16px;">
-            <div class="perfil-balance-lbl">Límite mensual</div>
-            <div class="budget-mini-num money-num">$ {{ limite_mensual_fmt }}</div>
-        </div>
-    </div>
-
-    <div class="goals-stack">
-        {% for b in barras_presupuesto %}
-        <article class="app-card budget-cat-card">
-            <div class="budget-cat-top">
-                <span class="app-cat-badge tone-{{ b.ui.tone }}">
-                    {% include 'includes/cat_icon.html' with icon=b.ui.icon %}
+    <section class="m-budget-hero" aria-label="Resumen de presupuesto mensual">
+        <div class="m-budget-hero-top">
+            <div>
+                <span class="m-stats-kicker">
+                    {% if estado_mensual == 'excedido' %}Presupuesto excedido{% else %}Disponible este mes{% endif %}
                 </span>
-                <div class="budget-cat-info">
-                    <div class="budget-cat-row">
-                        <strong>{{ b.nombre }}</strong>
-                        <span class="budget-cat-pct money-num">{{ b.porcentaje }}%</span>
-                    </div>
-                    <div class="budget-cat-sub money-num">$ {{ b.gastado_fmt }} / $ {{ b.tope_fmt }} · mes</div>
-                    <div class="progress-track" style="margin-top: 8px;">
-                        <div class="progress-fill {% if b.excedido %}is-danger{% endif %}" style="width: {{ b.porcentaje }}%;"></div>
-                    </div>
+                <div class="m-budget-hero-val money-num {% if estado_mensual == 'excedido' %}is-danger{% endif %}">
+                    {% if estado_mensual == 'excedido' %}-${{ excedente_mensual_fmt }}{% else %}${{ disponible_mensual_fmt }}{% endif %}
                 </div>
             </div>
-        </article>
-        {% endfor %}
-    </div>
+            <span class="m-status-chip {% if estado_mensual == 'excedido' %}is-danger{% elif estado_mensual == 'preventivo' %}is-warn{% else %}is-ok{% endif %} money-num">
+                {{ porcentaje_mensual_real }}% usado
+            </span>
+        </div>
 
-    <button type="button" class="btn-soft-pill is-wide" id="toggle-budget-form" style="width: 100%; margin-top: 14px;">
-        Editar presupuestos
-    </button>
+        <div class="m-progress-track m-progress-track--lg">
+            <div class="m-progress-fill {% if estado_mensual == 'excedido' %}is-danger{% elif estado_mensual == 'preventivo' %}is-warn{% endif %}"
+                 style="width: {{ porcentaje_mensual }}%;"></div>
+        </div>
 
-    <section class="app-card filter-drawer" id="budget-form-panel" style="margin-top: 12px;">
+        <div class="m-budget-metrics">
+            <div>
+                <span>Utilizado</span>
+                <strong class="money-num">${{ gastos_mes_fmt }}</strong>
+            </div>
+            <div>
+                <span>Límite mensual</span>
+                <strong class="money-num">${{ limite_mensual_fmt }}</strong>
+            </div>
+            <div>
+                <span>Límite diario</span>
+                <strong class="money-num">${{ limite_diario_fmt }}</strong>
+            </div>
+        </div>
+    </section>
+
+    {% if estado_mensual != 'ok' or alerta_hoy %}
+    <section class="m-insight-banner is-alert">
+        <img src="{% static 'img/mishi/mishi-alert.png' %}" alt="" class="m-insight-mascot" aria-hidden="true">
+        <div class="m-insight-copy">
+            {% if estado_mensual == 'excedido' %}
+                <h2>Superaste tu presupuesto mensual</h2>
+                <p>Llevas ${{ gastos_mes_fmt }} sobre tu tope de ${{ limite_mensual_fmt }}. Ajusta tus límites o pausa gastos opcionales.</p>
+            {% elif limite_superado_hoy %}
+                <h2>Límite diario superado</h2>
+                <p>Hoy registras ${{ gasto_hoy_fmt }} frente a tu límite diario de ${{ limite_diario_fmt }}.</p>
+            {% else %}
+                <h2>Te acercas a tu límite</h2>
+                <p>Has consumido el {{ porcentaje_mensual_real }}% de tu presupuesto del mes. Revisa las categorías resaltadas.</p>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="m-filter-panel {% if not presupuesto %}is-open{% endif %}" id="budget-form-panel">
         <form method="POST" action="{% url 'presupuestos' %}">
             {% csrf_token %}
-            <div class="grid-2" style="margin-bottom: 0; gap: 12px;">
-                <div class="form-group">
+            <h2 class="m-panel-title">Configurar límites</h2>
+            <p class="m-panel-sub">Define cuánto quieres gastar al día y al mes para activar alertas oportunas.</p>
+
+            <div class="m-filter-grid">
+                <div class="m-field-group">
                     <label for="limite_diario">Límite diario (COP)</label>
-                    <input type="number" id="limite_diario" name="limite_diario" class="form-control app-field"
+                    <input type="number" id="limite_diario" name="limite_diario" class="m-input money-num"
                            min="100" step="100" value="{{ limite_diario_val }}" required>
                 </div>
-                <div class="form-group">
+                <div class="m-field-group">
                     <label for="limite_mensual">Límite mensual (COP)</label>
-                    <input type="number" id="limite_mensual" name="limite_mensual" class="form-control app-field"
+                    <input type="number" id="limite_mensual" name="limite_mensual" class="m-input money-num"
                            min="1000" step="1000" value="{{ limite_mensual_val }}" required>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-block-pill" style="margin-top: 8px;">Guardar límites</button>
+            <button type="submit" class="m-btn-pill is-primary m-btn-full" style="margin-top: 14px;">Guardar presupuestos</button>
         </form>
+    </section>
+
+    <section class="m-clean-section">
+        <div class="m-section-head">
+            <h2>Por categoría</h2>
+            <span class="m-section-meta">Referencia mensual</span>
+        </div>
+
+        <div class="m-surface-box m-surface-box--flush">
+            {% for b in barras_presupuesto %}
+            <div class="m-cat-bar-row m-cat-bar-row--static">
+                <span class="app-cat-badge tone-{{ b.ui.tone }}">
+                    {% include 'includes/cat_icon.html' with icon=b.ui.icon %}
+                </span>
+                <div class="m-cat-bar-main">
+                    <div class="m-cat-bar-top">
+                        <span class="m-cat-bar-name">
+                            {{ b.nombre }}
+                            {% if b.excedido %}
+                                <span class="m-status-chip is-danger">Excedido</span>
+                            {% elif b.cerca %}
+                                <span class="m-status-chip is-warn">Cerca</span>
+                            {% endif %}
+                        </span>
+                        <span class="m-cat-bar-val money-num">{{ b.porcentaje_real }}%</span>
+                    </div>
+                    <div class="m-cat-bar-sub money-num">
+                        <span>${{ b.gastado_fmt }} de ${{ b.tope_fmt }}</span>
+                        <span>{% if b.excedido %}Límite superado{% else %}Disp. ${{ b.disponible_fmt }}{% endif %}</span>
+                    </div>
+                    <div class="m-progress-track">
+                        <div class="m-progress-fill {% if b.excedido %}is-danger{% elif b.cerca %}is-warn{% endif %}" style="width: {{ b.porcentaje }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </section>
 </div>
 {% endblock %}
@@ -77,11 +133,12 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const btn = document.getElementById('toggle-budget-form');
-    const panel = document.getElementById('budget-form-panel');
+    var btn = document.getElementById('toggle-budget-form');
+    var panel = document.getElementById('budget-form-panel');
     if (btn && panel) {
         btn.addEventListener('click', function () {
-            panel.classList.toggle('is-open');
+            var opened = panel.classList.toggle('is-open');
+            btn.textContent = opened ? 'Cerrar' : 'Editar';
         });
     }
 });

@@ -1,47 +1,247 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Iniciar Sesion - Mishi{% endblock %}
+{% block title %}Iniciar sesion - Mishi{% endblock %}
 
 {% block content %}
-<div class="auth-app-shell reveal">
-    <div class="auth-mascot-hero">
-        <img src="{% static 'img/mishi-hero.png' %}" alt="Mishi" class="auth-mascot-img" width="565" height="513">
-        <div class="auth-brand-title">mishi</div>
-        <p class="auth-brand-sub">Tu plata, bajo control.</p>
+<section class="auth-split-wrap auth-split-wrap--login reveal{% if error or request.GET.form %} is-mob-form-open{% endif %}" id="auth-login-shell" aria-label="Inicio de sesión">
+    <div class="auth-mob-bg" aria-hidden="true">
+        <img src="{% static 'img/mishi/Gato atigrado asomándose entre ondas crema.png' %}"
+             alt=""
+             class="auth-mob-bg-img"
+             width="875"
+             height="1798"
+             decoding="async"
+             fetchpriority="high">
     </div>
 
-    <div class="card auth-card">
-        <h1 style="font-size: 23px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 4px;">Iniciar sesion</h1>
-        <p style="font-size: 13.5px; color: var(--fg-muted); margin-bottom: 20px;">Ingresa a tu cuenta de estudiante</p>
+    <div class="auth-mob-corner-blob" aria-hidden="true"></div>
 
-        <form action="{% url 'login' %}" method="POST">
-            {% csrf_token %}
+    <a href="{% url 'landing' %}" class="auth-mob-home-btn" aria-label="Volver al inicio">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m15 18-6-6 6-6"/>
+        </svg>
+    </a>
 
-            {% if error %}
-                <div class="alert alert-danger" role="alert">{{ error }}</div>
-            {% endif %}
-
-            <div class="form-group">
-                <label for="usuario">Correo electrónico o usuario</label>
-                <input type="text" id="usuario" name="usuario" class="form-control app-field"
-                       placeholder="usuario@universidad.edu.co" autocomplete="username" required value="">
-            </div>
-
-            <div class="form-group">
-                <label for="password">Contraseña</label>
-                <input type="password" id="password" name="password" class="form-control app-field"
-                       placeholder="••••••••" autocomplete="current-password" required value="">
-            </div>
-
-            <div style="margin-top: 20px;">
-                <button type="submit" class="btn btn-primary btn-block-pill">Ingresar</button>
-            </div>
-        </form>
-
-        <div style="margin-top: 18px; text-align: center; font-size: 13px; color: var(--fg-muted);">
-            ¿No tienes cuenta? <a href="{% url 'registro_usuario' %}" style="color: var(--orange-text); font-weight: 700;">Crear cuenta</a>
+    <div class="auth-mob-welcome" id="auth-mob-welcome">
+        <h2 class="auth-mob-title">
+            Organiza<br>
+            tus finanzas<br>
+            con Mishi
+            <svg class="auth-mob-burst" width="26" height="24" viewBox="0 0 28 26" fill="none" aria-hidden="true">
+                <path d="M5 12L9 3" stroke="#F97A22" stroke-width="3.2" stroke-linecap="round"/>
+                <path d="M10 15L19 8" stroke="#F97A22" stroke-width="3.2" stroke-linecap="round"/>
+                <path d="M12 20L23 18" stroke="#F97A22" stroke-width="3.2" stroke-linecap="round"/>
+            </svg>
+        </h2>
+        <p class="auth-mob-copy">
+            Registra tus ingresos y gastos, define metas y toma el control de tu dinero.
+        </p>
+        <div class="auth-mob-actions">
+            <button type="button" class="auth-mob-start-btn" data-open-mob-login>Comenzar</button>
+            <button type="button" class="auth-mob-arrow-btn" data-open-mob-login aria-label="Ir a iniciar sesión">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6"/>
+                </svg>
+            </button>
         </div>
     </div>
-</div>
+
+    <div class="auth-split-card">
+        <div class="auth-split-visual" aria-hidden="true">
+            <img src="{% static 'img/mishi/login-banner.jpg' %}"
+                 alt="Gestiona tus finanzas con Mishi"
+                 class="auth-split-banner"
+                 width="414"
+                 height="536"
+                 decoding="async"
+                 fetchpriority="high">
+        </div>
+
+        <div class="auth-split-form">
+            <button type="button" class="auth-mob-top-back" id="auth-mob-back-btn" aria-label="Volver a la portada">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m15 18-6-6 6-6"/>
+                </svg>
+            </button>
+
+            <div class="auth-split-brand">
+                <img src="{% static 'img/mishi-icon.png' %}" alt="Mishi" width="56" height="56">
+                <span>mishi</span>
+            </div>
+
+            <div class="auth-split-head">
+                <h1>
+                    <span class="auth-head-desk">¡Bienvenido de nuevo! <span class="auth-sparkle" aria-hidden="true"></span></span>
+                    <span class="auth-head-mob">Inicia sesión</span>
+                </h1>
+                <p>
+                    <span class="auth-head-desk">Inicia sesión en tu cuenta</span>
+                    <span class="auth-head-mob">Continúa organizando tus finanzas con Mishi.</span>
+                </p>
+            </div>
+
+            <form action="{% url 'login' %}" method="POST" class="auth-modern-form" id="mishi-login-form" novalidate>
+                {% csrf_token %}
+
+                {% if error %}
+                    <div class="alert alert-danger" role="alert">{{ error }}</div>
+                {% endif %}
+
+                <div class="auth-field-wrap" data-field-wrap>
+                    <div class="auth-input-group">
+                        <label for="usuario" class="sr-only">Correo electrónico o usuario</label>
+                        <span class="auth-input-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="4" width="20" height="16" rx="3"/>
+                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                            </svg>
+                        </span>
+                        <input type="text" id="usuario" name="usuario" class="auth-input"
+                               placeholder="Correo electrónico" autocomplete="username" required value=""
+                               data-msg-empty="Ingresa tu correo o usuario.">
+                    </div>
+                    <p class="auth-field-error" role="alert" aria-live="polite"></p>
+                </div>
+
+                <div class="auth-field-wrap" data-field-wrap>
+                    <div class="auth-input-group">
+                        <label for="password" class="sr-only">Contraseña</label>
+                        <span class="auth-input-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="4" y="11" width="16" height="10" rx="2.5"/>
+                                <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                            </svg>
+                        </span>
+                        <input type="password" id="password" name="password" class="auth-input auth-input--has-eye"
+                               placeholder="Contraseña" autocomplete="current-password" required value=""
+                               data-msg-empty="Escribe tu contraseña.">
+                        <button type="button" class="auth-eye-btn" id="toggle-login-pass" aria-label="Mostrar u ocultar contraseña" aria-pressed="false">
+                            <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg class="eye-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                                <path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                                <line x1="2" y1="2" x2="22" y2="22"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="auth-field-error" role="alert" aria-live="polite"></p>
+                </div>
+
+                <button type="submit" class="auth-submit-btn">Iniciar sesión</button>
+            </form>
+
+            <div class="auth-split-divider" aria-hidden="true">
+                <span></span>
+                <small>o</small>
+                <span></span>
+            </div>
+
+            <p class="auth-split-footer">
+                ¿Aún no tienes una cuenta?
+                <a href="{% url 'registro_usuario' %}">Regístrate</a>
+            </p>
+        </div>
+    </div>
+
+    <div class="auth-mob-wave-footer is-with-cat" aria-hidden="true">
+        <svg class="auth-mob-wave-svg" viewBox="0 0 390 64" preserveAspectRatio="none">
+            <path d="M0,22 C85,2 145,48 235,34 C305,23 350,8 390,18 L390,64 L0,64 Z" fill="#FCECD9" fill-opacity="0.72"/>
+        </svg>
+        <img src="{% static 'img/mishi/mishi-peek.png' %}" alt="" class="auth-mob-peek-cat" width="208" height="155">
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var btn = document.getElementById('toggle-login-pass');
+    var input = document.getElementById('password');
+    if (btn && input) {
+        btn.addEventListener('click', function () {
+            var visible = input.type === 'text';
+            input.type = visible ? 'password' : 'text';
+            btn.classList.toggle('is-visible', !visible);
+            btn.setAttribute('aria-pressed', String(!visible));
+        });
+    }
+
+    var shell = document.getElementById('auth-login-shell');
+    var openBtns = document.querySelectorAll('[data-open-mob-login]');
+    var backBtn = document.getElementById('auth-mob-back-btn');
+    var userInput = document.getElementById('usuario');
+
+    if (shell && openBtns.length) {
+        openBtns.forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                shell.classList.add('is-mob-form-open');
+                if (userInput) {
+                    window.setTimeout(function () { userInput.focus(); }, 220);
+                }
+            });
+        });
+    }
+
+    if (shell && backBtn) {
+        backBtn.addEventListener('click', function () {
+            shell.classList.remove('is-mob-form-open');
+        });
+    }
+
+    var form = document.getElementById('mishi-login-form');
+    if (form) {
+        var setFieldError = function (inputEl, msg) {
+            var wrap = inputEl.closest('[data-field-wrap]');
+            if (!wrap) return;
+            var errEl = wrap.querySelector('.auth-field-error');
+            if (msg) {
+                wrap.classList.add('is-invalid');
+                inputEl.setAttribute('aria-invalid', 'true');
+                if (errEl) errEl.textContent = msg;
+            } else {
+                wrap.classList.remove('is-invalid');
+                inputEl.removeAttribute('aria-invalid');
+                if (errEl) errEl.textContent = '';
+            }
+        };
+
+        var validateField = function (inputEl) {
+            var val = inputEl.value.trim();
+            if (inputEl.hasAttribute('required') && !val) {
+                setFieldError(inputEl, inputEl.dataset.msgEmpty || 'Completa este campo.');
+                return false;
+            }
+            setFieldError(inputEl, '');
+            return true;
+        };
+
+        var inputs = Array.from(form.querySelectorAll('input[required]'));
+        inputs.forEach(function (inp) {
+            inp.addEventListener('input', function () {
+                if (inp.closest('[data-field-wrap]').classList.contains('is-invalid')) {
+                    validateField(inp);
+                }
+            });
+            inp.addEventListener('blur', function () {
+                if (inp.value.trim() !== '') validateField(inp);
+            });
+        });
+
+        form.addEventListener('submit', function (e) {
+            var firstBad = null;
+            inputs.forEach(function (inp) {
+                if (!validateField(inp) && !firstBad) firstBad = inp;
+            });
+            if (firstBad) {
+                e.preventDefault();
+                firstBad.focus();
+            }
+        });
+    }
+})();
+</script>
 {% endblock %}

@@ -67,6 +67,126 @@ ESTILO_POR_DEFECTO = {
 }
 
 DIAS_SEMANA_INICIAL = ('L', 'M', 'M', 'J', 'V', 'S', 'D')
+MESES_CORTOS_ES = (
+    'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+    'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+)
+FRECUENCIA_ETIQUETAS = {
+    'diario': 'Diario',
+    'semanal': 'Semanal',
+    'quincenal': 'Quincenal',
+    'mensual': 'Mensual',
+}
+
+
+def etiqueta_fecha_movimiento(fecha, hoy=None):
+    """Retorna una etiqueta natural en español para agrupar transacciones por fecha."""
+    hoy = hoy or timezone.localdate()
+    if fecha == hoy:
+        return 'Hoy'
+    if fecha == hoy - timedelta(days=1):
+        return 'Ayer'
+    mes = MESES_CORTOS_ES[fecha.month - 1]
+    if fecha.year == hoy.year:
+        return f'{fecha.day} {mes}'
+    return f'{fecha.day} {mes} {fecha.year}'
+
+
+def agrupar_movimientos_por_fecha(movimientos, hoy=None):
+    """Agrupa movimientos (ya ordenados descendentemente) por fecha con balance diario."""
+    hoy = hoy or timezone.localdate()
+    grupos = []
+    por_fecha = {}
+    for mov in movimientos:
+        f = mov['fecha']
+        if f not in por_fecha:
+            mes = MESES_CORTOS_ES[f.month - 1]
+            grupo = {
+                'fecha': f,
+                'etiqueta': etiqueta_fecha_movimiento(f, hoy),
+                'fecha_corta': f'{f.day} {mes}',
+                'neto': Decimal('0.00'),
+                'items': [],
+            }
+            por_fecha[f] = grupo
+            grupos.append(grupo)
+        grupo = por_fecha[f]
+        grupo['items'].append(mov)
+        if mov['tipo'] == 'ingreso':
+            grupo['neto'] += mov['monto']
+        else:
+            grupo['neto'] -= mov['monto']
+
+    for g in grupos:
+        g['es_positivo'] = g['neto'] >= 0
+        g['neto_abs_fmt'] = formatear_cop(abs(g['neto']))
+    return grupos
+
+
+def serie_evolucion_periodo(movimientos_qs, hoy, periodo='mensual'):
+    """Retorna barras de evolución de gastos para periodo semanal, mensual o anual."""
+    if periodo == 'semanal':
+        return serie_semanal_gastos(movimientos_qs, hoy)
+
+    buckets = []
+    if periodo == 'anual':
+        # Últimos 6 meses incluyendo el mes actual
+        anio = hoy.year
+        mes = hoy.month
+        meses_lista = []
+        for _ in range(6):
+            meses_lista.append((anio, mes))
+            mes -= 1
+            if mes == 0:
+                mes = 12
+                anio -= 1
+        meses_lista.reverse()
+        for a, m in meses_lista:
+            inicio = hoy.replace(year=a, month=m, day=1)
+            if m == 12:
+                siguiente = inicio.replace(year=a + 1, month=1, day=1)
+            else:
+                siguiente = inicio.replace(month=m + 1, day=1)
+            fin = min(siguiente - timedelta(days=1), hoy)
+            total = movimientos_qs.filter(
+                tipo__iexact='gasto',
+                fecha__gte=inicio,
+                fecha__lte=fin,
+            ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+            buckets.append((MESES_CORTOS_ES[m - 1].capitalize(), inicio, total))
+    else:
+        # Mensual: 4-5 semanas dentro del mes actual
+        inicio_mes = hoy.replace(day=1)
+        idx = 1
+        cursor = inicio_mes
+        while cursor <= hoy and idx <= 5:
+            fin_sem = min(cursor + timedelta(days=6), hoy)
+            total = movimientos_qs.filter(
+                tipo__iexact='gasto',
+                fecha__gte=cursor,
+                fecha__lte=fin_sem,
+            ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+            buckets.append((f'S{idx}', cursor, total))
+            cursor = fin_sem + timedelta(days=1)
+            idx += 1
+
+    maximo = max((t for _, _, t in buckets), default=Decimal('0.00'))
+    total_periodo = sum((t for _, _, t in buckets), Decimal('0.00'))
+    barras = []
+    for etiqueta, fecha_ref, total in buckets:
+        altura = round(float(total / maximo) * 100) if maximo > 0 else 12
+        pct = round(float(total / total_periodo) * 100) if total_periodo > 0 else 0
+        barras.append({
+            'letra': etiqueta,
+            'fecha': fecha_ref,
+            'total': total,
+            'total_fmt': formatear_cop(total),
+            'pct_semana': pct,
+            'altura': max(34, altura) if total > 0 else 22,
+            'vacia': total == 0,
+            'destacada': maximo > 0 and total == maximo,
+        })
+    return barras
 
 
 def estilo_categoria(nombre):
@@ -249,8 +369,15 @@ def serie_semanal_gastos(movimientos_qs, hoy):
     return barras
 
 
-def enriquecer_metas(metas_qs):
-    """Añade faltante, porcentaje acotado e icono visual a cada MetaAhorro."""
+def enriquecer_metas(metas_qs, perfil=None, hoy=None):
+    """Añade faltante, porcentaje acotado, fecha estimada e icono visual a cada MetaAhorro."""
+    hoy = hoy or timezone.localdate()
+    ahorro_diario_est = Decimal('0.00')
+    if perfil is not None and perfil.mesada and perfil.mesada > 0:
+        dias_ciclo = max(calcular_dias_frecuencia(perfil.frecuencia), 1)
+        # Estimación realista: destinando 15% de la mesada por ciclo a ahorro
+        ahorro_diario_est = (perfil.mesada * Decimal('0.15')) / Decimal(dias_ciclo)
+
     lista = []
     for meta in metas_qs:
         objetivo = meta.objetivo or Decimal('0.00')
@@ -260,6 +387,18 @@ def enriquecer_metas(metas_qs):
             porcentaje = min(100, round(float(acumulado / objetivo) * 100))
         else:
             porcentaje = 0
+        completada = faltante == 0 and objetivo > 0
+
+        if completada:
+            fecha_estimada_lbl = 'Meta completada'
+        elif ahorro_diario_est > 0 and faltante > 0:
+            dias_est = max(1, min(1825, int((faltante / ahorro_diario_est).to_integral_value())))
+            fecha_est = hoy + timedelta(days=dias_est)
+            mes_est = MESES_CORTOS_ES[fecha_est.month - 1]
+            fecha_estimada_lbl = f'Est. {mes_est} {fecha_est.year}'
+        else:
+            fecha_estimada_lbl = 'Sin fecha estimada'
+
         lista.append({
             'obj': meta,
             'idMeta': meta.idMeta,
@@ -271,7 +410,8 @@ def enriquecer_metas(metas_qs):
             'acumulado_fmt': formatear_cop(acumulado),
             'faltante_fmt': formatear_cop(faltante),
             'porcentaje': porcentaje,
-            'completada': faltante == 0 and objetivo > 0,
+            'completada': completada,
+            'fecha_estimada_lbl': fecha_estimada_lbl,
             'ui': estilo_categoria(meta.categoria or meta.nombre),
         })
     return lista
