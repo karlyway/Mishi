@@ -1,8 +1,8 @@
 from decimal import Decimal
 
-from django.db import models
-
 from django.conf import settings
+from django.db import models
+from django.utils import timezone
 
 class Usuario(models.Model):
     idUsuario = models.AutoField(primary_key=True, db_column='idUsuario')
@@ -78,6 +78,12 @@ class Usuario(models.Model):
         default=''
     )
 
+    umbral_hormiga = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('15000.00')
+    )
+
     def save(self, *args, **kwargs):
         if self._state.adding and self.saldo_inicial is None:
             self.saldo_inicial = self.mesada
@@ -110,17 +116,86 @@ class MetaAhorro(models.Model):
     categoria = models.CharField(max_length=100, default='General')
     objetivo = models.DecimalField(max_digits=10, decimal_places=2)
     acumulado = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    fecha_objetivo = models.DateField(null=True, blank=True)
+    creada_en = models.DateField(null=True, blank=True)
 
     class Meta:
         db_table = 'Meta_Ahorro'
 
 
+class AporteMeta(models.Model):
+    idAporte = models.AutoField(primary_key=True, db_column='idAporte')
+    idMeta = models.ForeignKey(
+        MetaAhorro,
+        on_delete=models.CASCADE,
+        db_column='idMeta',
+        related_name='aportes',
+    )
+    idUsuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        db_column='idUsuario',
+        related_name='aportes_metas',
+    )
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha = models.DateField(default=timezone.localdate)
+    nota = models.CharField(max_length=120, blank=True, default='')
+
+    class Meta:
+        db_table = 'Aporte_Meta'
+        ordering = ['-fecha', '-idAporte']
+        indexes = [
+            models.Index(fields=['idUsuario', 'fecha'], name='idx_aporte_usr_fecha'),
+        ]
+
+
 class Categoria(models.Model):
     idCategoria = models.AutoField(primary_key=True, db_column='idCategoria')
     nombre = models.CharField(max_length=100)
+    idUsuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        db_column='idUsuario',
+        null=True,
+        blank=True,
+        related_name='categorias_personalizadas',
+    )
+    es_personalizada = models.BooleanField(default=False)
+    tipo_aplicable = models.CharField(max_length=20, default='ambos')
+    tono = models.CharField(max_length=20, blank=True, default='')
 
     class Meta:
         db_table = 'Categoria'
+        indexes = [
+            models.Index(fields=['idUsuario', 'nombre'], name='idx_cat_usuario_nombre'),
+        ]
+
+
+class PresupuestoCategoria(models.Model):
+    idPresupuestoCat = models.AutoField(primary_key=True, db_column='idPresupuestoCat')
+    idUsuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        db_column='idUsuario',
+        related_name='presupuestos_categoria',
+    )
+    idCategoria = models.ForeignKey(
+        Categoria,
+        on_delete=models.CASCADE,
+        db_column='idCategoria',
+        related_name='presupuestos_categoria',
+    )
+    limiteMensual = models.DecimalField(max_digits=10, decimal_places=2)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'Presupuesto_Categoria'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['idUsuario', 'idCategoria'],
+                name='uniq_pres_cat_usuario_categoria',
+            ),
+        ]
 
 
 class Transaccion(models.Model):
@@ -155,9 +230,18 @@ class Prestamo(models.Model):
     deudor = models.CharField(max_length=100)
     concepto = models.CharField(max_length=255, default='')
     fecha = models.DateField(auto_now_add=True)
+    fecha_limite = models.DateField(null=True, blank=True)
+    fecha_pago = models.DateField(null=True, blank=True)
     tipo = models.CharField(max_length=50, default='Por cobrar')
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     estado = models.CharField(max_length=50, default='Pendiente')
+    transaccion_pago = models.OneToOneField(
+        Transaccion,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='prestamo_liquidado',
+    )
 
     class Meta:
         db_table = 'Prestamo'
@@ -165,6 +249,14 @@ class Prestamo(models.Model):
 
 class GastoCompartido(models.Model):
     idGastoComp = models.AutoField(primary_key=True, db_column='idGastoComp')
+    idUsuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        db_column='idUsuario',
+        null=True,
+        blank=True,
+        related_name='gastos_compartidos',
+    )
     idTransaccion = models.OneToOneField(
         Transaccion,
         on_delete=models.CASCADE,
@@ -173,10 +265,14 @@ class GastoCompartido(models.Model):
     )
     descripcion = models.CharField(max_length=255)
     montoTotal = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=50)
+    mi_parte = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    yo_pague_total = models.BooleanField(default=True)
+    estado = models.CharField(max_length=50, default='Pendiente')
+    creado_en = models.DateField(default=timezone.localdate)
 
     class Meta:
         db_table = 'GastoCompartido'
+        ordering = ['-creado_en', '-idGastoComp']
 
 
 class Participante(models.Model):
@@ -185,9 +281,19 @@ class Participante(models.Model):
         GastoCompartido,
         on_delete=models.CASCADE,
         db_column='idGastoComp',
+        related_name='participantes',
     )
     nombreAmigo = models.CharField(max_length=100)
     parteAportada = models.DecimalField(max_digits=10, decimal_places=2)
+    pagado = models.BooleanField(default=False)
+    fecha_pago = models.DateField(null=True, blank=True)
+    transaccion_reembolso = models.OneToOneField(
+        Transaccion,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reembolso_participante',
+    )
 
     class Meta:
         db_table = 'Participante'
