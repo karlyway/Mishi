@@ -10112,3 +10112,245 @@ body.is-sheet-open {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* ==========================================================================
+   13. FASE 3: CATEGORÍAS, METAS, PRESUPUESTOS, COMPARTIDOS E INSIGHTS (Aditivos)
+   ========================================================================== */
+
+.m-tag-compartido {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+    background-color: #E7E7FB;
+    color: #4A4CC7;
+    font-size: 10.5px;
+    font-weight: 700;
+}
+
+.m-f3-cat-item {
+    border-bottom: 1px solid var(--app-hairline);
+    padding: 10px 0;
+}
+
+.m-f3-cat-item:last-child {
+    border-bottom: none;
+}
+
+.m-f3-cat-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.m-f3-cat-actions,
+.m-f3-goal-btns,
+.m-f3-part-tools,
+.m-f3-cat-val-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.m-f3-mini-btn {
+    border: 1px solid var(--app-hairline);
+    background-color: var(--app-canvas);
+    color: var(--carbon);
+    border-radius: var(--radius-pill);
+    padding: 5px 11px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .m-f3-mini-btn:hover {
+        background-color: var(--app-orange-pill);
+        color: var(--app-orange-ink);
+    }
+}
+
+.m-f3-del-mini {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: rgba(31, 36, 45, 0.38);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .m-f3-del-mini:hover {
+        background-color: var(--red-soft);
+        color: var(--red);
+    }
+}
+
+.m-f3-empty-note {
+    margin: 0;
+    padding: 10px 2px;
+    font-size: 13px;
+    line-height: 1.48;
+    color: var(--fg-muted);
+}
+
+.m-f3-meta-quota {
+    margin: 6px 0 0;
+    padding: 7px 11px;
+    border-radius: 12px;
+    background-color: #FFF8F2;
+    color: var(--app-orange-ink);
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.m-f3-meta-quota.is-warn {
+    background-color: var(--red-soft);
+    color: var(--red);
+}
+
+.m-f3-loan-pay-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.m-f3-loan-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--fg-muted);
+    cursor: pointer;
+}
+
+.m-f3-loan-opt input {
+    accent-color: var(--orange);
+    cursor: pointer;
+}
+
+.m-f3-part-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 14px 0 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--fg-muted);
+}
+
+.m-f3-part-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.m-f3-part-inputs {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 8px;
+}
+
+.m-f3-comp-parts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--app-hairline);
+}
+
+.m-f3-part-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.m-f3-part-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    color: var(--carbon);
+}
+
+.m-f3-part-info span {
+    color: var(--fg-muted);
+    font-weight: 600;
+}
+
+.m-f3-inline-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 12px;
+}
+
+.m-f3-inline-form .m-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.m-f3-rec-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--app-hairline);
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 140ms ease;
+}
+
+.m-f3-rec-row:last-child {
+    border-bottom: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .m-f3-rec-row:hover {
+        background-color: #FAF9F7;
+    }
+}
+
+.m-f3-rec-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.m-f3-rec-body strong {
+    font-size: 14px;
+    color: var(--carbon);
+}
+
+.m-f3-rec-body p {
+    margin: 0;
+    font-size: 12.8px;
+    line-height: 1.45;
+    color: var(--fg-muted);
+}
+
+.m-f3-rec-cta {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--app-orange-ink);
+    margin-top: 2px;
+}
+
+.m-f3-sub-topbar-btn {
+    white-space: nowrap;
+    width: auto;
+    justify-self: end;
+}

@@ -72,7 +72,7 @@
     <section class="m-filter-panel {% if not presupuesto %}is-open{% endif %}" id="budget-form-panel">
         <form method="POST" action="{% url 'presupuestos' %}">
             {% csrf_token %}
-            <h2 class="m-panel-title">Configurar límites</h2>
+            <h2 class="m-panel-title">Configurar límites generales</h2>
             <p class="m-panel-sub">Define cuánto quieres gastar al día y al mes para activar alertas oportunas.</p>
 
             <div class="m-filter-grid">
@@ -94,9 +94,33 @@
     <section class="m-clean-section">
         <div class="m-section-head">
             <h2>Por categoría</h2>
-            <span class="m-section-meta">Referencia mensual</span>
+            <button type="button" class="m-link-pill" id="toggle-cat-budget-form">+ Tope</button>
         </div>
 
+        <section class="m-filter-panel" id="cat-budget-form-panel" aria-label="Configurar presupuesto por categoría">
+            <h2 class="m-panel-title">Presupuesto mensual por categoría</h2>
+            <form method="POST" action="{% url 'presupuesto_categoria_guardar' %}">
+                {% csrf_token %}
+                <div class="m-filter-grid">
+                    <div class="m-field-group">
+                        <label for="pres-cat-select">Categoría</label>
+                        <select id="pres-cat-select" name="categoria_id" class="m-input" required>
+                            {% for cat in categorias_disponibles %}
+                            <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="m-field-group">
+                        <label for="pres-cat-monto">Tope mensual (COP)</label>
+                        <input type="number" id="pres-cat-monto" name="limite_mensual" class="m-input money-num"
+                               min="1000" step="1000" placeholder="150000" required>
+                    </div>
+                </div>
+                <button type="submit" class="m-btn-pill is-primary m-btn-full" style="margin-top: 12px;">Guardar tope</button>
+            </form>
+        </section>
+
+        {% if barras_presupuesto %}
         <div class="m-surface-box m-surface-box--flush">
             {% for b in barras_presupuesto %}
             <div class="m-cat-bar-row m-cat-bar-row--static">
@@ -113,11 +137,21 @@
                                 <span class="m-status-chip is-warn">Cerca</span>
                             {% endif %}
                         </span>
-                        <span class="m-cat-bar-val money-num">{{ b.porcentaje_real }}%</span>
+                        <span class="m-f3-cat-val-wrap">
+                            <span class="m-cat-bar-val money-num">{{ b.porcentaje_real }}%</span>
+                            <form method="POST" action="{% url 'presupuesto_categoria_eliminar' b.idPresupuestoCat %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="m-f3-del-mini" aria-label="Quitar tope de {{ b.nombre }}" title="Quitar tope">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true">
+                                        <path d="M18 6 6 18M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </span>
                     </div>
                     <div class="m-cat-bar-sub money-num">
                         <span>${{ b.gastado_fmt }} de ${{ b.tope_fmt }}</span>
-                        <span>{% if b.excedido %}Límite superado{% else %}Disp. ${{ b.disponible_fmt }}{% endif %}</span>
+                        <span>{% if b.excedido %}Excedido +${{ b.excedente_fmt }}{% else %}Disp. ${{ b.disponible_fmt }}{% endif %}</span>
                     </div>
                     <div class="m-progress-track">
                         <div class="m-progress-fill {% if b.excedido %}is-danger{% elif b.cerca %}is-warn{% endif %}" style="width: {{ b.porcentaje }}%;"></div>
@@ -126,6 +160,35 @@
             </div>
             {% endfor %}
         </div>
+        {% else %}
+        <div class="m-surface-box">
+            <p class="m-f3-empty-note" style="padding: 4px 0;">Aún no has asignado topes mensuales por categoría. Pulsa <strong>+ Tope</strong> para controlar categorías específicas como Alimentación o Transporte.</p>
+        </div>
+        {% endif %}
+
+        {% if categorias_sin_presupuesto %}
+        <div class="m-section-head" style="margin-top: 16px;">
+            <h2>Gastos del mes sin tope asignado</h2>
+        </div>
+        <div class="m-surface-box m-surface-box--flush">
+            {% for item in categorias_sin_presupuesto %}
+            <div class="m-cat-bar-row m-cat-bar-row--static">
+                <span class="app-cat-badge tone-{{ item.ui.tone }}">
+                    {% include 'includes/cat_icon.html' with icon=item.ui.icon %}
+                </span>
+                <div class="m-cat-bar-main">
+                    <div class="m-cat-bar-top">
+                        <span class="m-cat-bar-name">{{ item.nombre }}</span>
+                        <span class="m-cat-bar-val money-num">${{ item.gastado_fmt }}</span>
+                    </div>
+                    <div class="m-cat-bar-sub">
+                        <span>Sin tope mensual configurado</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
     </section>
 </div>
 {% endblock %}
@@ -139,6 +202,15 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () {
             var opened = panel.classList.toggle('is-open');
             btn.textContent = opened ? 'Cerrar' : 'Editar';
+        });
+    }
+
+    var catBtn = document.getElementById('toggle-cat-budget-form');
+    var catPanel = document.getElementById('cat-budget-form-panel');
+    if (catBtn && catPanel) {
+        catBtn.addEventListener('click', function () {
+            var opened = catPanel.classList.toggle('is-open');
+            catBtn.textContent = opened ? 'Cerrar' : '+ Tope';
         });
     }
 });

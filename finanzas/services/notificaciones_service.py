@@ -4,6 +4,8 @@ Optimizado para bajo impacto de consultas:
 - Carga las claves existentes en una sola consulta en memoria.
 - Respeta descartada=True (una notificación eliminada NUNCA reaparece para el mismo evento/clave).
 - Respeta alertas_activas=False del usuario.
+- Integrado con RF-09 (umbral hormiga configurable), RF-10 (metas y fechas objetivo),
+  RF-11 (presupuestos por categoría) y RF-12 (préstamos y gastos compartidos).
 """
 
 from decimal import Decimal
@@ -11,13 +13,14 @@ from decimal import Decimal
 from django.db.models import Sum
 from django.utils import timezone
 
-from finanzas.models import MetaAhorro, Notificacion, Prestamo
+from finanzas.models import MetaAhorro, Notificacion, Participante, Prestamo
 from finanzas.services.finanzas_service import (
     CERO,
-    UMBRAL_HORMIGA_DEFECTO,
     calcular_resumen_financiero,
     formatear_cop,
+    obtener_umbral_hormiga,
 )
+from finanzas.services.presupuestos_service import calcular_presupuestos_categoria
 
 
 def contar_notificaciones_no_leidas(perfil):
@@ -35,11 +38,13 @@ def sincronizar_notificaciones_usuario(perfil, resumen=None, hoy=None):
     resumen = resumen or calcular_resumen_financiero(perfil, hoy=hoy)
     hoy_iso = hoy.isoformat()
     mes_tag = f'{hoy.year}_{hoy.month:02d}'
+    alertas_on = bool(getattr(perfil, 'alertas_activas', True))
+    umbral_hormiga = obtener_umbral_hormiga(perfil)
 
     candidatas = []
 
-    # 1. Alertas de límite diario, saldo y presupuesto (respetan alertas_activas del usuario)
-    if getattr(perfil, 'alertas_activas', True):
+    # 1. Alertas de límite diario, saldo y presupuestos (respetan alertas_activas del usuario)
+    if alertas_on:
         dias = resumen['dias_restantes']
         dias_txt = f'{dias} día{"s" if dias != 1 else ""}'
 
@@ -122,9 +127,37 @@ def sincronizar_notificaciones_usuario(perfil, resumen=None, hoy=None):
                     '/app/presupuestos/',
                 ))
 
-    # 2. Gastos hormiga relevantes del mes (solo si alertas_activas está encendido)
+        # 1b. Presupuestos reales por categoría (RF-11)
+        pres_cats = calcular_presupuestos_categoria(perfil, hoy=hoy)['presupuestos_configurados']
+        for pc in pres_cats:
+            if pc['excedido']:
+                candidatas.append((
+                    f"presupuesto_cat_superado_{pc['idCategoria']}_{mes_tag}",
+                    'presupuesto_categoria',
+                    'danger',
+                    f"Tope de {pc['nombre']} superado",
+                    (
+                        f"Llevas ${pc['gastado_fmt']} en {pc['nombre']} sobre tu presupuesto de "
+                        f"${pc['tope_fmt']} ({pc['porcentaje_real']}%)."
+                    ),
+                    '/app/presupuestos/',
+                ))
+            elif pc['cerca']:
+                candidatas.append((
+                    f"presupuesto_cat_80_{pc['idCategoria']}_{mes_tag}",
+                    'presupuesto_categoria',
+                    'warn',
+                    f"{pc['nombre']} al {pc['porcentaje_real']}% del tope",
+                    (
+                        f"Has usado ${pc['gastado_fmt']} de ${pc['tope_fmt']} en {pc['nombre']}. "
+                        f"Te quedan ${pc['disponible_fmt']} este mes."
+                    ),
+                    '/app/presupuestos/',
+                ))
+
+    # 2. Gastos hormiga relevantes del mes usando el umbral configurable del usuario (RF-09)
     gastos_mes_total = resumen['gastos_mes']
-    if getattr(perfil, 'alertas_activas', True) and gastos_mes_total > CERO:
+    if alertas_on and gastos_mes_total > CERO:
         inicio_mes = hoy.replace(day=1)
         hormiga_mes = (
             resumen['movimientos']
@@ -132,7 +165,7 @@ def sincronizar_notificaciones_usuario(perfil, resumen=None, hoy=None):
                 tipo__iexact='gasto',
                 fecha__gte=inicio_mes,
                 fecha__lte=hoy,
-                monto__lte=UMBRAL_HORMIGA_DEFECTO,
+                monto__lte=umbral_hormiga,
             )
             .aggregate(total=Sum('monto'))['total']
             or CERO
@@ -146,13 +179,15 @@ def sincronizar_notificaciones_usuario(perfil, resumen=None, hoy=None):
                 'Ojo con tus gastos hormiga',
                 (
                     f'Este mes sumas ${formatear_cop(hormiga_mes)} ({pct_h}% de tus gastos) '
-                    'en compras pequeñas de $15.000 o menos.'
+                    f'en compras de ${formatear_cop(umbral_hormiga)} o menos.'
                 ),
                 '/app/insights/?tab=control',
             ))
 
-    # 3. Metas de ahorro cumplidas al 100%
-    for meta in MetaAhorro.objects.filter(idUsuario=perfil).only('idMeta', 'nombre', 'objetivo', 'acumulado'):
+    # 3. Metas de ahorro cumplidas al 100%, próximas a vencer o vencidas (RF-10)
+    for meta in MetaAhorro.objects.filter(idUsuario=perfil).only(
+        'idMeta', 'nombre', 'objetivo', 'acumulado', 'fecha_objetivo'
+    ):
         if meta.objetivo > CERO and meta.acumulado >= meta.objetivo:
             candidatas.append((
                 f'meta_lograda_{meta.idMeta}',
@@ -165,8 +200,32 @@ def sincronizar_notificaciones_usuario(perfil, resumen=None, hoy=None):
                 ),
                 '/app/metas/',
             ))
+        elif meta.fecha_objetivo is not None and meta.objetivo > meta.acumulado:
+            dias_meta = (meta.fecha_objetivo - hoy).days
+            faltante = meta.objetivo - meta.acumulado
+            if dias_meta <= 0:
+                candidatas.append((
+                    f'meta_vencida_{meta.idMeta}',
+                    'meta_plazo',
+                    'warn',
+                    f'Fecha vencida: {meta.nombre}',
+                    (
+                        f'La fecha objetivo de «{meta.nombre}» pasó y faltan '
+                        f'${formatear_cop(faltante)}. Actualiza el plazo en Metas.'
+                    ),
+                    '/app/metas/',
+                ))
+            elif dias_meta <= 7:
+                candidatas.append((
+                    f'meta_proxima_{meta.idMeta}_{mes_tag}',
+                    'meta_plazo',
+                    'info',
+                    f'Tu meta «{meta.nombre}» vence en {dias_meta} día{"s" if dias_meta != 1 else ""}',
+                    f'Te faltan ${formatear_cop(faltante)} para completarla a tiempo.',
+                    '/app/metas/',
+                ))
 
-    # 4. Recordatorio de préstamos pendientes
+    # 4. Recordatorio de préstamos pendientes y vencidos (RF-12)
     prestamos_pend = Prestamo.objects.filter(idUsuario=perfil, estado='Pendiente')
     cant_prest = prestamos_pend.count()
     if cant_prest > 0:
@@ -181,6 +240,39 @@ def sincronizar_notificaciones_usuario(perfil, resumen=None, hoy=None):
                 'Márcalos como pagados cuando se salden.'
             ),
             '/app/metas/?tab=prestamos',
+        ))
+        for p_venc in prestamos_pend.filter(fecha_limite__lt=hoy):
+            candidatas.append((
+                f'prestamo_vencido_{p_venc.idPrestamo}',
+                'prestamo_vencido',
+                'warn',
+                f'Préstamo vencido con {p_venc.deudor}',
+                (
+                    f'El préstamo de ${formatear_cop(p_venc.monto)} ({p_venc.concepto}) '
+                    'superó su fecha límite.'
+                ),
+                '/app/metas/?tab=prestamos',
+            ))
+
+    # 4b. Reembolsos pendientes de gastos compartidos (RF-12)
+    part_pend = Participante.objects.filter(
+        idGastoComp__idUsuario=perfil,
+        idGastoComp__yo_pague_total=True,
+        pagado=False,
+    )
+    cant_comp_pend = part_pend.count()
+    if cant_comp_pend > 0:
+        total_comp_pend = part_pend.aggregate(total=Sum('parteAportada'))['total'] or CERO
+        candidatas.append((
+            f'compartidos_pend_{mes_tag}',
+            'gasto_compartido',
+            'info',
+            f'Tienes ${formatear_cop(total_comp_pend)} por recuperar en compartidos',
+            (
+                f'{cant_comp_pend} aporte{"s" if cant_comp_pend != 1 else ""} de compañeros '
+                'siguen pendientes de reembolso.'
+            ),
+            '/app/metas/?tab=compartidos',
         ))
 
     # 5. Fecha vencida en ciclo irregular

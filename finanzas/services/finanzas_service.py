@@ -29,8 +29,29 @@ DIAS_POR_FRECUENCIA = {
 
 UMBRAL_ALERTA_PREVENTIVA = Decimal('0.80')
 UMBRAL_HORMIGA_DEFECTO = Decimal('15000.00')
+UMBRAL_HORMIGA_MIN = Decimal('500.00')
+UMBRAL_HORMIGA_MAX = Decimal('500000.00')
 CERO = Decimal('0.00')
 CENTAVO = Decimal('0.01')
+
+
+def obtener_umbral_hormiga(perfil):
+    """Retorna el umbral configurable de gastos hormiga del usuario (o $15.000 por defecto)."""
+    valor = getattr(perfil, 'umbral_hormiga', None) if perfil is not None else None
+    if valor is None or valor <= CERO:
+        return UMBRAL_HORMIGA_DEFECTO
+    return Decimal(valor)
+
+
+def es_gasto_hormiga(monto, tipo, perfil_o_umbral=None):
+    """Determina si una transacción es gasto hormiga según el umbral configurado del usuario."""
+    if (tipo or '').lower() != 'gasto':
+        return False
+    if isinstance(perfil_o_umbral, Decimal):
+        umbral = perfil_o_umbral
+    else:
+        umbral = obtener_umbral_hormiga(perfil_o_umbral)
+    return Decimal(monto) <= umbral
 
 
 def formatear_cop(valor):
@@ -318,8 +339,8 @@ def calcular_resumen_financiero(perfil, hoy=None):
     else:
         alerta_principal = None
 
-    # 5. Gastos hormiga de hoy y acumulados del mes
-    umbral_hormiga = UMBRAL_HORMIGA_DEFECTO
+    # 5. Gastos hormiga de hoy y acumulados del mes (umbral configurable del usuario RF-09)
+    umbral_hormiga = obtener_umbral_hormiga(perfil)
     total_hormiga = (
         movimientos_hasta_hoy.filter(
             tipo__iexact='gasto',
@@ -410,6 +431,8 @@ def calcular_resumen_financiero(perfil, hoy=None):
         'alerta_activa': alerta_activa,
         'alerta_principal': alerta_principal,
         # Hormiga y mes
+        'umbral_hormiga': umbral_hormiga,
+        'umbral_hormiga_fmt': formatear_cop(umbral_hormiga),
         'total_hormiga': total_hormiga,
         'total_hormiga_fmt': formatear_cop(total_hormiga),
         'gastos_mes': gastos_mes,

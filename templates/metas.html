@@ -14,17 +14,20 @@
         <a href="{% url 'crear_meta' %}" class="m-btn-pill is-primary">+ Nueva meta</a>
     </header>
 
-    <div class="m-tabs-underline" role="tablist" aria-label="Metas y préstamos">
-        <button type="button" class="m-tab-btn {% if tab_activo != 'prestamos' %}is-active{% endif %}" role="tab" aria-selected="{% if tab_activo != 'prestamos' %}true{% else %}false{% endif %}" data-metas-tab="metas">
+    <div class="m-tabs-underline" role="tablist" aria-label="Metas, préstamos y compartidos">
+        <button type="button" class="m-tab-btn {% if tab_activo == 'metas' %}is-active{% endif %}" role="tab" aria-selected="{% if tab_activo == 'metas' %}true{% else %}false{% endif %}" data-metas-tab="metas">
             Ahorro ({{ metas_ui|length }})
         </button>
         <button type="button" class="m-tab-btn {% if tab_activo == 'prestamos' %}is-active{% endif %}" role="tab" aria-selected="{% if tab_activo == 'prestamos' %}true{% else %}false{% endif %}" data-metas-tab="prestamos">
             Préstamos{% if prestamos_pendientes_count %} ({{ prestamos_pendientes_count }}){% endif %}
         </button>
+        <button type="button" class="m-tab-btn {% if tab_activo == 'compartidos' %}is-active{% endif %}" role="tab" aria-selected="{% if tab_activo == 'compartidos' %}true{% else %}false{% endif %}" data-metas-tab="compartidos">
+            Compartidos{% if compartidos_pendientes_count %} ({{ compartidos_pendientes_count }}){% endif %}
+        </button>
     </div>
 
-    <!-- TAB METAS DE AHORRO -->
-    <div class="m-tab-panel {% if tab_activo != 'prestamos' %}is-active{% endif %}" data-metas-panel="metas" role="tabpanel">
+    <!-- TAB 1: METAS DE AHORRO (RF-10) -->
+    <div class="m-tab-panel {% if tab_activo == 'metas' %}is-active{% endif %}" data-metas-panel="metas" role="tabpanel">
         <section class="m-savings-hero" aria-label="Resumen de ahorro acumulado">
             <div class="m-savings-copy">
                 <span class="m-stats-kicker">Ahorro acumulado</span>
@@ -51,6 +54,8 @@
                             <h2>{{ meta.nombre }}</h2>
                             {% if meta.completada %}
                                 <a href="{% url 'animo' %}" class="m-status-chip is-ok">Lograda</a>
+                            {% elif meta.vencida %}
+                                <span class="m-status-chip is-danger">Vencida</span>
                             {% else %}
                                 <span class="m-goal-pct money-num">{{ meta.porcentaje }}%</span>
                             {% endif %}
@@ -64,7 +69,7 @@
                 </div>
 
                 <div class="m-progress-track m-progress-track--goal">
-                    <div class="m-progress-fill {% if meta.completada %}is-ok{% endif %}" style="width: {{ meta.porcentaje }}%;"></div>
+                    <div class="m-progress-fill {% if meta.completada %}is-ok{% elif meta.vencida %}is-danger{% endif %}" style="width: {{ meta.porcentaje }}%;"></div>
                 </div>
 
                 <div class="m-goal-amounts money-num">
@@ -72,11 +77,22 @@
                     <span>Meta ${{ meta.objetivo_fmt }}</span>
                 </div>
 
+                {% if meta.resumen_cuota_lbl and not meta.completada %}
+                <p class="m-f3-meta-quota money-num {% if meta.vencida %}is-warn{% endif %}">{{ meta.resumen_cuota_lbl }}</p>
+                {% endif %}
+
                 <div class="m-goal-footer">
                     <span class="m-goal-rem money-num">{% if meta.completada %}¡Objetivo alcanzado!{% else %}Faltan ${{ meta.faltante_fmt }}{% endif %}</span>
-                    <button type="button" class="m-link-pill" data-toggle-abono="abono-box-{{ meta.idMeta }}">
-                        + Abonar
-                    </button>
+                    <div class="m-f3-goal-btns">
+                        {% if not meta.completada %}
+                        <button type="button" class="m-f3-mini-btn" data-toggle-abono="fecha-box-{{ meta.idMeta }}">
+                            Plazo
+                        </button>
+                        {% endif %}
+                        <button type="button" class="m-link-pill" data-toggle-abono="abono-box-{{ meta.idMeta }}">
+                            + Abonar
+                        </button>
+                    </div>
                 </div>
 
                 <form method="POST" action="{% url 'metas' %}" class="m-goal-abono-form" id="abono-box-{{ meta.idMeta }}">
@@ -89,6 +105,18 @@
                            placeholder="Monto a abonar (COP)" required>
                     <button type="submit" class="m-btn-pill is-primary">Guardar</button>
                 </form>
+
+                {% if not meta.completada %}
+                <form method="POST" action="{% url 'metas' %}" class="m-goal-abono-form" id="fecha-box-{{ meta.idMeta }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="actualizar_fecha_meta">
+                    <input type="hidden" name="meta_id" value="{{ meta.idMeta }}">
+                    <label for="meta-fecha-{{ meta.idMeta }}" class="sr-only">Fecha objetivo para {{ meta.nombre }}</label>
+                    <input type="date" id="meta-fecha-{{ meta.idMeta }}" name="fecha_objetivo"
+                           class="m-input" value="{{ meta.fecha_objetivo_iso }}" min="{{ hoy_iso }}">
+                    <button type="submit" class="m-btn-pill is-primary">Guardar</button>
+                </form>
+                {% endif %}
             </article>
             {% endfor %}
         </div>
@@ -96,18 +124,32 @@
         <div class="m-empty-box">
             <img src="{% static 'img/mishi/mishi-empty.png' %}" alt="" class="m-empty-cat" aria-hidden="true">
             <h3>Crea tu primera meta</h3>
-            <p>Un portátil, un viaje o tu fondo de emergencia. Mishi te ayuda a seguir cada paso.</p>
+            <p>Un portátil, un viaje o tu fondo de emergencia. Mishi te ayuda a calcular tus cuotas reales.</p>
             <a href="{% url 'crear_meta' %}" class="m-btn-pill is-primary">+ Crear meta</a>
         </div>
         {% endif %}
     </div>
 
-    <!-- TAB PRÉSTAMOS -->
+    <!-- TAB 2: PRÉSTAMOS (RF-12) -->
     <div class="m-tab-panel {% if tab_activo == 'prestamos' %}is-active{% endif %}" data-metas-panel="prestamos" role="tabpanel">
         <div class="m-section-head">
             <h2>Préstamos entre compañeros</h2>
             <button type="button" class="m-link-pill" id="toggle-prestamo-btn">+ Registrar</button>
         </div>
+
+        {% if prestamos_ui %}
+        <div class="m-summary-ribbon" aria-label="Resumen de préstamos pendientes">
+            <div class="m-ribbon-cell">
+                <span>Por cobrar</span>
+                <strong class="money-num is-income">+${{ comp_resumen.total_por_cobrar_fmt }}</strong>
+            </div>
+            <span class="m-ribbon-sep" aria-hidden="true"></span>
+            <div class="m-ribbon-cell">
+                <span>Por pagar</span>
+                <strong class="money-num">-${{ comp_resumen.total_por_pagar_fmt }}</strong>
+            </div>
+        </div>
+        {% endif %}
 
         <section class="m-filter-panel" id="prestamo-form-panel">
             <form method="POST" action="{% url 'metas' %}">
@@ -134,14 +176,18 @@
                         <label for="prestamo-monto">Monto (COP)</label>
                         <input type="number" id="prestamo-monto" name="monto" class="m-input" min="1" step="0.01" inputmode="decimal" required>
                     </div>
+                    <div class="m-field-group m-field-group--full">
+                        <label for="prestamo-fecha-limite">Fecha límite estimada (opcional)</label>
+                        <input type="date" id="prestamo-fecha-limite" name="fecha_limite" class="m-input">
+                    </div>
                 </div>
                 <button type="submit" class="m-btn-pill is-primary m-btn-full" style="margin-top: 12px;">Guardar préstamo</button>
             </form>
         </section>
 
-        {% if prestamos %}
+        {% if prestamos_ui %}
         <div class="m-tx-surface">
-            {% for p in prestamos %}
+            {% for p in prestamos_ui %}
             <div class="m-tx-row m-tx-row--static">
                 <span class="app-cat-badge {% if p.tipo == 'Por cobrar' %}tone-green{% else %}tone-amber{% endif %}">
                     {% include 'includes/cat_icon.html' with icon='wallet' %}
@@ -152,16 +198,23 @@
                         <span class="m-status-chip {% if p.tipo == 'Por cobrar' %}is-ok{% else %}is-warn{% endif %}">
                             {% if p.tipo == 'Por cobrar' %}Me deben{% else %}Debo{% endif %}
                         </span>
+                        {% if p.vencido %}<span class="m-status-chip is-danger">Vencido</span>{% endif %}
                     </div>
-                    <div class="m-tx-sub">{{ p.concepto }} · {{ p.fecha|date:"d M" }}</div>
+                    <div class="m-tx-sub">
+                        {{ p.concepto }} · {{ p.fecha|date:"d M" }}{% if p.fecha_limite %} · Límite {{ p.fecha_limite|date:"d M" }}{% endif %}
+                    </div>
                 </div>
                 <div class="m-loan-right">
-                    <strong class="m-tx-amount money-num">${{ p.monto }}</strong>
+                    <strong class="m-tx-amount money-num">${{ p.monto_fmt }}</strong>
                     {% if p.estado == 'Pendiente' %}
-                    <form method="POST" action="{% url 'metas' %}">
+                    <form method="POST" action="{% url 'metas' %}" class="m-f3-loan-pay-form">
                         {% csrf_token %}
                         <input type="hidden" name="accion" value="pagar_prestamo">
                         <input type="hidden" name="prestamo_id" value="{{ p.idPrestamo }}">
+                        <label class="m-f3-loan-opt">
+                            <input type="checkbox" name="registrar_movimiento" value="1">
+                            <span>Reflejar en saldo</span>
+                        </label>
                         <button type="submit" class="m-mini-pay-btn">Marcar pagado</button>
                     </form>
                     {% else %}
@@ -176,6 +229,138 @@
             <img src="{% static 'img/mishi/mishi-empty.png' %}" alt="" class="m-empty-cat" aria-hidden="true">
             <h3>Sin préstamos pendientes</h3>
             <p>Lleva el control de lo que prestas o te prestan en la universidad.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- TAB 3: GASTOS COMPARTIDOS (RF-12) -->
+    <div class="m-tab-panel {% if tab_activo == 'compartidos' %}is-active{% endif %}" data-metas-panel="compartidos" role="tabpanel">
+        <div class="m-section-head">
+            <h2>Gastos compartidos</h2>
+            <button type="button" class="m-link-pill" id="toggle-compartido-btn">+ Compartido</button>
+        </div>
+
+        {% if gastos_compartidos %}
+        <div class="m-summary-ribbon" aria-label="Resumen de gastos compartidos">
+            <div class="m-ribbon-cell">
+                <span>Por recuperar</span>
+                <strong class="money-num is-income">+${{ comp_resumen.total_por_recuperar_fmt }}</strong>
+            </div>
+            <span class="m-ribbon-sep" aria-hidden="true"></span>
+            <div class="m-ribbon-cell">
+                <span>Pendientes</span>
+                <strong class="money-num">{{ compartidos_pendientes_count }}</strong>
+            </div>
+        </div>
+        {% endif %}
+
+        <section class="m-filter-panel" id="compartido-form-panel">
+            <h2 class="m-panel-title">Dividir gasto con compañeros</h2>
+            <form method="POST" action="{% url 'gasto_compartido_crear' %}" id="compartido-form">
+                {% csrf_token %}
+                <div class="m-filter-grid">
+                    <div class="m-field-group m-field-group--full">
+                        <label for="comp-desc">Descripción</label>
+                        <input type="text" id="comp-desc" name="descripcion" class="m-input" placeholder="Ej: Pizza estudio, Uber grupal" required>
+                    </div>
+                    <div class="m-field-group">
+                        <label for="comp-cat">Categoría</label>
+                        <select id="comp-cat" name="categoria" class="m-input" required>
+                            {% for cat in categorias_gasto %}
+                            <option value="{{ cat.idCategoria }}">{{ cat.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="m-field-group">
+                        <label for="comp-fecha">Fecha</label>
+                        <input type="date" id="comp-fecha" name="fecha" class="m-input" value="{{ hoy_iso }}" max="{{ hoy_iso }}" required>
+                    </div>
+                    <div class="m-field-group">
+                        <label for="comp-total">Monto total (COP)</label>
+                        <input type="number" id="comp-total" name="monto_total" class="m-input money-num" min="100" step="100" placeholder="60000" required>
+                    </div>
+                    <div class="m-field-group">
+                        <label for="comp-miparte">Tu parte (COP)</label>
+                        <input type="number" id="comp-miparte" name="mi_parte" class="m-input money-num" min="0" step="100" placeholder="20000" required>
+                    </div>
+                    <div class="m-field-group m-field-group--full">
+                        <label for="comp-quien">¿Quién pagó la cuenta completa?</label>
+                        <select id="comp-quien" name="yo_pague_total" class="m-input">
+                            <option value="1">Yo pagué el total (mis amigos me reembolsan)</option>
+                            <option value="0">Pagó otra persona (solo descuento mi parte)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="m-f3-part-head">
+                    <span>Participantes</span>
+                    <div class="m-f3-part-tools">
+                        <button type="button" class="m-f3-mini-btn" id="btn-dividir-igual">Dividir igual</button>
+                        <button type="button" class="m-f3-mini-btn" id="btn-add-part">+ Amigo</button>
+                    </div>
+                </div>
+
+                <div id="comp-participantes-list" class="m-f3-part-list">
+                    <div class="m-f3-part-inputs">
+                        <input type="text" name="participante_nombre" class="m-input" placeholder="Nombre amigo" required>
+                        <input type="number" name="participante_monto" class="m-input money-num" min="100" step="100" placeholder="Aporte COP" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="m-btn-pill is-primary m-btn-full" style="margin-top: 12px;">Guardar gasto compartido</button>
+            </form>
+        </section>
+
+        {% if gastos_compartidos %}
+        <div class="m-goals-list">
+            {% for gc in gastos_compartidos %}
+            <article class="m-goal-card m-f3-comp-card">
+                <div class="m-goal-head">
+                    <span class="app-cat-badge tone-{{ gc.ui.tone }}">
+                        {% include 'includes/cat_icon.html' with icon=gc.ui.icon %}
+                    </span>
+                    <div class="m-goal-title-col">
+                        <div class="m-goal-title-line">
+                            <h2>{{ gc.descripcion }}</h2>
+                            <span class="m-status-chip {% if gc.es_liquidado %}is-ok{% else %}is-warn{% endif %}">{{ gc.estado }}</span>
+                        </div>
+                        <div class="m-goal-meta-line money-num">
+                            <span>Total ${{ gc.monto_total_fmt }}</span>
+                            <span>·</span>
+                            <span>Tu parte ${{ gc.mi_parte_fmt }}</span>
+                            <span>·</span>
+                            <span>{{ gc.fecha|date:"d M" }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="m-f3-comp-parts">
+                    {% for pt in gc.participantes %}
+                    <div class="m-f3-part-row">
+                        <div class="m-f3-part-info">
+                            <strong>{{ pt.nombreAmigo }}</strong>
+                            <span class="money-num">${{ pt.parte_fmt }}</span>
+                        </div>
+                        {% if pt.pagado %}
+                            <span class="m-status-chip is-ok">Pagado</span>
+                        {% else %}
+                            <form method="POST" action="{% url 'participante_pagar' pt.idParticipante %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="/app/metas/?tab=compartidos">
+                                <button type="submit" class="m-mini-pay-btn">Marcar pagado</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="m-empty-box m-empty-box--compact">
+            <img src="{% static 'img/mishi/mishi-empty.png' %}" alt="" class="m-empty-cat" aria-hidden="true">
+            <h3>Sin gastos compartidos</h3>
+            <p>Divide comidas, transporte o materiales sin duplicar gastos en tu saldo.</p>
         </div>
         {% endif %}
     </div>
@@ -218,6 +403,45 @@ document.addEventListener('DOMContentLoaded', function () {
     if (pBtn && pPanel) {
         pBtn.addEventListener('click', function () {
             pPanel.classList.toggle('is-open');
+        });
+    }
+
+    var cBtn = document.getElementById('toggle-compartido-btn');
+    var cPanel = document.getElementById('compartido-form-panel');
+    if (cBtn && cPanel) {
+        cBtn.addEventListener('click', function () {
+            cPanel.classList.toggle('is-open');
+        });
+    }
+
+    var partList = document.getElementById('comp-participantes-list');
+    var addPartBtn = document.getElementById('btn-add-part');
+    var splitBtn = document.getElementById('btn-dividir-igual');
+
+    if (addPartBtn && partList) {
+        addPartBtn.addEventListener('click', function () {
+            if (partList.children.length >= 6) return;
+            var row = document.createElement('div');
+            row.className = 'm-f3-part-inputs';
+            row.innerHTML =
+                '<input type="text" name="participante_nombre" class="m-input" placeholder="Nombre amigo" required>' +
+                '<input type="number" name="participante_monto" class="m-input money-num" min="100" step="100" placeholder="Aporte COP" required>';
+            partList.appendChild(row);
+        });
+    }
+
+    if (splitBtn && partList) {
+        splitBtn.addEventListener('click', function () {
+            var totalEl = document.getElementById('comp-total');
+            var miParteEl = document.getElementById('comp-miparte');
+            var total = Math.round(Number(totalEl ? totalEl.value : 0));
+            if (!total || total < 200) return;
+            var inputs = Array.from(partList.querySelectorAll('input[name="participante_monto"]'));
+            var personas = inputs.length + 1;
+            var cuota = Math.floor(total / personas);
+            var resto = total - (cuota * personas);
+            if (miParteEl) miParteEl.value = String(cuota + resto);
+            inputs.forEach(function (inp) { inp.value = String(cuota); });
         });
     }
 });

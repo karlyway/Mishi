@@ -1263,5 +1263,412 @@ def test_fase2_aislamiento_post_y_csrf_en_endpoints_mutantes(crear_estudiante):
     assert notif.descartada is False
 
 
+# ==============================================================================
+# 9. PRUEBAS DE FASE 3 (RF-02, RF-08, RF-09, RF-10, RF-11, RF-12, RF-13)
+# ==============================================================================
+
+@pytest.mark.django_db
+def test_rf02_categorias_personalizadas_crud_uso_y_aislamiento(client, crear_estudiante):
+    cuenta_a, perfil_a = crear_estudiante('cat_a@curn.edu.co', nombre='Ana')
+    cuenta_b, perfil_b = crear_estudiante('cat_b@curn.edu.co', nombre='Beto')
+    client.force_login(cuenta_a)
+
+    # Crear 4 categorías personalizadas (supera el mínimo de 3 de RF-02)
+    for nombre, tono in (
+        ('Gimnasio', 'green'),
+        ('Fotocopias', 'indigo'),
+        ('Mascota', 'orange'),
+        ('Suscripciones', 'rose'),
+    ):
+        resp = client.post(reverse('categoria_crear'), {
+            'nombre': nombre,
+            'tipo_aplicable': 'gasto',
+            'tono': tono,
+        })
+        assert resp.status_code == 302
+
+    cats_a = Categoria.objects.filter(idUsuario=perfil_a, es_personalizada=True)
+    assert cats_a.count() == 4
+    cat_gym = cats_a.get(nombre='Gimnasio')
+    cat_mascota = cats_a.get(nombre='Mascota')
+
+    # Usar categoría personalizada en una transacción real
+    resp_mov = client.post(reverse('movimiento'), {
+        'tipo': 'gasto',
+        'monto': '45000',
+        'categoria': cat_gym.idCategoria,
+        'descripcion': 'Mensualidad gym',
+        'fecha': date.today().isoformat(),
+    })
+    assert resp_mov.status_code == 302
+    assert Transaccion.objects.filter(idUsuario=perfil_a, idCategoria=cat_gym).count() == 1
+
+    # No permite eliminar categoría en uso, pero sí renombrarla y eliminar una sin uso
+    client.post(reverse('categoria_eliminar', args=[cat_gym.idCategoria]))
+    assert Categoria.objects.filter(idCategoria=cat_gym.idCategoria).exists()
+
+    client.post(reverse('categoria_editar', args=[cat_gym.idCategoria]), {
+        'nombre': 'Gimnasio U',
+        'tipo_aplicable': 'gasto',
+        'tono': 'teal',
+    })
+    cat_gym.refresh_from_db()
+    assert cat_gym.nombre == 'Gimnasio U'
+
+    client.post(reverse('categoria_eliminar', args=[cat_mascota.idCategoria]))
+    assert not Categoria.objects.filter(idCategoria=cat_mascota.idCategoria).exists()
+
+    # Aislamiento: usuario B (sesión independiente) no ve, no usa, no edita ni elimina categorías de usuario A
+    from django.test import Client as DjangoClient
+    client_b = DjangoClient()
+    client_b.force_login(cuenta_b)
+    resp_cats_b = client_b.get(reverse('categorias'))
+    assert resp_cats_b.context['categorias_personalizadas'] == []
+    assert 'Gimnasio U' not in [c['nombre'] for c in resp_cats_b.context['sheet_categorias_ui']]
+    assert 'Gimnasio U' not in resp_cats_b.content.decode('utf-8')
+
+    client_b.post(reverse('movimiento'), {
+        'tipo': 'gasto',
+        'monto': '10000',
+        'categoria': cat_gym.idCategoria,
+        'descripcion': 'Intento ajeno',
+        'fecha': date.today().isoformat(),
+    })
+    assert Transaccion.objects.filter(idUsuario=perfil_b).count() == 0
+
+    client_b.post(reverse('categoria_editar', args=[cat_gym.idCategoria]), {'nombre': 'Hack'})
+    client_b.post(reverse('categoria_eliminar', args=[cat_gym.idCategoria]))
+    cat_gym.refresh_from_db()
+    assert cat_gym.nombre == 'Gimnasio U'
+
+
+@pytest.mark.django_db
+def test_rf08_comparacion_entre_periodos_y_evolucion_del_ahorro_real(
+    client, crear_estudiante, categoria_base
+):
+    from finanzas.models import AporteMeta
+    from finanzas.services.analitica_service import (
+        calcular_comparacion_periodos,
+        calcular_evolucion_ahorro,
+    )
+
+    hoy = date(2026, 11, 25)
+    mes_pasado = date(2026, 10, 15)
+    cuenta, perfil = crear_estudiante('rf08@curn.edu.co', mesada='400000.00')
+
+    # Mes anterior: gasto $100.000, ingreso $200.000
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Ingreso oct',
+        monto=Decimal('200000.00'), fecha=mes_pasado, tipo='ingreso'
+    )
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Gasto oct',
+        monto=Decimal('100000.00'), fecha=mes_pasado, tipo='gasto'
+    )
+    # Mes actual: gasto $60.000 (-40%), ingreso $250.000, aporte meta $50.000
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Ingreso nov',
+        monto=Decimal('250000.00'), fecha=hoy, tipo='ingreso'
+    )
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Gasto nov',
+        monto=Decimal('60000.00'), fecha=hoy, tipo='gasto'
+    )
+    meta = MetaAhorro.objects.create(
+        idUsuario=perfil, nombre='Portátil', objetivo=Decimal('500000.00'), acumulado=Decimal('50000.00')
+    )
+    AporteMeta.objects.create(idMeta=meta, idUsuario=perfil, monto=Decimal('50000.00'), fecha=hoy)
+
+    comp = calcular_comparacion_periodos(perfil, periodo='mensual', hoy=hoy)
+    assert comp['gastos_anterior'] == Decimal('100000.00')
+    assert comp['gastos_actual'] == Decimal('60000.00')
+    assert comp['var_gastos_pct'] == -40
+    assert comp['ahorro_neto_actual'] == Decimal('190000.00')
+    assert comp['aportes_metas_actual'] == Decimal('50000.00')
+
+    evol = calcular_evolucion_ahorro(perfil, hoy=hoy, meses=6)
+    assert len(evol['serie']) == 6
+    assert evol['serie'][-1]['aportes_metas'] == Decimal('50000.00')
+    assert evol['serie'][-1]['acumulado_metas'] == Decimal('50000.00')
+    assert evol['serie'][-2]['ahorro_neto'] == Decimal('100000.00')
+
+    client.force_login(cuenta)
+    resp = client.get(reverse('insights') + '?periodo=mensual')
+    assert resp.status_code == 200
+    assert 'Evolución del ahorro (6 meses)' in resp.content.decode('utf-8')
+
+
+@pytest.mark.django_db
+def test_rf09_umbral_hormiga_configurable_consistente_en_motor_estadisticas_recomendaciones_y_notificaciones(
+    client, crear_estudiante, categoria_base
+):
+    from finanzas.models import Notificacion
+    from finanzas.services.finanzas_service import calcular_resumen_financiero
+
+    cuenta, perfil = crear_estudiante('rf09@curn.edu.co', mesada='300000.00')
+    # Gasto de $25.000 hoy: NO es hormiga con $15.000 por defecto
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Combo almuerzo',
+        monto=Decimal('25000.00'), fecha=date.today(), tipo='gasto'
+    )
+    r_def = calcular_resumen_financiero(perfil)
+    assert r_def['umbral_hormiga'] == Decimal('15000.00')
+    assert r_def['total_hormiga'] == Decimal('0.00')
+
+    # Configurar umbral a $30.000 vía POST + CSRF
+    client.force_login(cuenta)
+    resp_upd = client.post(reverse('umbral_hormiga'), {
+        'umbral_hormiga': '30000',
+        'next': '/app/insights/?tab=control',
+    })
+    assert resp_upd.status_code == 302
+    perfil.refresh_from_db()
+    assert perfil.umbral_hormiga == Decimal('30000.00')
+
+    # Motor financiero, Estadísticas, Recomendaciones y Notificaciones usan $30.000 consistentemente
+    r_new = calcular_resumen_financiero(perfil)
+    assert r_new['total_hormiga'] == Decimal('25000.00')
+
+    resp_ins = client.get(reverse('insights') + '?tab=control')
+    html_ins = resp_ins.content.decode('utf-8')
+    assert resp_ins.context['hormiga_count'] == 1
+    assert '30.000' in html_ins
+    assert any('30.000' in rec['titulo'] for rec in resp_ins.context['recomendaciones'])
+
+    notif_hormiga = Notificacion.objects.filter(idUsuario=perfil, tipo='hormiga', descartada=False).first()
+    assert notif_hormiga is not None
+    assert '30.000' in notif_hormiga.mensaje
+
+    # Rechaza umbral fuera de rango
+    client.post(reverse('umbral_hormiga'), {'umbral_hormiga': '100'})
+    perfil.refresh_from_db()
+    assert perfil.umbral_hormiga == Decimal('30000.00')
+
+
+@pytest.mark.django_db
+def test_rf10_metas_fecha_objetivo_cuotas_reales_y_sin_doble_contabilizacion(
+    client, crear_estudiante
+):
+    from finanzas.models import AporteMeta, Notificacion
+    from finanzas.services.finanzas_service import calcular_resumen_financiero
+    from finanzas.services.metas_service import calcular_plan_meta
+    from finanzas.services.notificaciones_service import sincronizar_notificaciones_usuario
+
+    hoy = date.today()
+    cuenta, perfil = crear_estudiante('rf10@curn.edu.co', mesada='500000.00', frecuencia='quincenal')
+    client.force_login(cuenta)
+
+    # Crear meta con fecha objetivo a 30 días ($300.000 -> $10.000/día, $150.000/quincena)
+    fecha_obj = hoy + timedelta(days=30)
+    resp_crear = client.post(reverse('crear_meta'), {
+        'nombre': 'Bicicleta',
+        'categoria': 'Transporte',
+        'objetivo': '300000',
+        'fecha_objetivo': fecha_obj.isoformat(),
+    })
+    assert resp_crear.status_code == 302
+    meta = MetaAhorro.objects.get(idUsuario=perfil, nombre='Bicicleta')
+    assert meta.fecha_objetivo == fecha_obj
+
+    plan0 = calcular_plan_meta(meta, perfil=perfil, hoy=hoy)
+    assert plan0['dias_restantes'] == 30
+    assert plan0['cuota_diaria'] == Decimal('10000.00')
+    assert plan0['cuota_quincenal'] == Decimal('150000.00')
+    assert plan0['cuota_mensual'] == Decimal('300000.00')
+
+    # Abonar $50.000 crea AporteMeta SIN crear Transaccion gasto duplicada
+    client.post(reverse('metas'), {
+        'accion': 'actualizar_meta',
+        'meta_id': meta.idMeta,
+        'ahorro': '50000',
+    })
+    meta.refresh_from_db()
+    assert meta.acumulado == Decimal('50000.00')
+    assert AporteMeta.objects.filter(idMeta=meta, idUsuario=perfil, monto=Decimal('50000.00')).count() == 1
+    assert Transaccion.objects.filter(idUsuario=perfil).count() == 0
+
+    resumen = calcular_resumen_financiero(perfil, hoy=hoy)
+    assert resumen['dinero_reservado_metas'] == Decimal('50000.00')
+    assert resumen['saldo_disponible'] == Decimal('450000.00')
+
+    # Meta vencida dispara notificación real
+    meta.fecha_objetivo = hoy - timedelta(days=2)
+    meta.save(update_fields=['fecha_objetivo'])
+    sincronizar_notificaciones_usuario(perfil, hoy=hoy)
+    assert Notificacion.objects.filter(
+        idUsuario=perfil, clave=f'meta_vencida_{meta.idMeta}', descartada=False
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_rf11_presupuestos_reales_por_categoria_alertas_y_aislamiento(
+    client, crear_estudiante, categoria_base, categoria_transporte
+):
+    from finanzas.models import Notificacion, PresupuestoCategoria
+
+    cuenta_a, perfil_a = crear_estudiante('rf11_a@curn.edu.co', mesada='500000.00')
+    cuenta_b, _ = crear_estudiante('rf11_b@curn.edu.co', mesada='500000.00')
+    client.force_login(cuenta_a)
+
+    # Configurar presupuesto real de $100.000 para Alimentación
+    resp_save = client.post(reverse('presupuesto_categoria_guardar'), {
+        'categoria_id': str(categoria_base.idCategoria),
+        'limite_mensual': '100000',
+    })
+    assert resp_save.status_code == 302
+    pc = PresupuestoCategoria.objects.get(idUsuario=perfil_a, idCategoria=categoria_base)
+    assert pc.limiteMensual == Decimal('100000.00')
+
+    # Gastar $85.000 en Alimentación (85% -> alerta preventiva) y $12.000 en Transporte (sin tope)
+    client.post(reverse('movimiento'), {
+        'tipo': 'gasto',
+        'monto': '85000',
+        'categoria': categoria_base.idCategoria,
+        'descripcion': 'Mercado',
+        'fecha': date.today().isoformat(),
+    })
+    Transaccion.objects.create(
+        idUsuario=perfil_a, idCategoria=categoria_transporte, descripcion='Bus',
+        monto=Decimal('12000.00'), fecha=date.today(), tipo='gasto'
+    )
+
+    resp_p1 = client.get(reverse('presupuestos'))
+    barras = resp_p1.context['barras_presupuesto']
+    assert len(barras) == 1
+    assert barras[0]['porcentaje_real'] == 85
+    assert barras[0]['cerca'] is True
+    assert barras[0]['excedido'] is False
+    assert len(resp_p1.context['categorias_sin_presupuesto']) == 1
+    assert Notificacion.objects.filter(idUsuario=perfil_a, tipo='presupuesto_categoria', nivel='warn').exists()
+
+    # Superar tope (+$25.000 -> $110.000 = 110% -> alerta danger)
+    client.post(reverse('movimiento'), {
+        'tipo': 'gasto',
+        'monto': '25000',
+        'categoria': categoria_base.idCategoria,
+        'descripcion': 'Cena',
+        'fecha': date.today().isoformat(),
+    })
+    resp_p2 = client.get(reverse('presupuestos'))
+    assert resp_p2.context['barras_presupuesto'][0]['excedido'] is True
+    assert resp_p2.context['barras_presupuesto'][0]['excedente'] == Decimal('10000.00')
+    assert Notificacion.objects.filter(idUsuario=perfil_a, tipo='presupuesto_categoria', nivel='danger').exists()
+
+    # Aislamiento: usuario B no puede eliminar presupuesto de usuario A
+    client.force_login(cuenta_b)
+    client.post(reverse('presupuesto_categoria_eliminar', args=[pc.idPresupuestoCat]))
+    assert PresupuestoCategoria.objects.filter(idPresupuestoCat=pc.idPresupuestoCat).exists()
+
+
+@pytest.mark.django_db
+def test_rf12_prestamos_y_gastos_compartidos_sin_doble_contabilizacion_e_idempotencia(
+    client, crear_estudiante, categoria_base
+):
+    from finanzas.models import GastoCompartido, Notificacion, Participante
+    from finanzas.services.finanzas_service import calcular_resumen_financiero
+
+    cuenta_a, perfil_a = crear_estudiante('rf12_a@curn.edu.co', mesada='200000.00')
+    cuenta_b, _ = crear_estudiante('rf12_b@curn.edu.co', mesada='200000.00')
+    client.force_login(cuenta_a)
+    hoy = date.today()
+
+    # Escenario A: usuario paga cuenta completa de $60.000 (mi parte $20.000, Ana $20.000, Mateo $20.000)
+    resp_gc = client.post(reverse('gasto_compartido_crear'), {
+        'descripcion': 'Pizza estudio',
+        'categoria': str(categoria_base.idCategoria),
+        'fecha': hoy.isoformat(),
+        'monto_total': '60000',
+        'mi_parte': '20000',
+        'yo_pague_total': '1',
+        'participante_nombre': ['Ana', 'Mateo'],
+        'participante_monto': ['20000', '20000'],
+    })
+    assert resp_gc.status_code == 302
+    gc = GastoCompartido.objects.get(idUsuario=perfil_a)
+    assert gc.estado == 'Pendiente'
+    # Exactamente 1 gasto de $60.000 -> saldo $140.000 (cero doble descuento)
+    assert Transaccion.objects.filter(idUsuario=perfil_a, tipo='gasto').count() == 1
+    assert calcular_resumen_financiero(perfil_a, hoy=hoy)['saldo_disponible'] == Decimal('140000.00')
+    assert Notificacion.objects.filter(idUsuario=perfil_a, tipo='gasto_compartido').exists()
+
+    p_ana = Participante.objects.get(idGastoComp=gc, nombreAmigo='Ana')
+    p_mateo = Participante.objects.get(idGastoComp=gc, nombreAmigo='Mateo')
+
+    # Aislamiento: usuario B no puede marcar pagado al participante de A
+    client.force_login(cuenta_b)
+    client.post(reverse('participante_pagar', args=[p_ana.idParticipante]))
+    p_ana.refresh_from_db()
+    assert p_ana.pagado is False
+
+    # Usuario A marca a Ana pagada DOS veces -> solo 1 reembolso de $20.000 (idempotente)
+    client.force_login(cuenta_a)
+    client.post(reverse('participante_pagar', args=[p_ana.idParticipante]))
+    client.post(reverse('participante_pagar', args=[p_ana.idParticipante]))
+    assert Transaccion.objects.filter(idUsuario=perfil_a, tipo='ingreso').count() == 1
+    assert calcular_resumen_financiero(perfil_a, hoy=hoy)['saldo_disponible'] == Decimal('160000.00')
+
+    # Usuario A marca a Mateo pagado -> gasto pasa a Liquidado y saldo neto final = $180.000 (-$20.000 reales)
+    client.post(reverse('participante_pagar', args=[p_mateo.idParticipante]))
+    gc.refresh_from_db()
+    assert gc.estado == 'Liquidado'
+    assert calcular_resumen_financiero(perfil_a, hoy=hoy)['saldo_disponible'] == Decimal('180000.00')
+
+    # Préstamo con fecha límite vencida + liquidación opcional en saldo (idempotente)
+    client.post(reverse('metas'), {
+        'accion': 'crear_prestamo',
+        'deudor': 'Carlos',
+        'concepto': 'Fotocopias',
+        'tipo': 'Por cobrar',
+        'monto': '10000',
+        'fecha_limite': (hoy - timedelta(days=1)).isoformat(),
+    })
+    prestamo = Prestamo.objects.get(idUsuario=perfil_a, deudor='Carlos')
+    assert Notificacion.objects.filter(
+        idUsuario=perfil_a, clave=f'prestamo_vencido_{prestamo.idPrestamo}'
+    ).exists()
+
+    client.post(reverse('metas'), {
+        'accion': 'pagar_prestamo',
+        'prestamo_id': prestamo.idPrestamo,
+        'registrar_movimiento': '1',
+    })
+    client.post(reverse('metas'), {
+        'accion': 'pagar_prestamo',
+        'prestamo_id': prestamo.idPrestamo,
+        'registrar_movimiento': '1',
+    })
+    assert calcular_resumen_financiero(perfil_a, hoy=hoy)['saldo_disponible'] == Decimal('190000.00')
+
+
+@pytest.mark.django_db
+def test_rf13_recomendaciones_personalizadas_con_datos_reales(
+    client, crear_estudiante, categoria_base
+):
+    from finanzas.models import PresupuestoCategoria
+
+    cuenta, perfil = crear_estudiante('rf13@curn.edu.co', mesada='300000.00')
+    PresupuestoCategoria.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, limiteMensual=Decimal('40000.00')
+    )
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Comida',
+        monto=Decimal('50000.00'), fecha=date.today(), tipo='gasto'
+    )
+    Prestamo.objects.create(
+        idUsuario=perfil, deudor='Laura', concepto='Pasaje', tipo='Por cobrar',
+        monto=Decimal('15000.00'), estado='Pendiente'
+    )
+
+    client.force_login(cuenta)
+    resp = client.get(reverse('insights'))
+    assert resp.status_code == 200
+    recs = resp.context['recomendaciones']
+    assert len(recs) >= 2
+    titulos = ' '.join(r['titulo'] for r in recs)
+    assert 'Alimentación' in titulos
+    assert '15.000' in titulos
+
+
+
 
 

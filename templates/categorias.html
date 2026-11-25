@@ -12,8 +12,39 @@
             </svg>
         </a>
         <h1>Categorías</h1>
-        <span style="width: 38px;"></span>
+        <button type="button" class="m-link-pill m-f3-sub-topbar-btn" id="toggle-cat-form">+ Nueva</button>
     </div>
+
+    <section class="m-filter-panel" id="cat-create-panel" aria-label="Crear categoría personalizada">
+        <h2 class="m-panel-title">Nueva categoría personalizada</h2>
+        <form method="POST" action="{% url 'categoria_crear' %}">
+            {% csrf_token %}
+            <div class="m-filter-grid">
+                <div class="m-field-group m-field-group--full">
+                    <label for="cat-nombre">Nombre</label>
+                    <input type="text" id="cat-nombre" name="nombre" class="m-input"
+                           placeholder="Ej: Gimnasio, Fotocopias, Mascota" maxlength="50" required>
+                </div>
+                <div class="m-field-group">
+                    <label for="cat-tipo">Uso</label>
+                    <select id="cat-tipo" name="tipo_aplicable" class="m-input">
+                        <option value="ambos">Gastos e ingresos</option>
+                        <option value="gasto">Solo gastos</option>
+                        <option value="ingreso">Solo ingresos</option>
+                    </select>
+                </div>
+                <div class="m-field-group">
+                    <label for="cat-tono">Color</label>
+                    <select id="cat-tono" name="tono" class="m-input">
+                        {% for slug, etiqueta, hex_color, soft_color in tonos_paleta %}
+                        <option value="{{ slug }}">{{ etiqueta }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="m-btn-pill is-primary m-btn-full" style="margin-top: 12px;">Guardar categoría</button>
+        </form>
+    </section>
 
     <div class="pill-tabs-row">
         <a href="{% url 'categorias' %}?rango=mes" class="pill-tab {% if rango == 'mes' %}is-active{% endif %}">Este mes</a>
@@ -47,6 +78,46 @@
         </div>
         {% endfor %}
     </section>
+
+    <section class="m-clean-section" aria-label="Categorías personalizadas">
+        <div class="m-section-head">
+            <h2>Mis categorías personalizadas</h2>
+            <span class="m-section-meta">{{ categorias_personalizadas|length }} creada{% if categorias_personalizadas|length != 1 %}s{% endif %}</span>
+        </div>
+
+        <div class="app-card" style="padding: 8px 16px;">
+            {% for cat in categorias_personalizadas %}
+            <div class="m-f3-cat-item">
+                <div class="m-f3-cat-main">
+                    <span class="cat-dot-left">
+                        <span class="cat-color-dot" style="background-color: {{ cat.ui.color }};"></span>
+                        <span class="cat-dot-name">{{ cat.nombre }}</span>
+                    </span>
+                    <div class="m-f3-cat-actions">
+                        <button type="button" class="m-f3-mini-btn" data-toggle-cat-edit="cat-edit-{{ cat.idCategoria }}">Editar</button>
+                        <form method="POST" action="{% url 'categoria_eliminar' cat.idCategoria %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="m-f3-del-mini" aria-label="Eliminar {{ cat.nombre }}" title="Eliminar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true">
+                                    <path d="M18 6 6 18M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <form method="POST" action="{% url 'categoria_editar' cat.idCategoria %}" class="m-goal-abono-form m-f3-cat-edit-form" id="cat-edit-{{ cat.idCategoria }}">
+                    {% csrf_token %}
+                    <input type="text" name="nombre" class="m-input" value="{{ cat.nombre }}" maxlength="50" required aria-label="Nuevo nombre">
+                    <input type="hidden" name="tipo_aplicable" value="{{ cat.tipo_aplicable }}">
+                    <input type="hidden" name="tono" value="{{ cat.tono }}">
+                    <button type="submit" class="m-btn-pill is-primary">Guardar</button>
+                </form>
+            </div>
+            {% empty %}
+            <p class="m-f3-empty-note">Aún no has creado categorías propias. Usa <strong>+ Nueva</strong> para agregar categorías personalizadas como Gimnasio, Copias o Suscripciones.</p>
+            {% endfor %}
+        </div>
+    </section>
 </div>
 
 {{ etiquetas_json|json_script:"cat-labels" }}
@@ -78,6 +149,22 @@ document.addEventListener('DOMContentLoaded', function () {
             cutout: '68%',
             plugins: { legend: { display: false } }
         }
+    });
+
+    var toggleBtn = document.getElementById('toggle-cat-form');
+    var panel = document.getElementById('cat-create-panel');
+    if (toggleBtn && panel) {
+        toggleBtn.addEventListener('click', function () {
+            var open = panel.classList.toggle('is-open');
+            toggleBtn.textContent = open ? 'Cerrar' : '+ Nueva';
+        });
+    }
+
+    document.querySelectorAll('[data-toggle-cat-edit]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var form = document.getElementById(btn.getAttribute('data-toggle-cat-edit'));
+            if (form) form.classList.toggle('is-open');
+        });
     });
 });
 </script>

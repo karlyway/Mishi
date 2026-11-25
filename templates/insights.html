@@ -50,7 +50,7 @@
         <button type="button" class="m-tab-btn" role="tab" aria-selected="false" data-stats-tab="control">Control</button>
     </div>
 
-    <!-- TAB 1: RESUMEN -->
+    <!-- TAB 1: RESUMEN (RF-08 + RF-13) -->
     <div class="m-tab-panel is-active" data-stats-panel="resumen" role="tabpanel">
         <section class="m-insight-banner is-{{ mishi_mood }}">
             <img src="{% if mishi_mood == 'alert' %}{% static 'img/mishi/mishi-alert.png' %}{% elif mishi_mood == 'celebrate' %}{% static 'img/mishi/mishi-celebrate.png' %}{% else %}{% static 'img/mishi/mishi-laptop.png' %}{% endif %}"
@@ -58,6 +58,33 @@
             <div class="m-insight-copy">
                 <h2>{{ mishi_titulo }}</h2>
                 <p>{{ mishi_mensaje }}</p>
+            </div>
+        </section>
+
+        <section class="m-clean-section" aria-label="Comparación entre períodos">
+            <div class="m-section-head">
+                <h2>Comparación vs {{ comparacion.etiqueta_anterior|lower }}</h2>
+                {% if comparacion.tiene_datos_anteriores %}
+                <span class="m-status-chip {% if comparacion.var_gastos_pct > 0 %}is-warn{% elif comparacion.var_gastos_pct < 0 %}is-ok{% else %}is-neutral{% endif %} money-num">
+                    Gastos {% if comparacion.var_gastos_pct > 0 %}+{% endif %}{{ comparacion.var_gastos_pct }}%
+                </span>
+                {% endif %}
+            </div>
+            <div class="m-surface-box">
+                <div class="m-cycle-meta">
+                    <div>
+                        <span>Gastos ({{ comparacion.etiqueta_anterior }})</span>
+                        <strong class="money-num">${{ comparacion.gastos_anterior_fmt }}</strong>
+                    </div>
+                    <div>
+                        <span>Ahorro neto actual</span>
+                        <strong class="money-num {% if comparacion.ahorro_neto_actual_positivo %}is-income{% endif %}">{% if comparacion.ahorro_neto_actual_positivo %}+{% else %}-{% endif %}${{ comparacion.ahorro_neto_actual_fmt }}</strong>
+                    </div>
+                    <div>
+                        <span>Aportes a metas</span>
+                        <strong class="money-num">${{ comparacion.aportes_metas_actual_fmt }}</strong>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -83,6 +110,35 @@
                     </div>
                     {% endfor %}
                 </div>
+            </div>
+        </section>
+
+        <section class="m-clean-section" aria-label="Recomendaciones personalizadas">
+            <div class="m-section-head">
+                <h2>Recomendaciones para ti</h2>
+                <span class="m-section-meta">Basado en tus datos</span>
+            </div>
+            <div class="m-surface-box m-surface-box--flush">
+                {% for rec in recomendaciones %}
+                <a href="{{ rec.url_destino }}" class="m-f3-rec-row">
+                    <span class="m-notif-ico is-{{ rec.nivel }}" aria-hidden="true">
+                        {% if rec.nivel == 'danger' %}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+                        {% elif rec.nivel == 'warn' %}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+                        {% elif rec.nivel == 'success' %}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>
+                        {% else %}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                        {% endif %}
+                    </span>
+                    <div class="m-f3-rec-body">
+                        <strong>{{ rec.titulo }}</strong>
+                        <p>{{ rec.detalle }}</p>
+                        <span class="m-f3-rec-cta">{{ rec.accion_lbl }} →</span>
+                    </div>
+                </a>
+                {% endfor %}
             </div>
         </section>
 
@@ -119,7 +175,7 @@
         </section>
     </div>
 
-    <!-- TAB 2: GRÁFICAS -->
+    <!-- TAB 2: GRÁFICAS (RF-07 + RF-08 Evolución del ahorro) -->
     <div class="m-tab-panel" data-stats-panel="graficas" role="tabpanel">
         <div class="m-charts-grid">
             <section class="m-clean-section">
@@ -165,9 +221,21 @@
                 </div>
             </section>
         </div>
+
+        <section class="m-clean-section" style="margin-top: 16px;">
+            <div class="m-section-head">
+                <h2>Evolución del ahorro (6 meses)</h2>
+                <span class="m-section-meta money-num">Metas: ${{ evolucion_ahorro.total_ahorro_metas_fmt }}</span>
+            </div>
+            <div class="m-surface-box">
+                <div class="m-chart-canvas-wrap">
+                    <canvas id="statsSavingsChart"></canvas>
+                </div>
+            </div>
+        </section>
     </div>
 
-    <!-- TAB 3: CONTROL -->
+    <!-- TAB 3: CONTROL (RF-05 + RF-09 Umbral configurable) -->
     <div class="m-tab-panel" data-stats-panel="control" id="control" role="tabpanel">
         <section class="m-surface-box m-control-stack">
             <div class="m-control-block">
@@ -214,12 +282,21 @@
             <div class="m-control-block">
                 <div class="m-control-head">
                     <div>
-                        <span class="m-control-kicker">Gastos hormiga (&le; $15.000)</span>
+                        <span class="m-control-kicker">Gastos hormiga (&le; ${{ umbral_hormiga_fmt }})</span>
                         <div class="m-control-big money-num">${{ hormiga_periodo_fmt }}</div>
                     </div>
-                    <span class="m-status-chip is-neutral">{{ hormiga_count }} compras</span>
+                    <span class="m-status-chip is-neutral">{{ hormiga_count }} compra{% if hormiga_count != 1 %}s{% endif %}</span>
                 </div>
-                <p class="m-control-desc">En este mes acumulas <strong class="money-num">${{ hormiga_mes_fmt }}</strong> en pequeños gastos. Reducirlos libera ahorro directo para tus metas.</p>
+                <p class="m-control-desc">En este mes acumulas <strong class="money-num">${{ hormiga_mes_fmt }}</strong> en compras pequeñas de hasta <strong class="money-num">${{ umbral_hormiga_fmt }}</strong>. Este umbral aplica en estadísticas, recomendaciones y alertas.</p>
+                <form method="POST" action="{% url 'umbral_hormiga' %}" class="m-f3-inline-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="/app/insights/?tab=control">
+                    <label for="insights-umbral-hormiga" class="sr-only">Configurar umbral de gastos hormiga (COP)</label>
+                    <input type="number" id="insights-umbral-hormiga" name="umbral_hormiga"
+                           class="m-input money-num" min="500" max="500000" step="500"
+                           value="{{ umbral_hormiga_val }}" required>
+                    <button type="submit" class="m-btn-pill is-primary">Actualizar umbral</button>
+                </form>
                 <div class="m-control-foot">
                     <span>Microgastos de {{ etiqueta_periodo|lower }}</span>
                     <a href="{% url 'historial' %}?tipo=gasto" class="m-link-accent">Revisar gastos</a>
@@ -246,7 +323,7 @@
                         <strong class="money-num">${{ resumen.gastos_mes_fmt }}</strong>
                     </div>
                     <div>
-                        <span>Variación mensual</span>
+                        <span>Variación vs previo</span>
                         <strong class="money-num">{% if variacion > 0 %}+{% elif variacion < 0 %}-{% endif %}{{ variacion_abs }}%</strong>
                     </div>
                 </div>
@@ -260,6 +337,9 @@
 {{ etiquetas_categorias|json_script:"stats-cat-labels" }}
 {{ valores_categorias|json_script:"stats-cat-values" }}
 {{ colores_categorias|json_script:"stats-cat-colors" }}
+{{ evolucion_ahorro.etiquetas_json|json_script:"stats-sav-labels" }}
+{{ evolucion_ahorro.ahorro_neto_json|json_script:"stats-sav-neto" }}
+{{ evolucion_ahorro.acumulado_metas_json|json_script:"stats-sav-metas" }}
 {% endblock %}
 
 {% block extra_js %}
@@ -279,6 +359,9 @@ document.addEventListener('DOMContentLoaded', function () {
         var labels = JSON.parse(document.getElementById('stats-cat-labels').textContent);
         var values = JSON.parse(document.getElementById('stats-cat-values').textContent);
         var colors = JSON.parse(document.getElementById('stats-cat-colors').textContent);
+        var savLabels = JSON.parse(document.getElementById('stats-sav-labels').textContent);
+        var savNeto = JSON.parse(document.getElementById('stats-sav-neto').textContent);
+        var savMetas = JSON.parse(document.getElementById('stats-sav-metas').textContent);
 
         var barEl = document.getElementById('statsBarChart');
         if (barEl) {
@@ -348,6 +431,67 @@ document.addEventListener('DOMContentLoaded', function () {
                             backgroundColor: '#1F242D',
                             cornerRadius: 10,
                             padding: 10
+                        }
+                    }
+                }
+            });
+        }
+
+        var savEl = document.getElementById('statsSavingsChart');
+        if (savEl) {
+            new Chart(savEl.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: savLabels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Ahorro neto (COP)',
+                            data: savNeto,
+                            backgroundColor: 'rgba(34, 160, 107, 0.28)',
+                            borderColor: '#22A06B',
+                            borderWidth: 1.5,
+                            borderRadius: 8
+                        },
+                        {
+                            type: 'line',
+                            label: 'Acumulado metas (COP)',
+                            data: savMetas,
+                            borderColor: '#F97A22',
+                            backgroundColor: 'rgba(249, 122, 34, 0.14)',
+                            borderWidth: 2.4,
+                            tension: 0.3,
+                            pointRadius: 3.5,
+                            pointBackgroundColor: '#F97A22',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: { boxWidth: 10, font: { size: 11 }, color: '#666A73' }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1F242D',
+                            cornerRadius: 10,
+                            padding: 10
+                        }
+                    },
+                    scales: {
+                        y: {
+                            border: { display: false },
+                            grid: { color: 'rgba(31, 36, 45, 0.05)' },
+                            ticks: { color: '#666A73', font: { size: 11 } }
+                        },
+                        x: {
+                            border: { display: false },
+                            grid: { display: false },
+                            ticks: { color: '#1F242D', font: { weight: '600', size: 11 } }
                         }
                     }
                 }

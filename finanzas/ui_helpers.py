@@ -219,7 +219,7 @@ def calcular_resumen_usuario(perfil, hoy=None):
 def agrupar_categorias_gasto(gastos_qs):
     """Agrupa un queryset de gastos por categoría con porcentaje y metadata visual."""
     filas = list(
-        gastos_qs.values('idCategoria', 'idCategoria__nombre')
+        gastos_qs.values('idCategoria', 'idCategoria__nombre', 'idCategoria__tono')
         .annotate(total=Sum('monto'))
         .order_by('-total')
     )
@@ -227,6 +227,13 @@ def agrupar_categorias_gasto(gastos_qs):
     resultado = []
     for item in filas:
         nombre = item['idCategoria__nombre']
+        tono = (item.get('idCategoria__tono') or '').strip().lower()
+        ui = estilo_categoria(nombre)
+        if tono:
+            from .services.categorias_service import TONOS_MAP
+            if tono in TONOS_MAP:
+                t = TONOS_MAP[tono]
+                ui = {**ui, 'tone': t['tone'], 'color': t['color'], 'soft': t['soft']}
         total = item['total'] or Decimal('0.00')
         porcentaje = round(float(total / total_general) * 100) if total_general > 0 else 0
         resultado.append({
@@ -235,7 +242,7 @@ def agrupar_categorias_gasto(gastos_qs):
             'total': total,
             'total_fmt': formatear_cop(total),
             'porcentaje': porcentaje,
-            'ui': estilo_categoria(nombre),
+            'ui': ui,
         })
     return resultado, total_general
 
@@ -271,49 +278,12 @@ def serie_semanal_gastos(movimientos_qs, hoy):
     return barras
 
 
-def enriquecer_metas(metas_qs, perfil=None, hoy=None):
-    """Añade faltante, porcentaje acotado, fecha estimada e icono visual a cada MetaAhorro."""
-    hoy = hoy or timezone.localdate()
-    ahorro_diario_est = Decimal('0.00')
-    if perfil is not None and perfil.mesada and perfil.mesada > 0:
-        dias_ciclo = max(calcular_dias_frecuencia(perfil.frecuencia), 1)
-        # Estimación realista: destinando 15% de la mesada por ciclo a ahorro
-        ahorro_diario_est = (perfil.mesada * Decimal('0.15')) / Decimal(dias_ciclo)
-
-    lista = []
-    for meta in metas_qs:
-        objetivo = meta.objetivo or Decimal('0.00')
-        acumulado = meta.acumulado or Decimal('0.00')
-        faltante = max(objetivo - acumulado, Decimal('0.00'))
-        if objetivo > 0:
-            porcentaje = min(100, round(float(acumulado / objetivo) * 100))
-        else:
-            porcentaje = 0
-        completada = faltante == 0 and objetivo > 0
-
-        if completada:
-            fecha_estimada_lbl = 'Meta completada'
-        elif ahorro_diario_est > 0 and faltante > 0:
-            dias_est = max(1, min(1825, int((faltante / ahorro_diario_est).to_integral_value())))
-            fecha_est = hoy + timedelta(days=dias_est)
-            mes_est = MESES_CORTOS_ES[fecha_est.month - 1]
-            fecha_estimada_lbl = f'Est. {mes_est} {fecha_est.year}'
-        else:
-            fecha_estimada_lbl = 'Sin fecha estimada'
-
-        lista.append({
-            'obj': meta,
-            'idMeta': meta.idMeta,
-            'nombre': meta.nombre,
-            'categoria': meta.categoria,
-            'objetivo': objetivo,
-            'objetivo_fmt': formatear_cop(objetivo),
-            'acumulado': acumulado,
-            'acumulado_fmt': formatear_cop(acumulado),
-            'faltante_fmt': formatear_cop(faltante),
-            'porcentaje': porcentaje,
-            'completada': completada,
-            'fecha_estimada_lbl': fecha_estimada_lbl,
-            'ui': estilo_categoria(meta.categoria or meta.nombre),
-        })
-    return lista
+def enriquecer_metas(metas_qs, perfil=None, hoy=None, limite_diario_ref=None):
+    """Delega al servicio real de metas con fecha objetivo y cálculo de cuotas (RF-10)."""
+    from .services.metas_service import enriquecer_metas_reales
+    return enriquecer_metas_reales(
+        metas_qs,
+        perfil=perfil,
+        hoy=hoy,
+        limite_diario_ref=limite_diario_ref,
+    )

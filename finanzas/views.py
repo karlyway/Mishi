@@ -10,7 +10,21 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from .models import Categoria, MetaAhorro, Notificacion, Presupuesto, Prestamo, Transaccion, Usuario
+from .models import (
+    Categoria,
+    GastoCompartido,
+    MetaAhorro,
+    Notificacion,
+    Participante,
+    Presupuesto,
+    Prestamo,
+    Transaccion,
+    Usuario,
+)
+from .services.analitica_service import (
+    calcular_comparacion_periodos,
+    calcular_evolucion_ahorro,
+)
 from .services.avatares import (
     AVATAR_DEFECTO,
     AVATARES_MISHI,
@@ -18,11 +32,46 @@ from .services.avatares import (
     es_avatar_valido,
     obtener_avatar_info,
 )
-from .services.finanzas_service import FRECUENCIAS_VALIDAS
+from .services.categorias_service import (
+    TONOS_CATEGORIA_PALETA,
+    crear_categoria_personalizada,
+    editar_categoria_personalizada,
+    eliminar_categoria_personalizada,
+    obtener_categoria_accesible,
+    obtener_categorias_personalizadas,
+    obtener_categorias_usuario,
+    obtener_estilo_categoria,
+)
+from .services.compartidos_service import (
+    crear_gasto_compartido,
+    crear_prestamo_usuario,
+    marcar_participante_pagado,
+    marcar_prestamo_pagado,
+    obtener_resumen_compartidos_y_prestamos,
+)
+from .services.finanzas_service import (
+    FRECUENCIAS_VALIDAS,
+    UMBRAL_HORMIGA_MAX,
+    UMBRAL_HORMIGA_MIN,
+    es_gasto_hormiga,
+    obtener_umbral_hormiga,
+)
+from .services.metas_service import (
+    actualizar_fecha_objetivo_meta,
+    crear_meta_usuario,
+    enriquecer_metas_reales,
+    registrar_aporte_meta,
+)
 from .services.notificaciones_service import (
     contar_notificaciones_no_leidas,
     sincronizar_notificaciones_usuario,
 )
+from .services.presupuestos_service import (
+    calcular_presupuestos_categoria,
+    eliminar_presupuesto_categoria,
+    guardar_presupuesto_categoria,
+)
+from .services.recomendaciones_service import generar_recomendaciones_personalizadas
 from .services.seguridad_service import (
     POLITICA_PRIVACIDAD_FECHA,
     POLITICA_PRIVACIDAD_VERSION,
@@ -225,11 +274,13 @@ def registro_usuario_view(request):
     return render(request, 'registro_usuario.html', context_base)
 
 
-def obtener_categorias():
-    if not Categoria.objects.exists():
+def obtener_categorias(perfil=None):
+    if perfil is not None:
+        return obtener_categorias_usuario(perfil)
+    if not Categoria.objects.filter(idUsuario__isnull=True).exists():
         for nombre in CATEGORIAS_POR_DEFECTO:
-            Categoria.objects.get_or_create(nombre=nombre)
-    return Categoria.objects.all().order_by('idCategoria')
+            Categoria.objects.get_or_create(nombre=nombre, idUsuario=None)
+    return Categoria.objects.filter(idUsuario__isnull=True).order_by('idCategoria')
 
 
 def _categorias_con_ui(categorias):
@@ -237,7 +288,8 @@ def _categorias_con_ui(categorias):
         {
             'idCategoria': c.idCategoria,
             'nombre': c.nombre,
-            'ui': estilo_categoria(c.nombre),
+            'es_personalizada': getattr(c, 'es_personalizada', False),
+            'ui': obtener_estilo_categoria(c),
         }
         for c in categorias
     ]
@@ -253,13 +305,18 @@ def dashboard_view(request):
     resumen = _obtener_resumen(request, perfil)
     movimientos = resumen['movimientos']
     hoy = resumen['hoy']
+    umbral_hormiga = resumen['umbral_hormiga']
+
+    recientes = list(movimientos[:4])
+    compartidos_ids = set(
+        GastoCompartido.objects.filter(
+            idTransaccion_id__in=[m.idTransaccion for m in recientes]
+        ).values_list('idTransaccion_id', flat=True)
+    )
 
     ultimos_movimientos = []
-    for mov in movimientos[:4]:
-        es_hormiga = (
-            mov.tipo.lower() == 'gasto'
-            and mov.monto <= Decimal('15000.00')
-        )
+    for mov in recientes:
+        es_hormiga = es_gasto_hormiga(mov.monto, mov.tipo, umbral_hormiga)
         ultimos_movimientos.append({
             'id': mov.idTransaccion,
             'fecha': mov.fecha,
@@ -270,8 +327,8 @@ def dashboard_view(request):
             'monto': mov.monto,
             'monto_fmt': formatear_cop(mov.monto),
             'es_hormiga': es_hormiga,
-            'es_compartido': False,
-            'ui': estilo_categoria(mov.idCategoria.nombre),
+            'es_compartido': mov.idTransaccion in compartidos_ids,
+            'ui': obtener_estilo_categoria(mov.idCategoria),
         })
 
     periodo = request.GET.get('periodo', 'semanal')
@@ -350,7 +407,7 @@ def movimiento_view(request):
         return redirect('login')
 
     resumen = _obtener_resumen(request, perfil)
-    categorias = obtener_categorias()
+    categorias = obtener_categorias(perfil)
     categorias_ui = _categorias_con_ui(categorias)
 
     if request.method == 'POST':
@@ -365,7 +422,9 @@ def movimiento_view(request):
                 raise ValueError
 
             monto = _validar_monto_positivo(monto_texto, Decimal('100'))
-            categoria = Categoria.objects.get(idCategoria=categoria_id)
+            categoria = obtener_categoria_accesible(perfil, categoria_id)
+            if categoria is None:
+                raise Categoria.DoesNotExist
             fecha_movimiento = date.fromisoformat(fecha)
 
             if fecha_movimiento > timezone.localdate():
@@ -462,8 +521,9 @@ def historial_view(request):
         movimientos_db = movimientos_base
 
     if categoria_id:
-        if categoria_id.isdigit() and Categoria.objects.filter(idCategoria=int(categoria_id)).exists():
-            movimientos_db = movimientos_db.filter(idCategoria_id=int(categoria_id))
+        cat_filtrada = obtener_categoria_accesible(perfil, categoria_id) if categoria_id.isdigit() else None
+        if cat_filtrada is not None:
+            movimientos_db = movimientos_db.filter(idCategoria_id=cat_filtrada.idCategoria)
         else:
             error_filtros = 'La categoría seleccionada no es válida.'
 
@@ -483,12 +543,17 @@ def historial_view(request):
         tipo__iexact='gasto'
     ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
+    umbral_hormiga = obtener_umbral_hormiga(perfil)
+    movs_lista = list(movimientos_db)
+    compartidos_ids = set(
+        GastoCompartido.objects.filter(
+            idTransaccion_id__in=[m.idTransaccion for m in movs_lista]
+        ).values_list('idTransaccion_id', flat=True)
+    )
+
     movimientos = []
-    for m in movimientos_db:
-        es_hormiga = (
-            m.tipo.lower() == 'gasto'
-            and m.monto <= Decimal('15000.00')
-        )
+    for m in movs_lista:
+        es_hormiga = es_gasto_hormiga(m.monto, m.tipo, umbral_hormiga)
         movimientos.append({
             'id': m.idTransaccion,
             'titulo': m.descripcion or m.idCategoria.nombre,
@@ -499,8 +564,8 @@ def historial_view(request):
             'fecha': m.fecha,
             'fecha_label': etiqueta_fecha_movimiento(m.fecha, hoy),
             'es_hormiga': es_hormiga,
-            'es_compartido': False,
-            'ui': estilo_categoria(m.idCategoria.nombre),
+            'es_compartido': m.idTransaccion in compartidos_ids,
+            'ui': obtener_estilo_categoria(m.idCategoria),
         })
 
     movimientos_agrupados = agrupar_movimientos_por_fecha(movimientos, hoy)
@@ -519,7 +584,7 @@ def historial_view(request):
         'balance_fmt': formatear_cop(abs(balance)),
         'balance_positivo': balance >= 0,
         'barras_semana': serie_semanal_gastos(movimientos_base, hoy),
-        'categorias': obtener_categorias(),
+        'categorias': obtener_categorias(perfil),
         'q': q,
         'tipo_filtro': tipo_filtro,
         'rango': rango or 'todos',
@@ -549,16 +614,35 @@ def detalle_movimiento_view(request, movimiento_id):
     if movimiento is None:
         return redirect('historial')
 
-    es_hormiga = (
-        movimiento.tipo.lower() == 'gasto'
-        and movimiento.monto <= Decimal('15000.00')
+    umbral_hormiga = obtener_umbral_hormiga(perfil)
+    es_hormiga = es_gasto_hormiga(movimiento.monto, movimiento.tipo, umbral_hormiga)
+    gasto_comp = (
+        GastoCompartido.objects.filter(idTransaccion=movimiento)
+        .prefetch_related('participantes')
+        .first()
     )
+    participantes_comp = []
+    if gasto_comp is not None:
+        participantes_comp = [
+            {
+                'idParticipante': pt.idParticipante,
+                'nombreAmigo': pt.nombreAmigo,
+                'parte_fmt': formatear_cop(pt.parteAportada),
+                'pagado': pt.pagado,
+            }
+            for pt in gasto_comp.participantes.all()
+        ]
     return render(request, 'detalle_movimiento.html', {
         'usuario': perfil,
         'movimiento': movimiento,
         'monto_fmt': formatear_cop(movimiento.monto),
-        'ui': estilo_categoria(movimiento.idCategoria.nombre),
+        'ui': obtener_estilo_categoria(movimiento.idCategoria),
         'es_hormiga': es_hormiga,
+        'umbral_hormiga_fmt': formatear_cop(umbral_hormiga),
+        'gasto_compartido': gasto_comp,
+        'gasto_comp_mi_parte_fmt': formatear_cop(gasto_comp.mi_parte) if gasto_comp else '',
+        'gasto_comp_total_fmt': formatear_cop(gasto_comp.montoTotal) if gasto_comp else '',
+        'participantes_comp': participantes_comp,
         'pestana_activa': 'historial',
     })
 
@@ -578,7 +662,7 @@ def editar_movimiento_view(request, movimiento_id):
     if movimiento is None:
         return redirect('historial')
 
-    categorias = obtener_categorias()
+    categorias = obtener_categorias(perfil)
 
     if request.method == 'POST':
         try:
@@ -597,7 +681,9 @@ def editar_movimiento_view(request, movimiento_id):
             if fecha_movimiento > timezone.localdate():
                 raise ValueError
 
-            categoria = Categoria.objects.get(idCategoria=categoria_id)
+            categoria = obtener_categoria_accesible(perfil, categoria_id)
+            if categoria is None:
+                raise Categoria.DoesNotExist
 
             movimiento.tipo = tipo
             movimiento.monto = monto
@@ -650,80 +736,95 @@ def eliminar_movimiento_view(request, movimiento_id):
     return redirect('historial')
 
 
-# Metas de ahorro y préstamos
+# Metas de ahorro, préstamos y gastos compartidos (RF-10, RF-12)
 @login_required
 def metas_view(request):
     perfil = _obtener_perfil_autenticado(request)
     if perfil is None:
         return redirect('login')
 
+    hoy = timezone.localdate()
+
     if request.method == 'POST':
         accion = request.POST.get('accion')
+        tab_destino = 'metas'
 
         try:
             if accion == 'crear_meta':
                 nombre = request.POST.get('nombre', '').strip()
                 categoria = request.POST.get('categoria', '').strip()
                 objetivo = _validar_monto_positivo(request.POST.get('objetivo', '0'), Decimal('0.01'))
+                fecha_obj_txt = request.POST.get('fecha_objetivo', '').strip()
+                fecha_obj = date.fromisoformat(fecha_obj_txt) if fecha_obj_txt else None
 
-                if not nombre:
-                    raise ValueError
-
-                MetaAhorro.objects.create(
-                    idUsuario=perfil,
-                    nombre=nombre,
-                    categoria=categoria or 'General',
-                    objetivo=objetivo
-                )
+                crear_meta_usuario(perfil, nombre, categoria, objetivo, fecha_objetivo=fecha_obj, hoy=hoy)
                 messages.success(request, 'Meta de ahorro creada correctamente.')
 
             elif accion == 'actualizar_meta':
                 meta_id = request.POST.get('meta_id')
                 ahorro = _validar_monto_positivo(request.POST.get('ahorro', '0'), Decimal('0.01'))
-                meta = MetaAhorro.objects.get(idMeta=meta_id, idUsuario=perfil)
-                meta.acumulado += ahorro
-                meta.save()
+                registrar_aporte_meta(perfil, meta_id, ahorro, fecha=hoy)
                 messages.success(request, 'Ahorro agregado correctamente.')
 
+            elif accion == 'actualizar_fecha_meta':
+                meta_id = request.POST.get('meta_id')
+                fecha_obj_txt = request.POST.get('fecha_objetivo', '').strip()
+                fecha_obj = date.fromisoformat(fecha_obj_txt) if fecha_obj_txt else None
+                if fecha_obj is not None and fecha_obj < hoy:
+                    raise ValueError('La fecha objetivo debe ser hoy o futura.')
+                actualizar_fecha_objetivo_meta(perfil, meta_id, fecha_obj)
+                messages.success(request, 'Fecha objetivo actualizada correctamente.')
+
             elif accion == 'crear_prestamo':
+                tab_destino = 'prestamos'
                 deudor = request.POST.get('deudor', '').strip()
                 concepto = request.POST.get('concepto', '').strip()
                 tipo = request.POST.get('tipo', 'Por cobrar')
                 monto = _validar_monto_positivo(request.POST.get('monto', '0'), Decimal('0.01'))
+                fecha_lim_txt = request.POST.get('fecha_limite', '').strip()
+                fecha_lim = date.fromisoformat(fecha_lim_txt) if fecha_lim_txt else None
 
-                if not deudor or not concepto or tipo not in ['Por cobrar', 'Por pagar']:
-                    raise ValueError
-
-                Prestamo.objects.create(
-                    idUsuario=perfil,
-                    deudor=deudor,
-                    concepto=concepto,
-                    tipo=tipo,
-                    monto=monto,
-                    estado='Pendiente'
-                )
+                crear_prestamo_usuario(perfil, deudor, concepto, tipo, monto, fecha_limite=fecha_lim)
                 messages.success(request, 'Préstamo registrado correctamente.')
 
             elif accion == 'pagar_prestamo':
+                tab_destino = 'prestamos'
                 prestamo_id = request.POST.get('prestamo_id')
-                prestamo = Prestamo.objects.get(idPrestamo=prestamo_id, idUsuario=perfil)
-                prestamo.estado = 'Pagado'
-                prestamo.save()
-                messages.success(request, 'Préstamo marcado como pagado.')
+                registrar_mov = request.POST.get('registrar_movimiento') in ('1', 'on', 'true', 'True')
+                _, actualizado = marcar_prestamo_pagado(
+                    perfil,
+                    prestamo_id,
+                    registrar_movimiento=registrar_mov,
+                    hoy=hoy,
+                )
+                if actualizado:
+                    messages.success(request, 'Préstamo marcado como pagado.')
 
             else:
                 messages.error(request, 'Acción no válida.')
                 return redirect('metas')
 
             _refrescar_notificaciones(request, perfil)
+            if tab_destino != 'metas':
+                return redirect(f'/app/metas/?tab={tab_destino}')
             return redirect('metas')
 
-        except (ValueError, InvalidOperation, MetaAhorro.DoesNotExist, Prestamo.DoesNotExist):
-            messages.error(request, 'Verifica los datos ingresados.')
+        except (ValueError, InvalidOperation, MetaAhorro.DoesNotExist, Prestamo.DoesNotExist) as exc:
+            detalle = str(exc).strip()
+            messages.error(
+                request,
+                detalle if detalle and 'does not exist' not in detalle.lower() else 'Verifica los datos ingresados.',
+            )
 
+    resumen = _obtener_resumen(request, perfil)
     metas = MetaAhorro.objects.filter(idUsuario=perfil).order_by('-idMeta')
-    prestamos = Prestamo.objects.filter(idUsuario=perfil).order_by('estado', '-idPrestamo')
-    metas_ui = enriquecer_metas(metas, perfil=perfil, hoy=timezone.localdate())
+    metas_ui = enriquecer_metas_reales(
+        metas,
+        perfil=perfil,
+        hoy=hoy,
+        limite_diario_ref=resumen['limite_diario_recomendado'],
+    )
+    comp_resumen = obtener_resumen_compartidos_y_prestamos(perfil, hoy=hoy)
 
     total_ahorrado = sum((m['acumulado'] for m in metas_ui), Decimal('0.00'))
     total_objetivo = sum((m['objetivo'] for m in metas_ui), Decimal('0.00'))
@@ -734,20 +835,27 @@ def metas_view(request):
     )
     metas_completadas_count = sum(1 for m in metas_ui if m['completada'])
     metas_activas_count = len(metas_ui) - metas_completadas_count
-    prestamos_pendientes_count = prestamos.filter(estado='Pendiente').count()
-    tab_activo = 'prestamos' if request.GET.get('tab') == 'prestamos' else 'metas'
+
+    tab_param = request.GET.get('tab', 'metas').strip().lower()
+    tab_activo = tab_param if tab_param in ('metas', 'prestamos', 'compartidos') else 'metas'
 
     context = {
         'usuario': perfil,
         'metas': metas,
         'metas_ui': metas_ui,
-        'prestamos': prestamos,
+        'prestamos': comp_resumen['prestamos'],
+        'prestamos_ui': comp_resumen['prestamos_ui'],
+        'gastos_compartidos': comp_resumen['gastos_compartidos'],
+        'comp_resumen': comp_resumen,
+        'categorias_gasto': obtener_categorias_usuario(perfil, tipo='gasto'),
+        'hoy_iso': hoy.isoformat(),
         'total_ahorrado_fmt': formatear_cop(total_ahorrado),
         'total_objetivo_fmt': formatear_cop(total_objetivo),
         'porcentaje_global': porcentaje_global,
         'metas_activas_count': metas_activas_count,
         'metas_completadas_count': metas_completadas_count,
-        'prestamos_pendientes_count': prestamos_pendientes_count,
+        'prestamos_pendientes_count': comp_resumen['prestamos_pendientes_count'],
+        'compartidos_pendientes_count': comp_resumen['compartidos_pendientes_count'],
         'tab_activo': tab_activo,
         'pestana_activa': 'metas',
     }
@@ -761,35 +869,33 @@ def crear_meta_view(request):
     if perfil is None:
         return redirect('login')
 
+    hoy = timezone.localdate()
+
     if request.method == 'POST':
         try:
             nombre = request.POST.get('nombre', '').strip()
             categoria = request.POST.get('categoria', '').strip()
             objetivo = _validar_monto_positivo(request.POST.get('objetivo', '0'), Decimal('0.01'))
+            fecha_obj_txt = request.POST.get('fecha_objetivo', '').strip()
+            fecha_obj = date.fromisoformat(fecha_obj_txt) if fecha_obj_txt else None
 
-            if not nombre:
-                raise ValueError
-
-            MetaAhorro.objects.create(
-                idUsuario=perfil,
-                nombre=nombre,
-                categoria=categoria or 'General',
-                objetivo=objetivo
-            )
+            crear_meta_usuario(perfil, nombre, categoria, objetivo, fecha_objetivo=fecha_obj, hoy=hoy)
             _refrescar_notificaciones(request, perfil)
             messages.success(request, 'Meta de ahorro creada correctamente.')
             return redirect('metas')
 
-        except (ValueError, InvalidOperation):
-            messages.error(request, 'Completa el nombre y un monto objetivo válido.')
+        except (ValueError, InvalidOperation) as exc:
+            detalle = str(exc).strip()
+            messages.error(request, detalle or 'Completa el nombre y un monto objetivo válido.')
 
     return render(request, 'crear_meta.html', {
         'usuario': perfil,
+        'hoy_iso': hoy.isoformat(),
         'pestana_activa': 'metas',
     })
 
 
-# Pantalla Categorías (Donut + desglose por porcentaje)
+# Pantalla Categorías (Donut + gestión de categorías personalizadas RF-02)
 @login_required
 def categorias_view(request):
     perfil = _obtener_perfil_autenticado(request)
@@ -810,10 +916,33 @@ def categorias_view(request):
     )
     categorias_gasto, total_gastado = agrupar_categorias_gasto(gastos_qs)
 
+    personalizadas_qs = obtener_categorias_personalizadas(perfil)
+    conteo_por_cat = {
+        r['idCategoria']: r['total']
+        for r in Transaccion.objects.filter(
+            idUsuario=perfil,
+            idCategoria__in=personalizadas_qs,
+        )
+        .values('idCategoria')
+        .annotate(total=Sum('monto'))
+    }
+    personalizadas_ui = []
+    for cat in personalizadas_qs:
+        personalizadas_ui.append({
+            'idCategoria': cat.idCategoria,
+            'nombre': cat.nombre,
+            'tipo_aplicable': cat.tipo_aplicable,
+            'tono': cat.tono,
+            'ui': obtener_estilo_categoria(cat),
+            'tiene_movimientos': cat.idCategoria in conteo_por_cat,
+        })
+
     return render(request, 'categorias.html', {
         'usuario': perfil,
         'rango': rango,
         'categorias_gasto': categorias_gasto,
+        'categorias_personalizadas': personalizadas_ui,
+        'tonos_paleta': TONOS_CATEGORIA_PALETA,
         'total_gastado_fmt': formatear_cop(total_gastado),
         'etiquetas_json': [c['nombre'] for c in categorias_gasto],
         'valores_json': [float(c['total']) for c in categorias_gasto],
@@ -822,7 +951,7 @@ def categorias_view(request):
     })
 
 
-# Pantalla Estadísticas e Insights (analítica completa, gráficos, hormiga y ciclo)
+# Pantalla Estadísticas e Insights (RF-08, RF-09, RF-13)
 @login_required
 def insights_view(request):
     perfil = _obtener_perfil_autenticado(request)
@@ -832,8 +961,7 @@ def insights_view(request):
     resumen = _obtener_resumen(request, perfil)
     hoy = resumen['hoy']
     inicio_mes = hoy.replace(day=1)
-    fin_mes_pasado = inicio_mes - timedelta(days=1)
-    inicio_mes_pasado = fin_mes_pasado.replace(day=1)
+    umbral_hormiga = resumen['umbral_hormiga']
 
     periodo = request.GET.get('periodo', 'mensual').strip().lower()
     if periodo not in ['semanal', 'mensual', 'anual']:
@@ -865,47 +993,58 @@ def insights_view(request):
         fecha__gte=inicio_mes,
         fecha__lte=hoy,
     )
-    gastos_mes_pasado = resumen['movimientos'].filter(
-        tipo__iexact='gasto',
-        fecha__gte=inicio_mes_pasado,
-        fecha__lte=fin_mes_pasado,
-    ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
-    gastos_mes = resumen['gastos_mes']
-    if gastos_mes_pasado > 0:
-        variacion = round(float((gastos_mes - gastos_mes_pasado) / gastos_mes_pasado) * 100)
-    else:
-        variacion = 0
+    comparacion = calcular_comparacion_periodos(perfil, periodo=periodo, hoy=hoy)
+    evolucion_ahorro = calcular_evolucion_ahorro(perfil, hoy=hoy, meses=6)
+    variacion = comparacion['var_gastos_pct']
 
     hormiga_mes = gastos_mes_qs.filter(
-        monto__lte=Decimal('15000.00')
+        monto__lte=umbral_hormiga
     ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
 
-    hormiga_periodo_qs = gastos_periodo_qs.filter(monto__lte=Decimal('15000.00'))
+    hormiga_periodo_qs = gastos_periodo_qs.filter(monto__lte=umbral_hormiga)
     hormiga_periodo = hormiga_periodo_qs.aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
     hormiga_count = hormiga_periodo_qs.count()
 
     categorias_periodo, _ = agrupar_categorias_gasto(gastos_periodo_qs)
     barras_evolucion = serie_evolucion_periodo(resumen['movimientos'], hoy, periodo)
 
+    presupuestos_cat = calcular_presupuestos_categoria(perfil, hoy=hoy)
+    metas_plan = enriquecer_metas_reales(
+        MetaAhorro.objects.filter(idUsuario=perfil),
+        perfil=perfil,
+        hoy=hoy,
+        limite_diario_ref=resumen['limite_diario_recomendado'],
+    )
+    compartidos_resumen = obtener_resumen_compartidos_y_prestamos(perfil, hoy=hoy)
+    recomendaciones = generar_recomendaciones_personalizadas(
+        perfil,
+        resumen,
+        comparacion=comparacion,
+        presupuestos_cat=presupuestos_cat,
+        metas_plan=metas_plan,
+        compartidos_resumen=compartidos_resumen,
+        hoy=hoy,
+    )
+
     alerta_principal = resumen['alerta_principal']
     if alerta_principal is not None:
         mishi_mood = 'alert'
         mishi_titulo = alerta_principal['titulo']
         mishi_mensaje = alerta_principal['detalle']
-    elif variacion < 0:
+    elif comparacion['tiene_datos_anteriores'] and variacion < 0:
         mishi_mood = 'celebrate'
         mishi_titulo = 'Ritmo de ahorro saludable'
         mishi_mensaje = (
-            f'Llevas {abs(variacion)}% menos en gastos que el mes pasado. '
+            f"Llevas {abs(variacion)}% menos en gastos frente a {comparacion['etiqueta_anterior'].lower()}. "
             'Buen momento para abonar a una meta.'
         )
-    elif variacion > 0:
+    elif comparacion['tiene_datos_anteriores'] and variacion > 0:
         mishi_mood = 'alert'
         mishi_titulo = f'Tus gastos subieron {variacion}%'
         mishi_mensaje = (
-            f"Este mes acumulas ${resumen['gastos_mes_fmt']}. "
-            'Revisa tu categoría principal en la pestaña Gráficas.'
+            f"Acumulas ${comparacion['gastos_actual_fmt']} frente a ${comparacion['gastos_anterior_fmt']} "
+            f"en {comparacion['etiqueta_anterior'].lower()}."
         )
     else:
         mishi_mood = 'neutral'
@@ -932,8 +1071,13 @@ def insights_view(request):
         'categorias_periodo': categorias_periodo,
         'categorias_top': categorias_periodo[:4],
         'barras_evolucion': barras_evolucion,
+        'comparacion': comparacion,
+        'evolucion_ahorro': evolucion_ahorro,
+        'recomendaciones': recomendaciones,
         'variacion': variacion,
         'variacion_abs': abs(variacion),
+        'umbral_hormiga_val': int(umbral_hormiga),
+        'umbral_hormiga_fmt': resumen['umbral_hormiga_fmt'],
         'hormiga_mes_fmt': formatear_cop(hormiga_mes),
         'hormiga_periodo_fmt': formatear_cop(hormiga_periodo),
         'hormiga_count': hormiga_count,
@@ -959,6 +1103,7 @@ def perfil_view(request):
         frecuencia = request.POST.get('frecuencia', perfil.frecuencia)
         mesada_texto = request.POST.get('mesada', str(perfil.mesada)).strip()
         fecha_proximo_texto = request.POST.get('fecha_proximo_ingreso', '').strip()
+        umbral_texto = request.POST.get('umbral_hormiga', '').strip()
 
         try:
             mesada = Decimal(mesada_texto or '0')
@@ -976,6 +1121,10 @@ def perfil_view(request):
             fecha_proximo = None
             if fecha_proximo_texto:
                 fecha_proximo = date.fromisoformat(fecha_proximo_texto)
+
+            if umbral_texto:
+                umbral = _validar_monto_positivo(umbral_texto, UMBRAL_HORMIGA_MIN, UMBRAL_HORMIGA_MAX)
+                perfil.umbral_hormiga = umbral
 
             perfil.nombre = nombre
             perfil.universidad = universidad
@@ -1006,6 +1155,8 @@ def perfil_view(request):
         'saldo_inicial_fmt': resumen['saldo_inicial_fmt'],
         'dinero_reservado_metas_fmt': resumen['dinero_reservado_metas_fmt'],
         'limite_diario_fmt': resumen['limite_diario_fmt'],
+        'umbral_hormiga_val': int(resumen['umbral_hormiga']),
+        'umbral_hormiga_fmt': resumen['umbral_hormiga_fmt'],
         'mesada_fmt': formatear_cop(perfil.mesada),
         'dias_restantes': resumen['dias_restantes'],
         'ciclo': resumen['ciclo'],
@@ -1086,7 +1237,7 @@ def perfil_preferencias_view(request):
     return redirect('perfil')
 
 
-# Pantalla Presupuestos (conectada al modelo Presupuesto)
+# Pantalla Presupuestos (general + presupuestos reales por categoría RF-11)
 @login_required
 def presupuestos_view(request):
     perfil = _obtener_perfil_autenticado(request)
@@ -1119,20 +1270,10 @@ def presupuestos_view(request):
     limite_diario_form_val = (
         presupuesto.limiteDiario if presupuesto else resumen['limite_diario_recomendado']
     )
-    limite_mensual_activo = (
-        presupuesto.limiteMensual
-        if presupuesto
-        else (perfil.mesada if perfil.mesada > 0 else Decimal('600000.00'))
-    )
+    referencia_base = perfil.mesada if perfil.mesada > 0 else (resumen['saldo_inicial'] + resumen['ingresos_recibidos'])
+    limite_mensual_activo = presupuesto.limiteMensual if presupuesto else referencia_base
 
     hoy = resumen['hoy']
-    gastos_mes_qs = resumen['movimientos'].filter(
-        tipo__iexact='gasto',
-        fecha__gte=hoy.replace(day=1),
-        fecha__lte=hoy
-    )
-    categorias_gasto, _ = agrupar_categorias_gasto(gastos_mes_qs)
-
     gastos_mes = resumen['gastos_mes']
     disponible_mensual = max(limite_mensual_activo - gastos_mes, Decimal('0.00'))
     excedente_mensual = max(gastos_mes - limite_mensual_activo, Decimal('0.00'))
@@ -1142,39 +1283,14 @@ def presupuestos_view(request):
         else 0
     )
     porcentaje_mensual = min(100, porcentaje_mensual_real)
-    if gastos_mes > limite_mensual_activo:
+    if limite_mensual_activo > 0 and gastos_mes > limite_mensual_activo:
         estado_mensual = 'excedido'
-    elif porcentaje_mensual_real >= 80:
+    elif limite_mensual_activo > 0 and porcentaje_mensual_real >= 80:
         estado_mensual = 'preventivo'
     else:
         estado_mensual = 'ok'
 
-    # Distribución orientativa sobre el presupuesto mensual (será reemplazada por PresupuestoCategoria en Fase 3)
-    if not categorias_gasto:
-        categorias_gasto = [
-            {'nombre': c.nombre, 'total': Decimal('0.00'), 'total_fmt': '0', 'ui': estilo_categoria(c.nombre)}
-            for c in obtener_categorias()[:4]
-        ]
-
-    divisor = max(len(categorias_gasto), 1)
-    tope_categoria = limite_mensual_activo / divisor
-    barras_presupuesto = []
-    for item in categorias_gasto:
-        pct_real = round(float(item['total'] / tope_categoria) * 100) if tope_categoria > 0 else 0
-        pct = min(100, pct_real)
-        excedido = item['total'] > tope_categoria
-        cerca = (not excedido) and pct_real >= 80
-        barras_presupuesto.append({
-            'nombre': item['nombre'],
-            'gastado_fmt': item['total_fmt'],
-            'tope_fmt': formatear_cop(round(tope_categoria)),
-            'disponible_fmt': formatear_cop(max(round(tope_categoria) - item['total'], Decimal('0.00'))),
-            'porcentaje': pct,
-            'porcentaje_real': pct_real,
-            'excedido': excedido,
-            'cerca': cerca,
-            'ui': item['ui'],
-        })
+    pres_cat_data = calcular_presupuestos_categoria(perfil, hoy=hoy)
 
     return render(request, 'presupuestos.html', {
         'usuario': perfil,
@@ -1197,9 +1313,190 @@ def presupuestos_view(request):
         'alerta_hoy': resumen['alerta_activa'],
         'alerta_principal': resumen['alerta_principal'],
         'alerta_saldo_insuficiente': resumen['alerta_saldo_insuficiente'],
-        'barras_presupuesto': barras_presupuesto,
+        'barras_presupuesto': pres_cat_data['presupuestos_configurados'],
+        'categorias_sin_presupuesto': pres_cat_data['categorias_sin_presupuesto'],
+        'total_asignado_categorias_fmt': pres_cat_data['total_asignado_fmt'],
+        'categorias_disponibles': obtener_categorias_usuario(perfil, tipo='gasto'),
         'pestana_activa': 'presupuestos',
     })
+
+
+# Endpoints modulares de Fase 3 (POST + CSRF + aislamiento estricto)
+@login_required
+def categoria_crear_view(request):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+    if request.method == 'POST':
+        try:
+            cat = crear_categoria_personalizada(
+                perfil,
+                nombre=request.POST.get('nombre', ''),
+                tipo_aplicable=request.POST.get('tipo_aplicable', 'ambos'),
+                tono=request.POST.get('tono', ''),
+            )
+            messages.success(request, f'Categoría "{cat.nombre}" creada correctamente.')
+        except ValueError as exc:
+            messages.error(request, str(exc))
+    return redirect('categorias')
+
+
+@login_required
+def categoria_editar_view(request, categoria_id):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+    if request.method == 'POST':
+        try:
+            cat = editar_categoria_personalizada(
+                perfil,
+                categoria_id=categoria_id,
+                nombre=request.POST.get('nombre', ''),
+                tipo_aplicable=request.POST.get('tipo_aplicable', 'ambos'),
+                tono=request.POST.get('tono', ''),
+            )
+            messages.success(request, f'Categoría "{cat.nombre}" actualizada.')
+        except ValueError as exc:
+            messages.error(request, str(exc))
+    return redirect('categorias')
+
+
+@login_required
+def categoria_eliminar_view(request, categoria_id):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+    if request.method == 'POST':
+        try:
+            nombre = eliminar_categoria_personalizada(perfil, categoria_id)
+            messages.success(request, f'Categoría "{nombre}" eliminada.')
+        except ValueError as exc:
+            messages.error(request, str(exc))
+    return redirect('categorias')
+
+
+@login_required
+def presupuesto_categoria_guardar_view(request):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+    if request.method == 'POST':
+        try:
+            cat_id = request.POST.get('categoria_id', '')
+            limite = _validar_monto_positivo(request.POST.get('limite_mensual', '0'), Decimal('1000'))
+            pc = guardar_presupuesto_categoria(perfil, cat_id, limite)
+            _refrescar_notificaciones(request, perfil)
+            messages.success(request, f'Tope mensual de "{pc.idCategoria.nombre}" guardado.')
+        except (ValueError, InvalidOperation) as exc:
+            messages.error(request, str(exc) or 'Ingresa un presupuesto válido por categoría.')
+    return redirect('presupuestos')
+
+
+@login_required
+def presupuesto_categoria_eliminar_view(request, presupuesto_cat_id):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+    if request.method == 'POST':
+        if eliminar_presupuesto_categoria(perfil, presupuesto_cat_id):
+            _refrescar_notificaciones(request, perfil)
+            messages.success(request, 'Presupuesto de categoría eliminado.')
+    return redirect('presupuestos')
+
+
+@login_required
+def gasto_compartido_crear_view(request):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+    if request.method == 'POST':
+        try:
+            hoy = timezone.localdate()
+            descripcion = request.POST.get('descripcion', '').strip()
+            categoria_id = request.POST.get('categoria', '')
+            monto_total = _validar_monto_positivo(request.POST.get('monto_total', '0'), Decimal('100'))
+            mi_parte_txt = request.POST.get('mi_parte', '0').strip() or '0'
+            mi_parte = _validar_monto_positivo(mi_parte_txt, Decimal('0.00'))
+            fecha_txt = request.POST.get('fecha', '').strip() or hoy.isoformat()
+            fecha_mov = date.fromisoformat(fecha_txt)
+            yo_pague_total = request.POST.get('yo_pague_total', '1') in ('1', 'on', 'true', 'True')
+
+            nombres = request.POST.getlist('participante_nombre')
+            montos = request.POST.getlist('participante_monto')
+            participantes = []
+            for nm, m_txt in zip(nombres, montos):
+                nm_c = nm.strip()
+                m_c = m_txt.strip()
+                if not nm_c and not m_c:
+                    continue
+                aporte = _validar_monto_positivo(m_c or '0', Decimal('100'))
+                participantes.append((nm_c, aporte))
+
+            crear_gasto_compartido(
+                perfil=perfil,
+                categoria_id=categoria_id,
+                descripcion=descripcion,
+                monto_total=monto_total,
+                mi_parte=mi_parte,
+                fecha=fecha_mov,
+                participantes_lista=participantes,
+                yo_pague_total=yo_pague_total,
+                hoy=hoy,
+            )
+            _refrescar_notificaciones(request, perfil)
+            messages.success(request, 'Gasto compartido registrado correctamente.')
+        except (ValueError, InvalidOperation) as exc:
+            messages.error(request, str(exc) or 'Verifica los datos del gasto compartido.')
+    return redirect('/app/metas/?tab=compartidos')
+
+
+@login_required
+def participante_pagar_view(request, participante_id):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+    if request.method == 'POST':
+        try:
+            part, marcado = marcar_participante_pagado(perfil, participante_id)
+            if marcado:
+                _refrescar_notificaciones(request, perfil)
+                messages.success(request, f'Reembolso de {part.nombreAmigo} registrado correctamente.')
+        except Participante.DoesNotExist:
+            messages.error(request, 'No se encontró el participante indicado.')
+    next_url = request.POST.get('next', '').strip()
+    if next_url.startswith('/app/') and not next_url.startswith('//'):
+        return redirect(next_url)
+    return redirect('/app/metas/?tab=compartidos')
+
+
+@login_required
+def umbral_hormiga_view(request):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+    if request.method == 'POST':
+        try:
+            nuevo = _validar_monto_positivo(
+                request.POST.get('umbral_hormiga', '0').strip(),
+                UMBRAL_HORMIGA_MIN,
+                UMBRAL_HORMIGA_MAX,
+            )
+            perfil.umbral_hormiga = nuevo
+            perfil.save(update_fields=['umbral_hormiga'])
+            _refrescar_notificaciones(request, perfil)
+            messages.success(
+                request,
+                f'Umbral de gastos hormiga actualizado a ${formatear_cop(nuevo)}.',
+            )
+        except (ValueError, InvalidOperation):
+            messages.error(
+                request,
+                f'Ingresa un umbral válido entre ${formatear_cop(UMBRAL_HORMIGA_MIN)} y ${formatear_cop(UMBRAL_HORMIGA_MAX)}.',
+            )
+    next_url = request.POST.get('next', '').strip()
+    if next_url.startswith('/app/') and not next_url.startswith('//'):
+        return redirect(next_url)
+    return redirect('perfil')
 
 
 # Pantalla motivacional / descanso Mishi (Screen 12 naranja)

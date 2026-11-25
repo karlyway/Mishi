@@ -47,6 +47,12 @@
             </select>
         </div>
 
+        <div class="form-group">
+            <label for="meta-fecha-objetivo" class="field-lbl-strong">Fecha objetivo (opcional)</label>
+            <input type="date" id="meta-fecha-objetivo" name="fecha_objetivo"
+                   class="form-control app-field" min="{{ hoy_iso }}">
+        </div>
+
         <div class="mishi-tip-card">
             <img src="{% static 'img/mishi/mishi-save.png' %}" alt="" class="mishi-tip-cat" aria-hidden="true">
             <div>

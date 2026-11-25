@@ -44,8 +44,27 @@
         {% if es_hormiga %}
         <div class="detalle-meta-row">
             <span class="detalle-meta-lbl">Clasificación</span>
-            <span class="mini-pill is-warn">Gasto hormiga (&le; $15.000)</span>
+            <span class="mini-pill is-warn">Gasto hormiga (&le; ${{ umbral_hormiga_fmt }})</span>
         </div>
+        {% endif %}
+
+        {% if gasto_compartido %}
+        <div class="detalle-meta-row">
+            <span class="detalle-meta-lbl">Gasto compartido</span>
+            <span class="mini-pill {% if gasto_compartido.estado == 'Liquidado' %}is-ok{% else %}is-warn{% endif %}">{{ gasto_compartido.estado }}</span>
+        </div>
+        <div class="detalle-meta-row">
+            <span class="detalle-meta-lbl">Total / Tu parte</span>
+            <strong class="detalle-meta-val money-num">${{ gasto_comp_total_fmt }} · Mi parte ${{ gasto_comp_mi_parte_fmt }}</strong>
+        </div>
+        {% for pt in participantes_comp %}
+        <div class="detalle-meta-row">
+            <span class="detalle-meta-lbl">{{ pt.nombreAmigo }}</span>
+            <span class="money-num" style="font-size: 13.5px;">
+                ${{ pt.parte_fmt }} · <strong>{% if pt.pagado %}Pagado{% else %}Pendiente{% endif %}</strong>
+            </span>
+        </div>
+        {% endfor %}
         {% endif %}
 
         <div class="detalle-actions">

@@ -1,7 +1,11 @@
 from django.utils import timezone
 
-from .models import Categoria, Usuario
+from .models import Usuario
 from .services.avatares import AVATARES_MISHI, obtener_avatar_info
+from .services.categorias_service import (
+    obtener_categorias_usuario,
+    obtener_estilo_categoria,
+)
 from .services.finanzas_service import calcular_resumen_financiero
 from .services.notificaciones_service import (
     contar_notificaciones_no_leidas,
@@ -11,23 +15,10 @@ from .services.seguridad_service import (
     POLITICA_PRIVACIDAD_VERSION,
     requiere_consentimiento_vigente,
 )
-from .ui_helpers import estilo_categoria
-
-
-CATEGORIAS_BASE = (
-    'Alimentación',
-    'Transporte',
-    'Universidad',
-    'Ocio',
-    'Hogar',
-    'Salud',
-    'Mesada / Ingreso',
-    'Otros',
-)
 
 
 def mishi_app_chrome(request):
-    """Expone categorías reales y resumen financiero compartido para el bottom sheet global."""
+    """Expone categorías del usuario y resumen financiero compartido para el bottom sheet global."""
     user = getattr(request, 'user', None)
     if not user or not user.is_authenticated:
         return {}
@@ -36,16 +27,13 @@ def mishi_app_chrome(request):
     if perfil is None:
         return {}
 
-    if not Categoria.objects.exists():
-        for nombre in CATEGORIAS_BASE:
-            Categoria.objects.get_or_create(nombre=nombre)
-
-    categorias = Categoria.objects.all().order_by('idCategoria')
+    categorias = obtener_categorias_usuario(perfil)
     sheet_categorias_ui = [
         {
             'idCategoria': c.idCategoria,
             'nombre': c.nombre,
-            'ui': estilo_categoria(c.nombre),
+            'es_personalizada': c.es_personalizada,
+            'ui': obtener_estilo_categoria(c),
         }
         for c in categorias
     ]
@@ -73,6 +61,7 @@ def mishi_app_chrome(request):
         'sheet_limite_diario_fmt': resumen['limite_diario_fmt'],
         'sheet_restante_hoy_fmt': resumen['dinero_restante_hoy_fmt'],
         'sheet_alerta_activa': resumen['alerta_activa'],
+        'umbral_hormiga_fmt': resumen['umbral_hormiga_fmt'],
         'notificaciones_no_leidas': no_leidas,
         'usuario_avatar': avatar_info,
         'usuario_avatar_path': avatar_info['archivo'],

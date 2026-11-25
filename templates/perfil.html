@@ -61,6 +61,10 @@
                     <label for="perfil-proximo-ingreso">Fecha estimada del próximo ingreso (opcional)</label>
                     <input type="date" id="perfil-proximo-ingreso" name="fecha_proximo_ingreso" class="m-input" value="{{ fecha_proximo_ingreso_iso }}">
                 </div>
+                <div class="m-field-group m-field-group--full">
+                    <label for="perfil-umbral-hormiga">Umbral de gastos hormiga (COP)</label>
+                    <input type="number" id="perfil-umbral-hormiga" name="umbral_hormiga" class="m-input money-num" min="500" max="500000" step="500" value="{{ umbral_hormiga_val }}">
+                </div>
             </div>
             <button type="submit" class="m-btn-pill is-primary m-btn-full" style="margin-top: 14px;">Guardar cambios</button>
         </form>
@@ -108,10 +112,21 @@
                 </span>
                 <span class="m-settings-copy">
                     <strong>Categorías</strong>
-                    <span>Distribución de tus gastos</span>
+                    <span>Distribución y categorías personalizadas</span>
                 </span>
                 <svg class="m-tx-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </a>
+
+            <button type="button" class="m-settings-row" id="row-umbral-hormiga">
+                <span class="m-settings-ico">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </span>
+                <span class="m-settings-copy">
+                    <strong>Umbral de gastos hormiga</strong>
+                    <span class="money-num">Compras &le; ${{ umbral_hormiga_fmt }}</span>
+                </span>
+                <svg class="m-tx-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
         </div>
     </section>
 
@@ -188,7 +203,7 @@
                 </span>
                 <span class="m-settings-copy">
                     <strong>Política de privacidad</strong>
-                    <span>{% if usuario.acepto_politica_datos and usuario.version_politica_datos == politica_version %}Aceptada · v{{ usuario.version_politica_datos }}{% else %}Pendiente de confirmación · v{{ politica_version }}{% endif %}</span>
+                    <span>{% if usuario.acepto_politica_datos and usuario.version_politica_datos == politica_version %}Aceptada{% if usuario.fecha_aceptacion_datos %} ({{ usuario.fecha_aceptacion_datos|date:"d/m/Y" }}){% endif %} · v{{ usuario.version_politica_datos }}{% else %}Pendiente de confirmación · v{{ politica_version }}{% endif %}</span>
                 </span>
                 <svg class="m-tx-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </a>
@@ -302,6 +317,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (toggle1) toggle1.addEventListener('click', toggleEdit);
     if (toggle2) toggle2.addEventListener('click', toggleEdit);
+    var toggleHormiga = document.getElementById('row-umbral-hormiga');
+    if (toggleHormiga) toggleHormiga.addEventListener('click', function () {
+        if (panel && !panel.classList.contains('is-open')) toggleEdit();
+        var inp = document.getElementById('perfil-umbral-hormiga');
+        if (inp) { inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); inp.focus(); }
+    });
 
     var pwPanel = document.getElementById('perfil-password-panel');
     var pwToggle = document.getElementById('toggle-password-form');
