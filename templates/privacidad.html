@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Política de Privacidad - Mishi{% endblock %}
+
+{% block content %}
+<div class="app-screen app-screen--content reveal">
+    <header class="m-sub-header">
+        <a href="{% if pestana_activa %}{% url 'perfil' %}{% else %}{% url 'registro_usuario' %}{% endif %}" class="m-icon-btn" aria-label="Volver">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </a>
+        <div class="m-sub-header-center">
+            <h1>Privacidad y datos</h1>
+            <p class="m-page-sub">Versión {{ politica_version }} · {{ politica_fecha }}</p>
+        </div>
+        <span style="width: 44px;" aria-hidden="true"></span>
+    </header>
+
+    <article class="m-tx-surface m-privacy-doc">
+        <div class="m-privacy-meta">
+            <span class="m-privacy-badge">Política v{{ politica_version }}</span>
+            {% if usuario and usuario.acepto_politica_datos and not consentimiento_pendiente %}
+            <span class="m-privacy-badge is-ok">
+                Aceptada{% if usuario.fecha_aceptacion_datos %} el {{ usuario.fecha_aceptacion_datos|date:"d/m/Y H:i" }}{% endif %}
+            </span>
+            {% endif %}
+        </div>
+
+        <section class="m-privacy-section">
+            <h2>1. Finalidad del tratamiento</h2>
+            <p>
+                Mishi es una aplicación web orientada al control de finanzas personales para estudiantes universitarios.
+                Los datos suministrados se utilizan exclusivamente para calcular tu saldo disponible, límite diario,
+                alertas preventivas, presupuestos, metas de ahorro y estadísticas personales dentro de tu cuenta.
+            </p>
+        </section>
+
+        <section class="m-privacy-section">
+            <h2>2. Datos que recopilamos</h2>
+            <ul>
+                <li><strong>Identificación básica:</strong> nombre, institución universitaria y correo electrónico.</li>
+                <li><strong>Credenciales de acceso:</strong> contraseña almacenada únicamente como hash seguro (PBKDF2-SHA256); nunca se guarda en texto plano.</li>
+                <li><strong>Registros financieros manuales:</strong> mesada estimada, ciclo financiero, ingresos, gastos, presupuestos, metas de ahorro y préstamos entre compañeros que tú registres.</li>
+                <li><strong>Preferencias de aplicación:</strong> avatar seleccionado, privacidad de saldo, estado de alertas y tema visual.</li>
+            </ul>
+            <p>
+                Mishi <strong>no</strong> solicita claves bancarias, números de tarjetas ni realiza conexiones con entidades financieras reales.
+            </p>
+        </section>
+
+        <section class="m-privacy-section">
+            <h2>3. Medidas técnicas de protección</h2>
+            <ul>
+                <li>Aislamiento estricto por usuario en consultas y operaciones de creación, consulta, edición y eliminación.</li>
+                <li>Protección contra solicitudes falsificadas (CSRF) en todos los formularios y acciones que modifican datos.</li>
+                <li>Validación de robustez de contraseñas en servidor y cookies de sesión configuradas con atributos de seguridad (<code>HttpOnly</code> y <code>SameSite=Lax</code>).</li>
+            </ul>
+        </section>
+
+        <section class="m-privacy-section">
+            <h2>4. Derechos del titular (referencia Ley 1581 de 2012)</h2>
+            <p>
+                Como titular de tus datos personales puedes conocer, actualizar y rectificar tu información desde la sección
+                <strong>Perfil</strong>, así como solicitar la supresión de tu cuenta y sus registros asociados.
+                Esta aceptación documenta tu autorización informada dentro de la plataforma y constituye una salvaguarda
+                técnica de privacidad dentro del alcance académico del proyecto, sin sustituir asesoría jurídica formal
+                para un despliegue comercial.
+            </p>
+        </section>
+
+        {% if usuario and consentimiento_pendiente %}
+        <div class="m-privacy-action-box">
+            <p>Tu cuenta fue creada antes de la publicación de la versión <strong>{{ politica_version }}</strong>. Confirma tu aceptación para registrar fecha y versión en tu perfil.</p>
+            <form method="POST" action="{% url 'aceptar_privacidad' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="/app/perfil/">
+                <button type="submit" class="m-btn-pill is-primary m-btn-full">Aceptar política de datos (v{{ politica_version }})</button>
+            </form>
+        </div>
+        {% endif %}
+    </article>
+</div>
+{% endblock %}

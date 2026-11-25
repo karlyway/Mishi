@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
-from django.contrib.auth import authenticate, get_user_model, login
+from django.contrib.auth import authenticate, get_user_model, login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q, Sum
@@ -19,7 +19,17 @@ from .services.avatares import (
     obtener_avatar_info,
 )
 from .services.finanzas_service import FRECUENCIAS_VALIDAS
-from .services.notificaciones_service import sincronizar_notificaciones_usuario
+from .services.notificaciones_service import (
+    contar_notificaciones_no_leidas,
+    sincronizar_notificaciones_usuario,
+)
+from .services.seguridad_service import (
+    POLITICA_PRIVACIDAD_FECHA,
+    POLITICA_PRIVACIDAD_VERSION,
+    registrar_consentimiento_datos,
+    requiere_consentimiento_vigente,
+    validar_contrasena_servidor,
+)
 from .ui_helpers import (
     FRECUENCIA_ETIQUETAS,
     agrupar_categorias_gasto,
@@ -59,11 +69,27 @@ def _obtener_resumen(request, perfil):
     return resumen
 
 
-def _validar_monto_positivo(texto, minimo=Decimal('100')):
+def _validar_monto_positivo(texto, minimo=Decimal('100'), maximo=Decimal('99999999.99')):
     monto = Decimal(texto)
-    if not monto.is_finite() or monto < minimo or monto.as_tuple().exponent < -2:
+    if (
+        not monto.is_finite()
+        or monto < minimo
+        or monto > maximo
+        or monto.as_tuple().exponent < -2
+    ):
         raise ValueError
     return monto
+
+
+def _refrescar_notificaciones(request, perfil):
+    """Sincroniza notificaciones tras una mutación financiera sin sobrecargar GETs."""
+    hoy = timezone.localdate()
+    resumen = calcular_resumen_usuario(perfil)
+    request._mishi_resumen = resumen
+    no_leidas = sincronizar_notificaciones_usuario(perfil, resumen=resumen, hoy=hoy)
+    request._mishi_notif_count = no_leidas
+    request.session['mishi_notif_sync_day'] = hoy.isoformat()
+    return no_leidas
 
 
 # Página de presentación pública
@@ -99,6 +125,7 @@ def registro_usuario_view(request):
     context_base = {
         'avatares_mishi': AVATARES_MISHI,
         'avatar_seleccionado': obtener_avatar_info(AVATAR_DEFECTO),
+        'politica_version': POLITICA_PRIVACIDAD_VERSION,
     }
 
     if request.method == 'POST':
@@ -109,6 +136,7 @@ def registro_usuario_view(request):
         password = request.POST.get('pass', '')
         mesada_texto = request.POST.get('mesada', '0').strip()
         avatar_id = request.POST.get('avatar', AVATAR_DEFECTO).strip() or AVATAR_DEFECTO
+        acepto_politica = request.POST.get('acepto_politica_datos') in ('1', 'on', 'true', 'True')
         if not es_avatar_valido(avatar_id):
             avatar_id = AVATAR_DEFECTO
         context_base['avatar_seleccionado'] = obtener_avatar_info(avatar_id)
@@ -129,7 +157,12 @@ def registro_usuario_view(request):
 
         try:
             mesada = Decimal(mesada_texto or '0')
-            if not mesada.is_finite() or mesada < 0:
+            if (
+                not mesada.is_finite()
+                or mesada < 0
+                or mesada > Decimal('99999999.99')
+                or mesada.as_tuple().exponent < -2
+            ):
                 raise InvalidOperation
         except InvalidOperation:
             return render(request, 'registro_usuario.html', {
@@ -141,6 +174,22 @@ def registro_usuario_view(request):
             return render(request, 'registro_usuario.html', {
                 **context_base,
                 'error': 'Este correo ya está registrado.'
+            })
+
+        if not acepto_politica:
+            return render(request, 'registro_usuario.html', {
+                **context_base,
+                'error': 'Debes aceptar la política de tratamiento de datos para crear tu cuenta.'
+            })
+
+        errores_pass = validar_contrasena_servidor(
+            password,
+            user=User(username=correo, email=correo, first_name=nombre),
+        )
+        if errores_pass:
+            return render(request, 'registro_usuario.html', {
+                **context_base,
+                'error': errores_pass[0]
             })
 
         try:
@@ -159,6 +208,9 @@ def registro_usuario_view(request):
                     mesada=mesada,
                     saldo_inicial=mesada,
                     avatar=avatar_id,
+                    acepto_politica_datos=True,
+                    fecha_aceptacion_datos=timezone.now(),
+                    version_politica_datos=POLITICA_PRIVACIDAD_VERSION,
                 )
 
             login(request, cuenta)
@@ -327,6 +379,7 @@ def movimiento_view(request):
                 tipo=tipo,
                 descripcion=descripcion
             )
+            _refrescar_notificaciones(request, perfil)
 
             messages.success(request, 'Movimiento registrado correctamente.')
             next_url = request.POST.get('next', '').strip()
@@ -552,6 +605,7 @@ def editar_movimiento_view(request, movimiento_id):
             movimiento.descripcion = descripcion
             movimiento.fecha = fecha_movimiento
             movimiento.save()
+            _refrescar_notificaciones(request, perfil)
 
             messages.success(request, 'Movimiento actualizado correctamente.')
             return redirect('historial')
@@ -588,6 +642,7 @@ def eliminar_movimiento_view(request, movimiento_id):
 
         if movimiento.exists():
             movimiento.delete()
+            _refrescar_notificaciones(request, perfil)
             messages.success(request, 'Movimiento eliminado correctamente.')
         else:
             messages.error(request, 'No se encontró el movimiento.')
@@ -658,7 +713,9 @@ def metas_view(request):
 
             else:
                 messages.error(request, 'Acción no válida.')
+                return redirect('metas')
 
+            _refrescar_notificaciones(request, perfil)
             return redirect('metas')
 
         except (ValueError, InvalidOperation, MetaAhorro.DoesNotExist, Prestamo.DoesNotExist):
@@ -719,6 +776,7 @@ def crear_meta_view(request):
                 categoria=categoria or 'General',
                 objetivo=objetivo
             )
+            _refrescar_notificaciones(request, perfil)
             messages.success(request, 'Meta de ahorro creada correctamente.')
             return redirect('metas')
 
@@ -910,6 +968,7 @@ def perfil_view(request):
                 or frecuencia not in FRECUENCIAS_VALIDAS
                 or not mesada.is_finite()
                 or mesada < 0
+                or mesada > Decimal('99999999.99')
                 or mesada.as_tuple().exponent < -2
             ):
                 raise ValueError
@@ -932,6 +991,7 @@ def perfil_view(request):
             elif frecuencia != 'mensual':
                 perfil.dia_pago_mensual = None
             perfil.save()
+            _refrescar_notificaciones(request, perfil)
             messages.success(request, 'Tu perfil fue actualizado correctamente.')
             return redirect('perfil')
 
@@ -957,6 +1017,7 @@ def perfil_view(request):
         'frecuencia_label': FRECUENCIA_ETIQUETAS.get(perfil.frecuencia, perfil.frecuencia),
         'alerta_activa': resumen['alerta_activa'],
         'presupuesto_configurado': Presupuesto.objects.filter(idUsuario=perfil).exists(),
+        'politica_version': POLITICA_PRIVACIDAD_VERSION,
         'pestana_activa': 'perfil',
     })
 
@@ -1004,6 +1065,8 @@ def perfil_preferencias_view(request):
 
     if campos_actualizados:
         perfil.save(update_fields=campos_actualizados)
+        if 'alertas_activas' in campos_actualizados:
+            _refrescar_notificaciones(request, perfil)
 
     avatar_info = obtener_avatar_info(perfil.avatar)
     if es_ajax:
@@ -1044,6 +1107,7 @@ def presupuestos_view(request):
                     'limiteMensual': limite_mensual,
                 }
             )
+            _refrescar_notificaciones(request, perfil)
             messages.success(request, 'Presupuesto guardado correctamente.')
             return redirect('presupuestos')
 
@@ -1159,20 +1223,21 @@ def notificaciones_view(request):
         return redirect('login')
 
     resumen = _obtener_resumen(request, perfil)
-    no_leidas = sincronizar_notificaciones_usuario(perfil, resumen=resumen)
+    hoy = resumen['hoy']
+    no_leidas = sincronizar_notificaciones_usuario(perfil, resumen=resumen, hoy=hoy)
     request._mishi_notif_count = no_leidas
+    request.session['mishi_notif_sync_day'] = hoy.isoformat()
 
     filtro = request.GET.get('filtro', 'todas').strip().lower()
     if filtro not in ('todas', 'no_leidas'):
         filtro = 'todas'
 
-    qs = Notificacion.objects.filter(idUsuario=perfil)
+    qs = Notificacion.objects.filter(idUsuario=perfil, descartada=False)
     total_notificaciones = qs.count()
     if filtro == 'no_leidas':
         qs = qs.filter(leida=False)
 
     notificaciones_ui = []
-    hoy = resumen['hoy']
     for n in qs[:50]:
         fecha_local = timezone.localtime(n.creada_en)
         notificaciones_ui.append({
@@ -1207,14 +1272,22 @@ def notificaciones_leer_view(request):
         return redirect('notificaciones')
 
     if request.POST.get('todas') == '1':
-        Notificacion.objects.filter(idUsuario=perfil, leida=False).update(leida=True)
+        Notificacion.objects.filter(
+            idUsuario=perfil,
+            descartada=False,
+            leida=False,
+        ).update(leida=True)
         messages.success(request, 'Todas las notificaciones fueron marcadas como leídas.')
         return redirect('notificaciones')
 
     notif_id = request.POST.get('notificacion_id', '').strip()
     destino = request.POST.get('next', '').strip()
     if notif_id.isdigit():
-        notif = Notificacion.objects.filter(idNotificacion=int(notif_id), idUsuario=perfil).first()
+        notif = Notificacion.objects.filter(
+            idNotificacion=int(notif_id),
+            idUsuario=perfil,
+            descartada=False,
+        ).first()
         if notif:
             if not notif.leida:
                 notif.leida = True
@@ -1234,7 +1307,88 @@ def notificacion_eliminar_view(request, notificacion_id):
         return redirect('login')
 
     if request.method == 'POST':
-        Notificacion.objects.filter(idNotificacion=notificacion_id, idUsuario=perfil).delete()
-        messages.success(request, 'Notificación eliminada.')
+        # Descarte lógico: evita que el motor vuelva a crear la misma alerta/evento.
+        actualizadas = Notificacion.objects.filter(
+            idNotificacion=notificacion_id,
+            idUsuario=perfil,
+            descartada=False,
+        ).update(descartada=True, leida=True)
+        if actualizadas:
+            messages.success(request, 'Notificación eliminada.')
 
     return redirect('notificaciones')
+
+
+# Política de privacidad y tratamiento de datos personales (Fase 2)
+def privacidad_view(request):
+    perfil = None
+    pestana_activa = None
+    if request.user.is_authenticated:
+        perfil = _obtener_perfil_autenticado(request)
+        if perfil is not None:
+            pestana_activa = 'perfil'
+
+    return render(request, 'privacidad.html', {
+        'usuario': perfil,
+        'pestana_activa': pestana_activa,
+        'politica_version': POLITICA_PRIVACIDAD_VERSION,
+        'politica_fecha': POLITICA_PRIVACIDAD_FECHA,
+        'consentimiento_pendiente': requiere_consentimiento_vigente(perfil) if perfil else False,
+    })
+
+
+@login_required
+def aceptar_privacidad_view(request):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+
+    if request.method == 'POST':
+        registrar_consentimiento_datos(perfil)
+        messages.success(request, 'Consentimiento de tratamiento de datos registrado.')
+
+    next_url = request.POST.get('next', '').strip()
+    if next_url.startswith('/app/') and not next_url.startswith('//'):
+        return redirect(next_url)
+    return redirect('dashboard')
+
+
+@login_required
+def cambiar_contrasena_view(request):
+    perfil = _obtener_perfil_autenticado(request)
+    if perfil is None:
+        return redirect('login')
+
+    if request.method != 'POST':
+        return redirect('perfil')
+
+    actual = request.POST.get('password_actual', '')
+    nueva = request.POST.get('password_nueva', '')
+    confirmar = request.POST.get('password_confirmar', '')
+
+    if not actual or not nueva or not confirmar:
+        messages.error(request, 'Completa todos los campos para cambiar tu contraseña.')
+        return redirect('perfil')
+
+    if not request.user.check_password(actual):
+        messages.error(request, 'Tu contraseña actual no coincide.')
+        return redirect('perfil')
+
+    if nueva != confirmar:
+        messages.error(request, 'La nueva contraseña y su confirmación no coinciden.')
+        return redirect('perfil')
+
+    if actual == nueva:
+        messages.error(request, 'La nueva contraseña debe ser diferente a la actual.')
+        return redirect('perfil')
+
+    errores = validar_contrasena_servidor(nueva, user=request.user)
+    if errores:
+        messages.error(request, errores[0])
+        return redirect('perfil')
+
+    request.user.set_password(nueva)
+    request.user.save(update_fields=['password'])
+    update_session_auth_hash(request, request.user)
+    messages.success(request, 'Tu contraseña se actualizó correctamente.')
+    return redirect('perfil')

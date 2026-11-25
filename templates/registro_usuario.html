@@ -209,6 +209,16 @@
                     </button>
                 </div>
 
+                <div class="auth-field-wrap" data-field-wrap>
+                    <label class="auth-consent-label" for="acepto_politica_datos">
+                        <input type="checkbox" id="acepto_politica_datos" name="acepto_politica_datos" value="1" class="auth-consent-check" required data-msg-empty="Debes aceptar la política de tratamiento de datos para continuar.">
+                        <span>
+                            Acepto la <a href="{% url 'privacidad' %}" target="_blank" rel="noopener">Política de privacidad y tratamiento de datos</a> (v{{ politica_version }}).
+                        </span>
+                    </label>
+                    <p class="auth-field-error" role="alert" aria-live="polite"></p>
+                </div>
+
                 <button type="submit" class="auth-submit-btn">Registrarme</button>
             </form>
 
@@ -467,11 +477,26 @@
             });
         });
 
+        var consentCheck = document.getElementById('acepto_politica_datos');
+        var validateConsent = function () {
+            if (!consentCheck) return true;
+            if (!consentCheck.checked) {
+                setFieldError(consentCheck, consentCheck.dataset.msgEmpty || 'Debes aceptar la política de privacidad.');
+                return false;
+            }
+            setFieldError(consentCheck, '');
+            return true;
+        };
+        if (consentCheck) {
+            consentCheck.addEventListener('change', validateConsent);
+        }
+
         form.addEventListener('submit', function (e) {
             var firstBad = null;
             fields.forEach(function (inp) {
                 if (!validateField(inp) && !firstBad) firstBad = inp;
             });
+            if (!validateConsent() && !firstBad) firstBad = consentCheck;
             if (firstBad) {
                 e.preventDefault();
                 if (firstBad.id === 'pass' && meter) meter.classList.add('is-open');

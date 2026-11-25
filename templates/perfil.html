@@ -171,6 +171,28 @@
                 </div>
             </div>
 
+            <button type="button" class="m-settings-row" id="toggle-password-form" aria-expanded="false" aria-controls="perfil-password-panel">
+                <span class="m-settings-ico">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                </span>
+                <span class="m-settings-copy">
+                    <strong>Cambiar contraseña</strong>
+                    <span>Actualiza tu clave de acceso de forma segura</span>
+                </span>
+                <svg class="m-tx-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+
+            <a href="{% url 'privacidad' %}" class="m-settings-row">
+                <span class="m-settings-ico">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+                </span>
+                <span class="m-settings-copy">
+                    <strong>Política de privacidad</strong>
+                    <span>{% if usuario.acepto_politica_datos and usuario.version_politica_datos == politica_version %}Aceptada · v{{ usuario.version_politica_datos }}{% else %}Pendiente de confirmación · v{{ politica_version }}{% endif %}</span>
+                </span>
+                <svg class="m-tx-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </a>
+
             <a href="{% url 'animo' %}" class="m-settings-row">
                 <span class="m-settings-ico">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
@@ -182,6 +204,28 @@
                 <svg class="m-tx-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </a>
         </div>
+    </section>
+
+    <section class="m-filter-panel" id="perfil-password-panel" aria-label="Cambiar contraseña">
+        <h2 class="m-panel-title">Cambiar contraseña</h2>
+        <form method="POST" action="{% url 'cambiar_contrasena' %}">
+            {% csrf_token %}
+            <div class="m-filter-grid">
+                <div class="m-field-group m-field-group--full">
+                    <label for="pw-actual">Contraseña actual</label>
+                    <input type="password" id="pw-actual" name="password_actual" class="m-input" autocomplete="current-password" required>
+                </div>
+                <div class="m-field-group">
+                    <label for="pw-nueva">Nueva contraseña (mín. 8 caracteres)</label>
+                    <input type="password" id="pw-nueva" name="password_nueva" class="m-input" autocomplete="new-password" minlength="8" required>
+                </div>
+                <div class="m-field-group">
+                    <label for="pw-confirmar">Confirmar nueva contraseña</label>
+                    <input type="password" id="pw-confirmar" name="password_confirmar" class="m-input" autocomplete="new-password" minlength="8" required>
+                </div>
+            </div>
+            <button type="submit" class="m-btn-pill is-primary m-btn-full" style="margin-top: 14px;">Actualizar contraseña</button>
+        </form>
     </section>
 
     <form method="POST" action="{% url 'logout' %}" class="m-logout-wrap">
@@ -258,6 +302,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (toggle1) toggle1.addEventListener('click', toggleEdit);
     if (toggle2) toggle2.addEventListener('click', toggleEdit);
+
+    var pwPanel = document.getElementById('perfil-password-panel');
+    var pwToggle = document.getElementById('toggle-password-form');
+    if (pwToggle && pwPanel) {
+        pwToggle.addEventListener('click', function () {
+            var open = pwPanel.classList.toggle('is-open');
+            pwToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) {
+                pwPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+    }
 
     /* Selector de avatar en Bottom Sheet */
     var avSheet = document.getElementById('mishi-avatar-sheet');

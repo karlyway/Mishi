@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 import pymysql
+from django.core.exceptions import ImproperlyConfigured
 
 pymysql.install_as_MySQLdb()
 
@@ -18,13 +19,39 @@ from dotenv import load_dotenv
 
 load_dotenv(BASE_DIR / '.env')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-v3!ujnf-kvzpgtw-_&8-bn)sx%n(#pzh(up3y*f!vvqcckz!0d'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+def _env_bool(nombre, default=False):
+    valor = os.environ.get(nombre)
+    if valor is None:
+        return default
+    return valor.strip().lower() in ('1', 'true', 'yes', 'si', 'on')
 
-ALLOWED_HOSTS = ['*']
+
+def validar_configuracion_produccion(debug_flag, secret_key_env, hosts_env):
+    """Valida variables obligatorias en producción (DEBUG=False) sin permitir valores inseguros."""
+    if not debug_flag:
+        if not secret_key_env or secret_key_env.startswith('django-insecure-') or len(secret_key_env) < 32:
+            raise ImproperlyConfigured(
+                'DJANGO_SECRET_KEY es obligatoria en producción (mínimo 32 caracteres y sin prefijo inseguro).'
+            )
+        hosts = [h.strip() for h in hosts_env.split(',') if h.strip()]
+        if not hosts or '*' in hosts:
+            raise ImproperlyConfigured(
+                'DJANGO_ALLOWED_HOSTS debe definir dominios explícitos en producción (no se permite "*").'
+            )
+        return secret_key_env, hosts
+
+    clave_local = secret_key_env or 'django-insecure-dev-only-mishi-local-session-key'
+    hosts_locales = [h.strip() for h in hosts_env.split(',') if h.strip()] or ['127.0.0.1', 'localhost', 'testserver']
+    return clave_local, hosts_locales
+
+
+DEBUG = _env_bool('DJANGO_DEBUG', default=True)
+SECRET_KEY, ALLOWED_HOSTS = validar_configuracion_produccion(
+    DEBUG,
+    os.environ.get('DJANGO_SECRET_KEY', '').strip(),
+    os.environ.get('DJANGO_ALLOWED_HOSTS', '').strip(),
+)
 
 # Application definition
 INSTALLED_APPS = [
@@ -92,6 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -100,6 +128,20 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Seguridad base (cookies y cabeceras)
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = _env_bool('DJANGO_SECURE_SSL_REDIRECT', default=True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # HSTS queda en 0 por defecto hasta confirmar HTTPS estable en producción
+    SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', '0'))
 
 # Internationalization
 LANGUAGE_CODE = 'es-co'

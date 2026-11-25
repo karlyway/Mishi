@@ -3,7 +3,14 @@ from django.utils import timezone
 from .models import Categoria, Usuario
 from .services.avatares import AVATARES_MISHI, obtener_avatar_info
 from .services.finanzas_service import calcular_resumen_financiero
-from .services.notificaciones_service import sincronizar_notificaciones_usuario
+from .services.notificaciones_service import (
+    contar_notificaciones_no_leidas,
+    sincronizar_notificaciones_usuario,
+)
+from .services.seguridad_service import (
+    POLITICA_PRIVACIDAD_VERSION,
+    requiere_consentimiento_vigente,
+)
 from .ui_helpers import estilo_categoria
 
 
@@ -48,15 +55,20 @@ def mishi_app_chrome(request):
         resumen = calcular_resumen_financiero(perfil)
         request._mishi_resumen = resumen
 
+    hoy_iso = timezone.localdate().isoformat()
     avatar_info = obtener_avatar_info(getattr(perfil, 'avatar', None))
     no_leidas = getattr(request, '_mishi_notif_count', None)
     if no_leidas is None:
-        no_leidas = sincronizar_notificaciones_usuario(perfil, resumen=resumen)
+        if request.session.get('mishi_notif_sync_day') != hoy_iso:
+            no_leidas = sincronizar_notificaciones_usuario(perfil, resumen=resumen)
+            request.session['mishi_notif_sync_day'] = hoy_iso
+        else:
+            no_leidas = contar_notificaciones_no_leidas(perfil)
         request._mishi_notif_count = no_leidas
 
     return {
         'sheet_categorias_ui': sheet_categorias_ui,
-        'sheet_hoy_iso': timezone.localdate().isoformat(),
+        'sheet_hoy_iso': hoy_iso,
         'sheet_saldo_fmt': resumen['saldo_fmt'],
         'sheet_limite_diario_fmt': resumen['limite_diario_fmt'],
         'sheet_restante_hoy_fmt': resumen['dinero_restante_hoy_fmt'],
@@ -69,4 +81,6 @@ def mishi_app_chrome(request):
         'pref_ocultar_saldo': bool(getattr(perfil, 'ocultar_saldo', False)),
         'pref_alertas_activas': bool(getattr(perfil, 'alertas_activas', True)),
         'pref_tema_visual': getattr(perfil, 'tema_visual', 'warm') or 'warm',
+        'requiere_consentimiento_datos': requiere_consentimiento_vigente(perfil),
+        'politica_privacidad_version': POLITICA_PRIVACIDAD_VERSION,
     }

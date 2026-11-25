@@ -34,7 +34,7 @@
         </div>
     </header>
 
-    {% if alerta_principal %}
+    {% if alerta_principal and pref_alertas_activas %}
     <a href="{% url 'insights' %}?tab=control" class="m-alert-pill {% if alerta_principal.nivel == 'danger' %}is-danger{% else %}is-warn{% endif %}" id="mishi-home-alert" role="{% if alerta_principal.nivel == 'danger' %}alert{% else %}status{% endif %}">
         <span class="m-alert-dot" aria-hidden="true"></span>
         <span class="m-alert-text">
@@ -63,7 +63,7 @@
                 </div>
 
                 <div class="m-balance-value-wrap">
-                    <div class="m-balance-value money-num" id="saldo-valor" data-real="${{ saldo_fmt }}">${{ saldo_fmt }}</div>
+                    <div class="m-balance-value money-num" id="saldo-valor" data-real="${{ saldo_fmt }}">{% if pref_ocultar_saldo %}$••••••{% else %}${{ saldo_fmt }}{% endif %}</div>
                     <span class="m-balance-currency">COP</span>
                 </div>
 

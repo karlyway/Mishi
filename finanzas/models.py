@@ -65,6 +65,19 @@ class Usuario(models.Model):
         default='warm'
     )
 
+    acepto_politica_datos = models.BooleanField(default=False)
+
+    fecha_aceptacion_datos = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    version_politica_datos = models.CharField(
+        max_length=20,
+        blank=True,
+        default=''
+    )
+
     def save(self, *args, **kwargs):
         if self._state.adding and self.saldo_inicial is None:
             self.saldo_inicial = self.mesada
@@ -195,6 +208,7 @@ class Notificacion(models.Model):
     mensaje = models.CharField(max_length=280)
     url_destino = models.CharField(max_length=120, default='/app/insights/?tab=control')
     leida = models.BooleanField(default=False)
+    descartada = models.BooleanField(default=False)
     creada_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -203,4 +217,5 @@ class Notificacion(models.Model):
         indexes = [
             models.Index(fields=['idUsuario', 'leida'], name='idx_notif_usr_leida'),
             models.Index(fields=['idUsuario', 'clave'], name='idx_notif_usr_clave'),
+            models.Index(fields=['idUsuario', 'descartada', 'leida'], name='idx_notif_usr_desc_leida'),
         ]

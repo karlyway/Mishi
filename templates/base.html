@@ -29,7 +29,7 @@
     <link rel="manifest" href="{% static 'manifest.json' %}">
     <link rel="icon" type="image/png" href="{% static 'img/mishi-icon.png' %}">
     <link rel="apple-touch-icon" href="{% static 'img/mishi-icon.png' %}">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=30">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=31">
 </head>
 <body class="{% if ocultar_chrome %}is-fullbleed-body{% elif pestana_activa %}is-app-body{% else %}is-public-body{% endif %}">
     {% if not ocultar_chrome %}
@@ -133,6 +133,22 @@
                     </div>
                 {% endif %}
             {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if pestana_activa and requiere_consentimiento_datos and request.resolver_match.url_name != 'privacidad' %}
+            <div class="m-consent-bar" role="region" aria-label="Actualización de política de privacidad">
+                <p class="m-consent-bar-copy">
+                    Actualizamos la <strong>Política de privacidad</strong> (v{{ politica_privacidad_version }}) para tu cuenta.
+                </p>
+                <div class="m-consent-bar-actions">
+                    <a href="{% url 'privacidad' %}" class="m-consent-link">Leer</a>
+                    <form method="POST" action="{% url 'aceptar_privacidad' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="m-consent-accept-btn">Aceptar</button>
+                    </form>
+                </div>
             </div>
         {% endif %}
 

@@ -303,6 +303,7 @@ def test_flujo_critico_registro_usuario_y_categorias_por_defecto(client):
         'mesada': '300000',
         'correo': 'camila@curn.edu.co',
         'pass': 'Segura123!',
+        'acepto_politica_datos': '1',
     })
     assert resp.status_code == 302
     assert resp.url == reverse('dashboard')
@@ -843,6 +844,7 @@ def test_avatares_registro_seleccion_y_persistencia_en_bd(client):
         'correo': 'luna@curn.edu.co',
         'pass': 'ClaveSegura1!',
         'avatar': 'mishi-negro-capucha',
+        'acepto_politica_datos': '1',
     })
     assert resp.status_code == 302
     perfil = Usuario.objects.get(cuenta__username='luna@curn.edu.co')
@@ -955,11 +957,311 @@ def test_notificaciones_aislamiento_entre_usuarios_y_eliminacion(client, crear_e
     notif_a.refresh_from_db()
     assert notif_a.leida is False
 
-    # Usuario A si puede eliminar su propia notificacion
+    # Usuario A si puede eliminar su propia notificacion (descarte logico para evitar reaparicion)
     client.force_login(cuenta_a)
     resp_del = client.post(reverse('notificacion_eliminar', args=[notif_a.idNotificacion]))
     assert resp_del.status_code == 302
-    assert not Notificacion.objects.filter(idNotificacion=notif_a.idNotificacion).exists()
+    notif_a.refresh_from_db()
+    assert notif_a.descartada is True
+    assert notif_a.leida is True
+    assert not Notificacion.objects.filter(idNotificacion=notif_a.idNotificacion, descartada=False).exists()
+
+
+# ==============================================================================
+# 8. VERIFICACION DE NOTIFICACIONES (NO REAPARICION, PREFERENCIAS, RENDIMIENTO)
+#    Y SEGURIDAD / PRIVACIDAD (FASE 2)
+# ==============================================================================
+
+@pytest.mark.django_db
+def test_notificaciones_eliminada_no_reaparece_por_el_mismo_evento(client, crear_estudiante, categoria_base):
+    from finanzas.models import Notificacion
+    from finanzas.services.notificaciones_service import sincronizar_notificaciones_usuario
+
+    cuenta, perfil = crear_estudiante('no_reaparece@curn.edu.co', mesada='150000.00', frecuencia='quincenal')
+    # Limite diario = $10.000 -> gasto hoy $8.500 (85%, alerta_80) + meta lograda
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Almuerzo',
+        monto=Decimal('8500.00'), fecha=date.today(), tipo='gasto'
+    )
+    MetaAhorro.objects.create(
+        idUsuario=perfil, nombre='Libros', objetivo=Decimal('10000.00'), acumulado=Decimal('10000.00')
+    )
+
+    client.force_login(cuenta)
+    resp = client.get(reverse('notificaciones'))
+    assert resp.status_code == 200
+    alerta_80 = Notificacion.objects.get(idUsuario=perfil, tipo='alerta_80', descartada=False)
+    meta_ok = Notificacion.objects.get(idUsuario=perfil, tipo='meta_lograda', descartada=False)
+
+    # El usuario elimina ambas notificaciones
+    client.post(reverse('notificacion_eliminar', args=[alerta_80.idNotificacion]))
+    client.post(reverse('notificacion_eliminar', args=[meta_ok.idNotificacion]))
+
+    # Re-sincronizar y navegar varias veces NO vuelve a mostrar ni recrear esos eventos
+    sincronizar_notificaciones_usuario(perfil)
+    resp_after = client.get(reverse('notificaciones'))
+    client.get(reverse('dashboard'))
+    assert resp_after.status_code == 200
+    assert Notificacion.objects.filter(idUsuario=perfil, tipo='alerta_80', descartada=False).count() == 0
+    assert Notificacion.objects.filter(idUsuario=perfil, tipo='meta_lograda', descartada=False).count() == 0
+    assert resp_after.context['total_notificaciones'] == 0
+
+
+@pytest.mark.django_db
+def test_preferencias_usuario_funcionan_de_extremo_a_extremo(client, crear_estudiante, categoria_base):
+    from finanzas.models import Notificacion
+
+    cuenta, perfil = crear_estudiante('prefs_e2e@curn.edu.co', mesada='150000.00', frecuencia='quincenal')
+    Transaccion.objects.create(
+        idUsuario=perfil, idCategoria=categoria_base, descripcion='Almuerzo',
+        monto=Decimal('8500.00'), fecha=date.today(), tipo='gasto'
+    )
+    client.force_login(cuenta)
+
+    # Desactivar alertas, ocultar saldo y elegir tema blanco
+    resp_pref = client.post(reverse('perfil_preferencias'), {
+        'alertas_activas': '0',
+        'ocultar_saldo': '1',
+        'tema_visual': 'pure',
+    })
+    assert resp_pref.status_code == 302
+
+    # En Dashboard se reflejan las 3 preferencias desde el servidor
+    resp_dash = client.get(reverse('dashboard'))
+    html_dash = resp_dash.content.decode('utf-8')
+    assert 'data-mishi-theme="pure"' in html_dash
+    assert '$••••••' in html_dash
+    assert 'id="mishi-home-alert"' not in html_dash
+
+    # Con alertas_activas=False no se generan avisos de limite/presupuesto/hormiga
+    resp_notif = client.get(reverse('notificaciones'))
+    assert 'Alertas de límite pausadas.' in resp_notif.content.decode('utf-8')
+    assert Notificacion.objects.filter(
+        idUsuario=perfil,
+        tipo__in=('alerta_80', 'limite_superado', 'saldo_insuficiente', 'presupuesto_mensual', 'hormiga'),
+        descartada=False,
+    ).count() == 0
+
+    # Al reactivar alertas_activas=1, el aviso se genera y vuelve a aparecer en Inicio
+    client.post(reverse('perfil_preferencias'), {'alertas_activas': '1'})
+    assert Notificacion.objects.filter(idUsuario=perfil, tipo='alerta_80', descartada=False).count() == 1
+    resp_dash2 = client.get(reverse('dashboard'))
+    assert 'id="mishi-home-alert"' in resp_dash2.content.decode('utf-8')
+
+
+@pytest.mark.django_db
+def test_notificaciones_navegacion_normal_usa_conteo_liviano_sin_resincronizar(
+    client, crear_estudiante, monkeypatch
+):
+    import finanzas.context_processors as cp
+
+    cuenta, _ = crear_estudiante('perf_notif@curn.edu.co', mesada='200000.00')
+    client.force_login(cuenta)
+
+    # Primera carga del dia sincroniza y marca la sesion
+    assert client.get(reverse('dashboard')).status_code == 200
+
+    llamadas = {'sync': 0}
+    real_sync = cp.sincronizar_notificaciones_usuario
+
+    def spy_sync(*args, **kwargs):
+        llamadas['sync'] += 1
+        return real_sync(*args, **kwargs)
+
+    monkeypatch.setattr(cp, 'sincronizar_notificaciones_usuario', spy_sync)
+
+    # Navegacion normal por multiples pantallas NO re-ejecuta sincronizacion completa
+    for ruta in ('dashboard', 'historial', 'perfil', 'presupuestos'):
+        assert client.get(reverse(ruta)).status_code == 200
+    assert llamadas['sync'] == 0
+
+
+def test_fase2_validacion_configuracion_produccion_rechaza_insegura_y_sin_hsts_prematuro():
+    from django.conf import settings as dj_settings
+    from django.core.exceptions import ImproperlyConfigured
+    from mishi_project.settings import validar_configuracion_produccion
+
+    clave_valida = 'MishiProdKey_9f8e7d6c5b4a3210_segura_2026!'
+
+    # Rechaza SECRET_KEY ausente, django-insecure o corta en produccion
+    for bad_key in ('', 'django-insecure-123456789012345678901234567890', 'corta123'):
+        with pytest.raises(ImproperlyConfigured):
+            validar_configuracion_produccion(False, bad_key, 'mishi.app')
+
+    # Rechaza ALLOWED_HOSTS vacio o comodin '*' en produccion
+    for bad_hosts in ('', '*', 'mishi.app,*'):
+        with pytest.raises(ImproperlyConfigured):
+            validar_configuracion_produccion(False, clave_valida, bad_hosts)
+
+    # Acepta configuracion productiva valida
+    key_ok, hosts_ok = validar_configuracion_produccion(False, clave_valida, 'mishi.app, www.mishi.app')
+    assert key_ok == clave_valida
+    assert hosts_ok == ['mishi.app', 'www.mishi.app']
+
+    # Endurecimiento de cookies y headers activos; HSTS no forzado prematuramente
+    assert dj_settings.SESSION_COOKIE_HTTPONLY is True
+    assert dj_settings.SESSION_COOKIE_SAMESITE == 'Lax'
+    assert dj_settings.CSRF_COOKIE_SAMESITE == 'Lax'
+    assert dj_settings.SECURE_CONTENT_TYPE_NOSNIFF is True
+    assert dj_settings.X_FRAME_OPTIONS == 'DENY'
+    assert getattr(dj_settings, 'SECURE_HSTS_SECONDS', 0) == 0
+
+
+@pytest.mark.django_db
+def test_fase2_registro_exige_consentimiento_y_contrasena_fuerte_en_servidor(client):
+    from finanzas.services.seguridad_service import POLITICA_PRIVACIDAD_VERSION
+
+    base_payload = {
+        'nombre': 'Mateo Torres',
+        'universidad': 'CURN',
+        'frecuencia': 'quincenal',
+        'mesada': '250000',
+        'correo': 'mateo_sec@curn.edu.co',
+        'pass': 'ClaveSegura2026!',
+    }
+
+    # Sin aceptar politica de datos -> rechazado
+    resp_no_consent = client.post(reverse('registro_usuario'), base_payload)
+    assert resp_no_consent.status_code == 200
+    assert 'política de tratamiento de datos' in resp_no_consent.content.decode('utf-8').lower()
+    assert not Usuario.objects.filter(cuenta__username='mateo_sec@curn.edu.co').exists()
+
+    # Contrasenas debiles rechazadas por AUTH_PASSWORD_VALIDATORS del servidor
+    for weak_pw in ('123456', '12345678', 'password'):
+        resp_weak = client.post(reverse('registro_usuario'), {
+            **base_payload,
+            'pass': weak_pw,
+            'acepto_politica_datos': '1',
+        })
+        assert resp_weak.status_code == 200
+        assert not Usuario.objects.filter(cuenta__username='mateo_sec@curn.edu.co').exists()
+
+    # Registro completo valido persiste consentimiento, fecha y version
+    resp_ok = client.post(reverse('registro_usuario'), {
+        **base_payload,
+        'acepto_politica_datos': '1',
+    })
+    assert resp_ok.status_code == 302
+    perfil = Usuario.objects.get(cuenta__username='mateo_sec@curn.edu.co')
+    assert perfil.acepto_politica_datos is True
+    assert perfil.fecha_aceptacion_datos is not None
+    assert perfil.version_politica_datos == POLITICA_PRIVACIDAD_VERSION
+
+
+@pytest.mark.django_db
+def test_fase2_usuario_existente_puede_leer_y_aceptar_politica_privacidad(client, crear_estudiante):
+    from finanzas.services.seguridad_service import POLITICA_PRIVACIDAD_VERSION
+
+    # Pagina publica accesible sin autenticacion
+    assert client.get(reverse('privacidad')).status_code == 200
+
+    # Usuario existente sin consentimiento previo ve el aviso discreto
+    cuenta, perfil = crear_estudiante('legacy_priv@curn.edu.co', nombre='Laura')
+    assert perfil.acepto_politica_datos is False
+    client.force_login(cuenta)
+
+    resp_before = client.get(reverse('dashboard'))
+    assert 'm-consent-bar' in resp_before.content.decode('utf-8')
+
+    # Aceptar protege contra open-redirect y registra fecha + version
+    resp_accept = client.post(reverse('aceptar_privacidad'), {'next': 'https://evil.example/phish'})
+    assert resp_accept.status_code == 302
+    assert resp_accept.url == reverse('dashboard')
+
+    perfil.refresh_from_db()
+    assert perfil.acepto_politica_datos is True
+    assert perfil.fecha_aceptacion_datos is not None
+    assert perfil.version_politica_datos == POLITICA_PRIVACIDAD_VERSION
+
+    # Al recargar, el aviso ya no aparece
+    resp_after = client.get(reverse('dashboard'))
+    assert 'm-consent-bar' not in resp_after.content.decode('utf-8')
+
+
+@pytest.mark.django_db
+def test_fase2_cambio_contrasena_en_perfil_valida_y_mantiene_sesion(client, crear_estudiante):
+    from django.contrib.auth import authenticate
+
+    cuenta, _ = crear_estudiante('pw_change@curn.edu.co', nombre='Sofía')
+    client.force_login(cuenta)
+
+    # Rechaza contrasena actual incorrecta
+    client.post(reverse('cambiar_contrasena'), {
+        'password_actual': 'Incorrecta999!',
+        'password_nueva': 'NuevaClave2026!',
+        'password_confirmar': 'NuevaClave2026!',
+    })
+    cuenta.refresh_from_db()
+    assert cuenta.check_password('Password123!') is True
+
+    # Rechaza contrasena nueva debil
+    client.post(reverse('cambiar_contrasena'), {
+        'password_actual': 'Password123!',
+        'password_nueva': '12345678',
+        'password_confirmar': '12345678',
+    })
+    cuenta.refresh_from_db()
+    assert cuenta.check_password('Password123!') is True
+
+    # Cambio valido actualiza hash y conserva sesion activa
+    resp_ok = client.post(reverse('cambiar_contrasena'), {
+        'password_actual': 'Password123!',
+        'password_nueva': 'NuevaClaveSegura9!',
+        'password_confirmar': 'NuevaClaveSegura9!',
+    })
+    assert resp_ok.status_code == 302
+    assert resp_ok.url == reverse('perfil')
+    assert client.get(reverse('perfil')).status_code == 200
+    assert authenticate(username='pw_change@curn.edu.co', password='NuevaClaveSegura9!') is not None
+
+
+@pytest.mark.django_db
+def test_fase2_aislamiento_post_y_csrf_en_endpoints_mutantes(crear_estudiante):
+    from django.test import Client as DjangoClient
+    from finanzas.models import Notificacion
+
+    cuenta, perfil = crear_estudiante('csrf_check@curn.edu.co')
+    notif = Notificacion.objects.create(
+        idUsuario=perfil, clave='csrf_test', tipo='info', nivel='info',
+        titulo='Aviso', mensaje='Prueba CSRF', url_destino='/app/', leida=False
+    )
+
+    # Sin autenticacion redirigen a login
+    anon = DjangoClient()
+    for url in (
+        reverse('perfil_preferencias'),
+        reverse('cambiar_contrasena'),
+        reverse('aceptar_privacidad'),
+        reverse('notificaciones'),
+        reverse('notificaciones_leer'),
+        reverse('notificacion_eliminar', args=[notif.idNotificacion]),
+    ):
+        resp = anon.get(url)
+        assert resp.status_code == 302
+        assert reverse('login') in resp.url
+
+    # Con CSRF enforced, POST sin token devuelve 403 Forbidden
+    csrf_client = DjangoClient(enforce_csrf_checks=True)
+    csrf_client.force_login(cuenta)
+    for url, data in (
+        (reverse('perfil_preferencias'), {'ocultar_saldo': '1'}),
+        (reverse('cambiar_contrasena'), {'password_actual': 'Password123!', 'password_nueva': 'OtraClave99!', 'password_confirmar': 'OtraClave99!'}),
+        (reverse('aceptar_privacidad'), {}),
+        (reverse('notificaciones_leer'), {'todas': '1'}),
+        (reverse('notificacion_eliminar', args=[notif.idNotificacion]), {}),
+    ):
+        assert csrf_client.post(url, data).status_code == 403
+
+    # GET a endpoints mutantes nunca modifica datos
+    csrf_client.get(reverse('perfil_preferencias') + '?ocultar_saldo=1')
+    csrf_client.get(reverse('aceptar_privacidad'))
+    csrf_client.get(reverse('notificacion_eliminar', args=[notif.idNotificacion]))
+    perfil.refresh_from_db()
+    notif.refresh_from_db()
+    assert perfil.ocultar_saldo is False
+    assert perfil.acepto_politica_datos is False
+    assert notif.descartada is False
+
 
 
 
